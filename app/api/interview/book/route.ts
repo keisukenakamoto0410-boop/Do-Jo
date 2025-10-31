@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email/sender";
+import {
+  bookingConfirmation,
+  interviewRequestForInterviewer,
+} from "@/lib/email/templates";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
@@ -132,17 +138,80 @@ export async function POST(request: Request) {
       };
     });
 
-    // Send request notification to interviewer
-    console.log("📧 [Mock Email] Booking request notification");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(`To: ${result.slot.interviewer.email}`);
-    console.log(`Subject: 新しい面接リクエスト`);
-    console.log(`From: ${session.user.email}`);
-    console.log(`\n${session.user.name}様から面接リクエストが届きました。`);
-    console.log(`日時: ${new Date(result.slot.startTime).toLocaleDateString("ja-JP")}`);
-    console.log(`カテゴリー: ${result.slot.jobCategory}`);
-    console.log("\nダッシュボードから承認してください。");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    // TODO: Get candidate details for emails
+    const candidate = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        name: true,
+        email: true,
+        japaneseLevel: true,
+      },
+    });
+
+    if (!candidate) {
+      throw new Error("候補者情報が見つかりません");
+    }
+
+    const interviewDate = new Date(result.slot.startTime).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // 1. Send confirmation email to candidate
+    const confirmationEmail = bookingConfirmation(
+      candidate.name,
+      interviewDate,
+      result.slot.interviewer.name,
+      result.interview.id
+    );
+
+    await sendEmail({
+      to: candidate.email,
+      subject: confirmationEmail.subject,
+      html: confirmationEmail.html,
+      text: confirmationEmail.text,
+    });
+
+    // 2. Send notification email to interviewer
+    const interviewerEmail = interviewRequestForInterviewer(
+      result.slot.interviewer.name,
+      candidate.name,
+      interviewDate,
+      candidate.japaneseLevel || "未設定",
+      result.interview.id
+    );
+
+    await sendEmail({
+      to: result.slot.interviewer.email,
+      subject: interviewerEmail.subject,
+      html: interviewerEmail.html,
+      text: interviewerEmail.text,
+    });
+
+    // 3. Create in-app notification for candidate
+    await createNotification({
+      userId: session.user.id,
+      type: "BOOKING_CONFIRMED",
+      title: "面接予約リクエストを受け付けました",
+      message: `${result.slot.interviewer.name}さんとの面接予約リクエストを送信しました。承認をお待ちください。`,
+      link: `/candidate/dashboard`,
+    });
+
+    // 4. Create in-app notification for interviewer
+    await createNotification({
+      userId: result.slot.interviewerId,
+      type: "INTERVIEW_REQUEST",
+      title: "📬 新しい面接予約リクエスト",
+      message: `${candidate.name}さんから${interviewDate}の面接予約リクエストが届きました。`,
+      link: `/interviewer/requests`,
+    });
+
+    console.log(`✅ Interview booking created: ${result.interview.id}`);
+    console.log(`📧 Emails sent to candidate and interviewer`);
+    console.log(`🔔 Notifications created for both users`);
 
     return NextResponse.json({
       success: true,

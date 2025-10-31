@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email/sender";
+import { bookingRejected } from "@/lib/email/templates";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
@@ -147,24 +150,42 @@ export async function POST(request: Request) {
       }
     });
 
-    // Send rejection notification email (mock)
-    console.log("📧 [Mock Email] Interview Rejection");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(`To: ${interview.candidate.email}`);
-    console.log(`Subject: 面接リクエスト却下のお知らせ`);
-    console.log("\nBody:");
-    console.log(`${interview.candidate.name}様`);
-    console.log("\n面接リクエストが却下されました。");
-    console.log("\n【却下された面接】");
-    console.log(
-      `日時: ${new Date(interview.slot.startTime).toLocaleDateString("ja-JP")}`
+    // Format interview date for display
+    const interviewDate = new Date(interview.slot.startTime).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // 1. Send rejection email to candidate
+    const rejectionEmail = bookingRejected(
+      interview.candidate.name,
+      interviewDate,
+      reason
     );
-    console.log(`カテゴリー: ${interview.slot.jobCategory}`);
-    console.log(`\n【却下理由】\n${reason}`);
-    console.log(
-      "\n別の日時での予約をお願いいたします。ご利用回数は返還されました。"
-    );
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    await sendEmail({
+      to: interview.candidate.email,
+      subject: rejectionEmail.subject,
+      html: rejectionEmail.html,
+      text: rejectionEmail.text,
+    });
+
+    // 2. Create in-app notification for candidate
+    await createNotification({
+      userId: interview.candidate.id,
+      type: "BOOKING_REJECTED",
+      title: "面接予約が却下されました",
+      message: `${interviewDate}の面接予約リクエストが却下されました。別の日時で再度お試しください。`,
+      link: `/candidate/book`,
+    });
+
+    console.log(`✅ Interview rejected: ${interviewId}`);
+    console.log(`📧 Rejection email sent to ${interview.candidate.email}`);
+    console.log(`🔔 Notification created for candidate`);
+    console.log(`Reason: ${reason}`);
 
     return NextResponse.json({
       success: true,

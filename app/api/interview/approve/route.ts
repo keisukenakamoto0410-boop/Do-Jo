@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  sendBookingConfirmationEmail,
-  sendInterviewerNotificationEmail,
-} from "@/lib/email";
+import { sendEmail } from "@/lib/email/sender";
+import { bookingApproved } from "@/lib/email/templates";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
@@ -144,22 +143,42 @@ export async function POST(request: Request) {
       return updated;
     });
 
-    // Send confirmation email to candidate
-    await sendBookingConfirmationEmail({
-      candidate: {
-        email: interview.candidate.email,
-        name: interview.candidate.name,
-      },
-      interviewer: {
-        email: interview.interviewer.email,
-        name: interview.interviewer.name,
-      },
-      slot: {
-        startTime: interview.slot.startTime,
-        endTime: interview.slot.endTime,
-        jobCategory: interview.slot.jobCategory,
-      },
+    // Format interview date for display
+    const interviewDate = new Date(interview.slot.startTime).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
+
+    // 1. Send approval email to candidate
+    const approvalEmail = bookingApproved(
+      interview.candidate.name,
+      interviewDate,
+      interview.interviewer.name,
+      interviewId
+    );
+
+    await sendEmail({
+      to: interview.candidate.email,
+      subject: approvalEmail.subject,
+      html: approvalEmail.html,
+      text: approvalEmail.text,
+    });
+
+    // 2. Create in-app notification for candidate
+    await createNotification({
+      userId: interview.candidate.id,
+      type: "BOOKING_APPROVED",
+      title: "🎉 面接予約が承認されました！",
+      message: `${interview.interviewer.name}さんとの面接が${interviewDate}に確定しました。`,
+      link: `/candidate/interview/${interviewId}`,
+    });
+
+    console.log(`✅ Interview approved: ${interviewId}`);
+    console.log(`📧 Approval email sent to ${interview.candidate.email}`);
+    console.log(`🔔 Notification created for candidate`);
 
     return NextResponse.json({
       success: true,

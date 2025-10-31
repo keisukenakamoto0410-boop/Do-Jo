@@ -1,0 +1,189 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserType {
+  CANDIDATE
+  INTERVIEWER
+  ADMIN
+}
+
+enum JapaneseLevel {
+  N1
+  N2
+  N3
+  N4
+  N5
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  CANCELLED
+}
+
+enum InterviewStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  password       String
+  name           String
+  userType       UserType
+  japaneseLevel  JapaneseLevel?
+  profile        Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  resumes                Resume[]
+  interviewSlots         InterviewSlot[]
+  interviewsAsCandidate  Interview[]       @relation("CandidateInterviews")
+  interviewsAsInterviewer Interview[]      @relation("InterviewerInterviews")
+  evaluations            Evaluation[]
+  usageTracking          UsageTracking[]
+
+  // Indexes
+  @@index([email])
+  @@index([userType])
+  @@map("users")
+}
+
+model Resume {
+  id         String   @id @default(uuid())
+  userId     String
+  fileUrl    String
+  fileName   String
+  uploadedAt DateTime @default(now())
+  isLatest   Boolean  @default(false)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([userId])
+  @@index([userId, isLatest])
+  @@map("resumes")
+}
+
+model InterviewSlot {
+  id            String     @id @default(uuid())
+  interviewerId String
+  startTime     DateTime
+  endTime       DateTime
+  status        SlotStatus @default(AVAILABLE)
+  jobCategory   String
+
+  // Relations
+  interviewer User        @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+  interviews  Interview[]
+
+  // Indexes
+  @@index([interviewerId])
+  @@index([startTime, endTime])
+  @@index([status])
+  @@index([jobCategory])
+  @@map("interview_slots")
+}
+
+model Interview {
+  id            String          @id @default(uuid())
+  candidateId   String
+  interviewerId String
+  slotId        String
+  videoUrl      String?
+  status        InterviewStatus @default(PENDING)
+  scheduledAt   DateTime
+  conductedAt   DateTime?
+  createdAt     DateTime        @default(now())
+
+  // Relations
+  candidate       User              @relation("CandidateInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
+  interviewer     User              @relation("InterviewerInterviews", fields: [interviewerId], references: [id], onDelete: Cascade)
+  slot            InterviewSlot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  evaluation      Evaluation?
+  fluencyAnalysis FluencyAnalysis?
+
+  // Indexes
+  @@index([candidateId])
+  @@index([interviewerId])
+  @@index([slotId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("interviews")
+}
+
+model Evaluation {
+  id                    String   @id @default(uuid())
+  interviewId           String   @unique
+  interviewerId         String
+  scores                Json
+  comments              String   @db.Text
+  advice                String   @db.Text
+  encouragementMessage  String   @db.Text
+  submittedAt           DateTime @default(now())
+
+  // Relations
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewer User      @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([interviewId])
+  @@index([interviewerId])
+  @@index([submittedAt])
+  @@map("evaluations")
+}
+
+model FluencyAnalysis {
+  id             String   @id @default(uuid())
+  interviewId    String   @unique
+  speechRate     Float
+  pauseFrequency Float
+  fillerCount    Int
+  totalDuration  Int
+  overallScore   Int
+  analyzedAt     DateTime @default(now())
+
+  // Relations
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  // Indexes
+  @@index([interviewId])
+  @@index([analyzedAt])
+  @@map("fluency_analyses")
+}
+
+model UsageTracking {
+  id          String   @id @default(uuid())
+  candidateId String
+  month       DateTime
+  usageCount  Int      @default(0)
+  limit       Int      @default(2)
+
+  // Relations
+  candidate User @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // Unique constraint: one record per candidate per month
+  @@unique([candidateId, month])
+  @@index([candidateId])
+  @@index([month])
+  @@map("usage_tracking")
+}

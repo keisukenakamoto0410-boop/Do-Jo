@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 
 interface SlotCardProps {
   slot: {
@@ -21,7 +22,6 @@ interface SlotCardProps {
 export default function SlotCard({ slot, onBookSuccess }: SlotCardProps) {
   const [isBooking, setIsBooking] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [error, setError] = useState<string>("");
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -59,12 +59,10 @@ export default function SlotCard({ slot, onBookSuccess }: SlotCardProps) {
 
   const handleBookClick = () => {
     setShowConfirmDialog(true);
-    setError("");
   };
 
   const handleConfirmBook = async () => {
     setIsBooking(true);
-    setError("");
 
     try {
       const response = await fetch("/api/interview/book", {
@@ -85,9 +83,10 @@ export default function SlotCard({ slot, onBookSuccess }: SlotCardProps) {
 
       // Close dialog and show success
       setShowConfirmDialog(false);
+      toast.success("面接の予約が完了しました！確認メールを送信しました。");
       onBookSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "予約に失敗しました");
+      toast.error(err instanceof Error ? err.message : "予約に失敗しました");
     } finally {
       setIsBooking(false);
     }
@@ -159,12 +158,6 @@ export default function SlotCard({ slot, onBookSuccess }: SlotCardProps) {
               面接を予約しますか？
             </h3>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-                {error}
-              </div>
-            )}
-
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
@@ -201,10 +194,7 @@ export default function SlotCard({ slot, onBookSuccess }: SlotCardProps) {
 
             <div className="flex space-x-3">
               <button
-                onClick={() => {
-                  setShowConfirmDialog(false);
-                  setError("");
-                }}
+                onClick={() => setShowConfirmDialog(false)}
                 disabled={isBooking}
                 className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >

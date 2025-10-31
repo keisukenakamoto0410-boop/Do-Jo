@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { toast } from "@/lib/toast";
 import ResumeUploader from "@/components/candidate/ResumeUploader";
 
 interface Resume {
@@ -18,7 +19,6 @@ export default function ResumePage() {
   const router = useRouter();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function ResumePage() {
 
       setResumes(data.resumes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
+      toast.error(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setIsLoading(false);
     }
@@ -65,9 +65,10 @@ export default function ResumePage() {
       }
 
       // Refresh list
+      toast.success("履歴書を削除しました");
       await fetchResumes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "削除に失敗しました");
+      toast.error(err instanceof Error ? err.message : "削除に失敗しました");
     } finally {
       setDeleteId(null);
     }
@@ -112,13 +113,6 @@ export default function ResumePage() {
             履歴書をアップロードして面接に使用します
           </p>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
 
         {/* Upload Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">

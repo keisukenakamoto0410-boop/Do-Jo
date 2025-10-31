@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { toast } from "@/lib/toast";
 import EvaluationForm, {
   type EvaluationScores,
 } from "@/components/evaluation/EvaluationForm";
@@ -51,7 +52,7 @@ export default function EvaluatePage() {
 
       // Check if already evaluated
       if (data.evaluation) {
-        alert("この面接は既に評価済みです");
+        toast.warning("この面接は既に評価済みです");
         router.push("/interviewer/dashboard");
         return;
       }
@@ -71,7 +72,7 @@ export default function EvaluatePage() {
 
   const handleCommentsSubmit = async (comments: EvaluationComments) => {
     if (!scores) {
-      alert("スコアデータがありません");
+      toast.error("スコアデータがありません");
       return;
     }
 
@@ -99,10 +100,10 @@ export default function EvaluatePage() {
       }
 
       // Success!
-      alert("評価を提出しました！候補者に通知されます。");
+      toast.success("評価を提出しました！候補者に通知されます。");
       router.push("/interviewer/dashboard");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "評価の提出に失敗しました");
+      toast.error(err instanceof Error ? err.message : "評価の提出に失敗しました");
     } finally {
       setIsSubmitting(false);
     }

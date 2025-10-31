@@ -33,7 +33,6 @@ export default function BookInterviewPage() {
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const [showSuccess, setShowSuccess] = useState(false);
 
   // Filters
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -140,18 +139,12 @@ export default function BookInterviewPage() {
   };
 
   const handleBookSuccess = () => {
-    setShowSuccess(true);
     // Refresh slots
     fetchSlots();
     // Reset filters
     setSelectedDate(null);
     setSelectedCategory("all");
     setSelectedInterviewer("all");
-
-    // Hide success message after 5 seconds
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 5000);
   };
 
   if (status === "loading" || isLoading) {
@@ -177,26 +170,6 @@ export default function BookInterviewPage() {
             希望の日時と面接官を選んで面接を予約できます（月2回まで）
           </p>
         </div>
-
-        {/* Success Message */}
-        {showSuccess && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              面接の予約が完了しました！確認メールを送信しました。
-            </div>
-          </div>
-        )}
 
         {/* Error Message */}
         {error && (

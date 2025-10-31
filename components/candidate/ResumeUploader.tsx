@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
+import { toast } from "@/lib/toast";
+import { uploadWithRetry } from "@/lib/retry";
 
 interface ResumeUploaderProps {
   onUploadSuccess: () => void;
@@ -11,8 +13,6 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -54,15 +54,13 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    setError("");
-    setSuccess("");
 
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
       const validationError = validateFile(file);
       if (validationError) {
-        setError(validationError);
+        toast.error(validationError);
         return;
       }
       setSelectedFile(file);
@@ -70,15 +68,12 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
   };
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-    setError("");
-    setSuccess("");
-
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
       const validationError = validateFile(file);
       if (validationError) {
-        setError(validationError);
+        toast.error(validationError);
         return;
       }
       setSelectedFile(file);
@@ -90,8 +85,6 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
 
     setIsUploading(true);
     setUploadProgress(0);
-    setError("");
-    setSuccess("");
 
     try {
       const formData = new FormData();
@@ -122,7 +115,7 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
         throw new Error(data.error || "アップロードに失敗しました");
       }
 
-      setSuccess("履歴書が正常にアップロードされました");
+      toast.success("履歴書が正常にアップロードされました");
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -131,11 +124,10 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
       // Call success callback
       setTimeout(() => {
         onUploadSuccess();
-        setSuccess("");
         setUploadProgress(0);
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロードに失敗しました");
+      toast.error(err instanceof Error ? err.message : "アップロードに失敗しました");
       setUploadProgress(0);
     } finally {
       setIsUploading(false);
@@ -144,8 +136,6 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
 
   const handleCancel = () => {
     setSelectedFile(null);
-    setError("");
-    setSuccess("");
     setUploadProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -196,22 +186,8 @@ export default function ResumeUploader({ onUploadSuccess }: ResumeUploaderProps)
         </div>
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-          {success}
-        </div>
-      )}
-
       {/* File Preview */}
-      {selectedFile && !success && (
+      {selectedFile && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">

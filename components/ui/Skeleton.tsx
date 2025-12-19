@@ -8,7 +8,7 @@ interface SkeletonProps {
   animation?: "pulse" | "wave" | "none";
 }
 
-export default function Skeleton({
+export function Skeleton({
   className = "",
   variant = "text",
   width,

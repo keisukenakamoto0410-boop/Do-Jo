@@ -1,4 +1,4 @@
-import { PrismaClient, UserType, JapaneseLevel } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -6,201 +6,119 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Create Admin User
-  const adminPassword = await bcrypt.hash("admin123", 10);
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@dojo.com" },
+  // Create Learner User
+  const learnerPassword = await bcrypt.hash("learner123", 10);
+  const learner1 = await prisma.user.upsert({
+    where: { email: "learner@dojo.com" },
     update: {},
     create: {
-      email: "admin@dojo.com",
-      password: adminPassword,
-      name: "Admin User",
-      userType: UserType.ADMIN,
-      profile: {
-        phone: "+81-90-1234-5678",
-      },
-    },
-  });
-  console.log("✅ Created admin user:", admin.email);
-
-  // Create Test Interviewers
-  const interviewerPassword = await bcrypt.hash("interviewer123", 10);
-
-  const interviewer1 = await prisma.user.upsert({
-    where: { email: "interviewer1@dojo.com" },
-    update: {},
-    create: {
-      email: "interviewer1@dojo.com",
-      password: interviewerPassword,
-      name: "田中 太郎",
-      userType: UserType.INTERVIEWER,
-      profile: {
-        phone: "+81-90-2345-6789",
-        bio: "10年以上の面接官経験があります。IT業界専門。",
-        specialties: ["IT", "エンジニア"],
-      },
-    },
-  });
-  console.log("✅ Created interviewer 1:", interviewer1.email);
-
-  const interviewer2 = await prisma.user.upsert({
-    where: { email: "interviewer2@dojo.com" },
-    update: {},
-    create: {
-      email: "interviewer2@dojo.com",
-      password: interviewerPassword,
-      name: "佐藤 花子",
-      userType: UserType.INTERVIEWER,
-      profile: {
-        phone: "+81-90-3456-7890",
-        bio: "人事部門で15年の経験。営業・事務職の面接を担当。",
-        specialties: ["営業", "事務", "カスタマーサポート"],
-      },
-    },
-  });
-  console.log("✅ Created interviewer 2:", interviewer2.email);
-
-  // Create Test Candidates
-  const candidatePassword = await bcrypt.hash("candidate123", 10);
-
-  const candidate1 = await prisma.user.upsert({
-    where: { email: "candidate1@dojo.com" },
-    update: {},
-    create: {
-      email: "candidate1@dojo.com",
-      password: candidatePassword,
+      email: "learner@dojo.com",
+      password: learnerPassword,
       name: "Rajesh Kumar",
-      userType: UserType.CANDIDATE,
-      japaneseLevel: JapaneseLevel.N3,
-      profile: {
-        phone: "+91-98765-43210",
-        nationality: "India",
-        targetJob: "ITエンジニア",
-        yearsOfExperience: 3,
-      },
+      role: "learner",
+      jlptLevel: "N3",
+      nativeLanguage: "English",
+      learningGoal: "business",
+      country: "India",
+      wantsToWorkInJapan: true,
+      bio: "I want to work in Japan as a software engineer.",
+      interests: ["Technology", "Anime", "Travel"],
+      termsAccepted: true,
+      termsAcceptedAt: new Date(),
     },
   });
-  console.log("✅ Created candidate 1:", candidate1.email);
+  console.log("✅ Created learner:", learner1.email);
 
-  const candidate2 = await prisma.user.upsert({
-    where: { email: "candidate2@dojo.com" },
+  // Create Senior Host User
+  const seniorPassword = await bcrypt.hash("senior123", 10);
+  const senior1 = await prisma.user.upsert({
+    where: { email: "senior@dojo.com" },
     update: {},
     create: {
-      email: "candidate2@dojo.com",
-      password: candidatePassword,
-      name: "Priya Sharma",
-      userType: UserType.CANDIDATE,
-      japaneseLevel: JapaneseLevel.N2,
-      profile: {
-        phone: "+91-98765-43211",
-        nationality: "India",
-        targetJob: "営業",
-        yearsOfExperience: 2,
-      },
+      email: "senior@dojo.com",
+      password: seniorPassword,
+      name: "田中 太郎",
+      role: "senior",
+      bio: "大手メーカーで営業部長として30年勤務。人材育成や海外営業を担当してきました。",
+      careerHistory: "大手電機メーカーで営業部長として30年勤務。海外営業、人材育成を担当。",
+      expertise: ["営業", "人事", "製造"],
+      interests: ["ゴルフ", "読書", "料理"],
+      termsAccepted: true,
+      termsAcceptedAt: new Date(),
     },
   });
-  console.log("✅ Created candidate 2:", candidate2.email);
+  console.log("✅ Created senior host:", senior1.email);
 
-  const candidate3 = await prisma.user.upsert({
-    where: { email: "candidate3@dojo.com" },
+  // Create Student Host User
+  const studentPassword = await bcrypt.hash("student123", 10);
+  const student1 = await prisma.user.upsert({
+    where: { email: "student@dojo.com" },
     update: {},
     create: {
-      email: "candidate3@dojo.com",
-      password: candidatePassword,
-      name: "Amit Patel",
-      userType: UserType.CANDIDATE,
-      japaneseLevel: JapaneseLevel.N4,
-      profile: {
-        phone: "+91-98765-43212",
-        nationality: "India",
-        targetJob: "事務",
-        yearsOfExperience: 1,
-      },
+      email: "student@dojo.com",
+      password: studentPassword,
+      name: "佐藤 花子",
+      role: "student",
+      bio: "東京大学で経済学を学んでいます。国際交流に興味があります。",
+      university: "東京大学",
+      major: "経済学部",
+      graduationYear: 2026,
+      interests: ["アニメ", "旅行", "音楽", "ファッション"],
+      termsAccepted: true,
+      termsAcceptedAt: new Date(),
     },
   });
-  console.log("✅ Created candidate 3:", candidate3.email);
+  console.log("✅ Created student host:", student1.email);
 
-  // Create Interview Slots for both interviewers
+  // Create some slots for the hosts
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(10, 0, 0, 0);
 
-  const jobCategories = ["IT", "営業", "事務"];
-  let totalSlots = 0;
-
-  // Slots for Interviewer 1 (IT specialist)
+  // Create slots for senior host
   for (let i = 0; i < 4; i++) {
     const startTime = new Date(tomorrow);
-    startTime.setHours(10 + i * 2, 0, 0, 0);
+    startTime.setHours(10 + i, 0, 0, 0);
     const endTime = new Date(startTime);
-    endTime.setHours(startTime.getHours() + 1, 0, 0, 0);
+    endTime.setMinutes(startTime.getMinutes() + 25);
 
-    await prisma.interviewSlot.create({
+    await prisma.slot.create({
       data: {
-        interviewerId: interviewer1.id,
+        hostId: senior1.id,
+        sessionType: "business",
         startTime,
         endTime,
-        status: "AVAILABLE",
-        jobCategory: "IT",
+        status: "available",
       },
     });
-    totalSlots++;
   }
+  console.log("✅ Created 4 slots for senior host");
 
-  // Slots for Interviewer 2 (Sales/Admin specialist)
+  // Create slots for student host
   for (let i = 0; i < 4; i++) {
     const startTime = new Date(tomorrow);
-    startTime.setHours(9 + i * 2, 30, 0, 0);
+    startTime.setHours(14 + i, 0, 0, 0);
     const endTime = new Date(startTime);
-    endTime.setHours(startTime.getHours() + 1, 0, 0, 0);
+    endTime.setMinutes(startTime.getMinutes() + 25);
 
-    await prisma.interviewSlot.create({
+    await prisma.slot.create({
       data: {
-        interviewerId: interviewer2.id,
+        hostId: student1.id,
+        sessionType: "casual",
         startTime,
         endTime,
-        status: "AVAILABLE",
-        jobCategory: jobCategories[i % 2 + 1], // Alternates between 営業 and 事務
-      },
-    });
-    totalSlots++;
-  }
-  console.log(`✅ Created ${totalSlots} interview slots`);
-
-  // Create Usage Tracking for all candidates
-  const currentMonth = new Date();
-  currentMonth.setDate(1);
-  currentMonth.setHours(0, 0, 0, 0);
-
-  const candidates = [candidate1, candidate2, candidate3];
-  for (const candidate of candidates) {
-    await prisma.usageTracking.upsert({
-      where: {
-        candidateId_month: {
-          candidateId: candidate.id,
-          month: currentMonth,
-        },
-      },
-      update: {},
-      create: {
-        candidateId: candidate.id,
-        month: currentMonth,
-        usageCount: 0,
-        limit: 2,
+        status: "available",
       },
     });
   }
-  console.log("✅ Created usage tracking for all candidates");
+  console.log("✅ Created 4 slots for student host");
 
   console.log("\n🎉 Seeding completed successfully!");
   console.log("\n📝 Login credentials:");
-  console.log("Admin:         admin@dojo.com / admin123");
-  console.log("Interviewer 1: interviewer1@dojo.com / interviewer123");
-  console.log("Interviewer 2: interviewer2@dojo.com / interviewer123");
-  console.log("Candidate 1:   candidate1@dojo.com / candidate123");
-  console.log("Candidate 2:   candidate2@dojo.com / candidate123");
-  console.log("Candidate 3:   candidate3@dojo.com / candidate123");
+  console.log("Learner:  learner@dojo.com / learner123");
+  console.log("Senior:   senior@dojo.com / senior123");
+  console.log("Student:  student@dojo.com / student123");
 }
 
 main()

@@ -1,0 +1,178 @@
+"use client";
+
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
+import LearnerPostFeed from "@/components/host/LearnerPostFeed";
+
+export default function HostDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    } else if (session?.user?.role === "learner") {
+      router.push("/learner/dashboard");
+    }
+  }, [status, session, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+      </div>
+    );
+  }
+
+  if (!session?.user) return null;
+
+  const user = session.user;
+  const isSenior = user.role === "senior";
+  const isStudent = user.role === "student";
+
+  return (
+    <div className={`min-h-screen ${isSenior ? "bg-gradient-to-br from-amber-50 via-white to-orange-50" : "bg-gradient-to-br from-purple-50 via-white to-pink-50"}`}>
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <Link href="/host/dashboard" className={`text-2xl font-bold ${isSenior ? "text-amber-600" : "text-purple-600"}`}>
+              Do Jo
+            </Link>
+            <nav className="flex items-center gap-6">
+              <Link href="/host/schedule" className="text-gray-600 hover:text-gray-900">
+                スケジュール
+              </Link>
+              <Link href="/host/reservations" className="text-gray-600 hover:text-gray-900">
+                予約一覧
+              </Link>
+              {isStudent && (
+                <Link href="/host/earnings" className="text-gray-600 hover:text-gray-900">
+                  収益管理
+                </Link>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{isSenior ? "🏯" : "🎓"}</span>
+                <span className="font-medium">{user.name}</span>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+              >
+                ログアウト
+              </button>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            こんにちは、{user.name}さん！
+          </h1>
+          <p className="text-gray-600">
+            {isSenior
+              ? "外国人学習者にビジネスマナーや敬語を教えましょう"
+              : "外国人学習者と楽しく会話してお小遣いを稼ぎましょう"
+            }
+          </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid md:grid-cols-2 gap-8 mb-8">
+          {/* Create Slot */}
+          <Link
+            href="/host/schedule"
+            className={`${isSenior ? "bg-gradient-to-br from-amber-500 to-orange-600" : "bg-gradient-to-br from-purple-500 to-pink-600"} rounded-2xl shadow-xl p-8 text-white hover:shadow-2xl transition-all`}
+          >
+            <div className="text-5xl mb-4">📅</div>
+            <h2 className="text-2xl font-bold mb-2">予約枠を作成</h2>
+            <p className="opacity-90 mb-4">
+              空いている時間に予約枠を設定しましょう
+            </p>
+            <span className="inline-block px-4 py-2 bg-white/20 rounded-lg text-sm">
+              スケジュールを管理 →
+            </span>
+          </Link>
+
+          {/* Today's Schedule */}
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">今日の予定</h2>
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-4xl mb-2">☀️</p>
+              <p>今日の予約はありません</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-xl shadow p-6 text-center">
+            <p className={`text-3xl font-bold ${isSenior ? "text-amber-600" : "text-purple-600"}`}>0</p>
+            <p className="text-sm text-gray-600">総セッション数</p>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 text-center">
+            <p className="text-3xl font-bold text-blue-600">0分</p>
+            <p className="text-sm text-gray-600">総会話時間</p>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 text-center">
+            <p className="text-3xl font-bold text-yellow-600">-</p>
+            <p className="text-sm text-gray-600">平均評価</p>
+          </div>
+          {isStudent && (
+            <div className="bg-white rounded-xl shadow p-6 text-center">
+              <p className="text-3xl font-bold text-green-600">¥0</p>
+              <p className="text-sm text-gray-600">今月の収益</p>
+            </div>
+          )}
+          {isSenior && (
+            <div className="bg-white rounded-xl shadow p-6 text-center">
+              <p className="text-3xl font-bold text-orange-600">0</p>
+              <p className="text-sm text-gray-600">今月のセッション</p>
+            </div>
+          )}
+        </div>
+
+        {/* Learner Post Feed */}
+        <div className="mb-8">
+          <LearnerPostFeed />
+        </div>
+
+        {/* Upcoming Reservations */}
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">今後の予約</h2>
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-5xl mb-4">📭</p>
+            <p>予約はまだありません</p>
+            <p className="text-sm mt-2">予約枠を作成すると、学習者からの予約が入ります</p>
+          </div>
+        </div>
+
+        {/* Student Earnings Card */}
+        {isStudent && (
+          <div className="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-xl p-8 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">💰 収益を確認</h2>
+                <p className="opacity-90">
+                  25分のセッションで ¥500〜1,000 稼げます
+                </p>
+              </div>
+              <Link
+                href="/host/earnings"
+                className="px-6 py-3 bg-white text-green-600 font-bold rounded-xl hover:bg-gray-100"
+              >
+                収益管理へ
+              </Link>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

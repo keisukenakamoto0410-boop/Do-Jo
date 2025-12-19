@@ -1,4 +1,6 @@
-import { UserType, JapaneseLevel } from "@prisma/client";
+export type UserRole = "learner" | "senior" | "student" | "admin";
+export type JLPTLevel = "N1" | "N2" | "N3" | "N4" | "N5" | "beginner";
+export type LearningGoal = "business" | "casual" | "both";
 
 export interface LoginFormData {
   email: string;
@@ -10,17 +12,17 @@ export interface RegisterFormData {
   password: string;
   confirmPassword: string;
   name: string;
-  userType: UserType;
-  japaneseLevel?: JapaneseLevel;
-  acceptsMarketing?: boolean;
+  role: UserRole;
+  jlptLevel?: JLPTLevel;
+  agreedToTerms: boolean;
 }
 
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  userType: UserType;
-  japaneseLevel?: JapaneseLevel;
+  role: UserRole;
+  jlptLevel?: JLPTLevel;
 }
 
 export interface AuthResponse {

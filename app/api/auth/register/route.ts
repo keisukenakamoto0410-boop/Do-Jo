@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
-import { UserType, JapaneseLevel } from "@prisma/client";
 
 export async function POST(request: Request) {
   try {
@@ -10,23 +9,47 @@ export async function POST(request: Request) {
       email,
       password,
       name,
-      userType,
-      japaneseLevel,
-      acceptsMarketing,
+      role, // "learner" | "senior" | "student"
+      agreedToTerms,
+      // 共通
+      bio,
+      interests,
+      languages,
+      // 学習者用
+      jlptLevel,
+      nativeLanguage,
+      learningGoal,
+      country,
+      wantsToWorkInJapan,
+      // シニア用
+      careerHistory,
+      expertise,
+      // 大学生用
+      university,
+      major,
+      graduationYear,
     } = body;
 
     // Validate required fields
-    if (!email || !password || !name || !userType) {
+    if (!email || !password || !name || !role) {
       return NextResponse.json(
-        { error: "必須フィールドが入力されていません" },
+        { error: "必須項目が入力されていません" },
         { status: 400 }
       );
     }
 
-    // Validate candidate must have Japanese level
-    if (userType === UserType.CANDIDATE && !japaneseLevel) {
+    // Validate role
+    if (!["learner", "senior", "student"].includes(role)) {
       return NextResponse.json(
-        { error: "候補者の場合、日本語レベルを選択してください" },
+        { error: "無効なユーザータイプです" },
+        { status: 400 }
+      );
+    }
+
+    // Validate terms acceptance
+    if (!agreedToTerms) {
+      return NextResponse.json(
+        { error: "You must agree to the Terms of Service" },
         { status: 400 }
       );
     }
@@ -46,39 +69,34 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Prepare profile data
-    const profile: any = {};
-    if (userType === UserType.CANDIDATE && acceptsMarketing !== undefined) {
-      profile.acceptsMarketing = acceptsMarketing;
-    }
-
     // Create user
     const user = await db.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        userType,
-        japaneseLevel: userType === UserType.CANDIDATE ? japaneseLevel : null,
-        profile: Object.keys(profile).length > 0 ? profile : null,
+        role,
+        bio: bio || null,
+        interests: interests || [],
+        languages: languages || [],
+        // 利用規約
+        termsAccepted: true,
+        termsAcceptedAt: new Date(),
+        // 学習者用
+        jlptLevel: role === "learner" ? jlptLevel : null,
+        nativeLanguage: role === "learner" ? nativeLanguage : null,
+        learningGoal: role === "learner" ? learningGoal : null,
+        country: role === "learner" ? country : null,
+        wantsToWorkInJapan: role === "learner" ? (wantsToWorkInJapan || false) : false,
+        // シニア用
+        careerHistory: role === "senior" ? careerHistory : null,
+        expertise: role === "senior" ? (expertise || []) : [],
+        // 大学生用
+        university: role === "student" ? university : null,
+        major: role === "student" ? major : null,
+        graduationYear: role === "student" ? graduationYear : null,
       },
     });
-
-    // If candidate, create usage tracking for current month
-    if (userType === UserType.CANDIDATE) {
-      const currentMonth = new Date();
-      currentMonth.setDate(1);
-      currentMonth.setHours(0, 0, 0, 0);
-
-      await db.usageTracking.create({
-        data: {
-          candidateId: user.id,
-          month: currentMonth,
-          usageCount: 0,
-          limit: 2,
-        },
-      });
-    }
 
     return NextResponse.json(
       {
@@ -88,7 +106,7 @@ export async function POST(request: Request) {
           id: user.id,
           email: user.email,
           name: user.name,
-          userType: user.userType,
+          role: user.role,
         },
       },
       { status: 201 }

@@ -10,213 +10,320 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS ====================
-
-enum UserType {
-  CANDIDATE
-  INTERVIEWER
-  ADMIN
-}
-
-enum JapaneseLevel {
-  N1
-  N2
-  N3
-  N4
-  N5
-}
-
-enum SlotStatus {
-  AVAILABLE
-  BOOKED
-  CANCELLED
-}
-
-enum InterviewStatus {
-  PENDING
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-  REJECTED
-}
-
-enum NotificationType {
-  BOOKING_CONFIRMED
-  BOOKING_APPROVED
-  BOOKING_REJECTED
-  FEEDBACK_READY
-  INTERVIEW_REMINDER
-  INTERVIEW_REQUEST
-  EVALUATION_REMINDER
-  GENERAL
-}
-
 // ==================== MODELS ====================
 
 model User {
-  id             String         @id @default(uuid())
-  email          String         @unique
-  password       String
-  name           String
-  userType       UserType
-  japaneseLevel  JapaneseLevel?
-  profile        Json?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String?
+  name            String
+  role            String    @default("learner") // "learner" | "senior" | "student" | "admin"
 
-  // Relations
-  resumes                Resume[]
-  interviewSlots         InterviewSlot[]
-  interviewsAsCandidate  Interview[]       @relation("CandidateInterviews")
-  interviewsAsInterviewer Interview[]      @relation("InterviewerInterviews")
-  evaluations            Evaluation[]
-  usageTracking          UsageTracking[]
-  notifications          Notification[]
+  // プロフィール（共通）
+  avatar          String?
+  bio             String?   @db.Text  // 自己紹介
+  interests       String[]  // 興味タグ ["料理", "歴史", "ビジネス", "アニメ"]
+  languages       String[]  // 話せる言語 ["日本語", "英語"]
 
-  // Indexes
+  // 外国人学習者用フィールド
+  jlptLevel       String?   // "N1" | "N2" | "N3" | "N4" | "N5"
+  nativeLanguage  String?   // 母国語
+  learningGoal    String?   // "business" | "casual" | "both"
+  country         String?   // 出身国
+  wantsToWorkInJapan Boolean @default(false)
+
+  // 日本人シニア用フィールド
+  careerHistory   String?   @db.Text  // これまでの経歴
+  expertise       String[]  // 得意分野 ["営業", "人事", "製造"]
+
+  // 日本人大学生用フィールド
+  university      String?   // 大学名
+  major           String?   // 専攻
+  graduationYear  Int?      // 卒業予定年
+
+  // 統計
+  totalTalkTime   Int       @default(0) // 総会話時間（分）
+  averageRating   Float     @default(0) // 平均評価
+  totalSessions   Int       @default(0) // 総セッション数
+  totalEarnings   Int       @default(0) // 総収益（円） ← 大学生向け
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+
+  // 利用規約
+  termsAccepted   Boolean   @default(false)
+  termsAcceptedAt DateTime?
+
+  // SNS投稿関連
+  totalPosts       Int      @default(0)     // 総投稿数
+  canBookSession   Boolean  @default(false) // 面談予約可能か
+  minPostsRequired Int      @default(4)     // 必要な投稿数（デフォルト4日分）
+
+  // リレーション
+  slots                   Slot[]
+  reservationsAsLearner   Reservation[] @relation("LearnerReservations")
+  reservationsAsHost      Reservation[] @relation("HostReservations")
+  feedbackGiven           Feedback[]    @relation("FeedbackGiver")
+  feedbackReceived        Feedback[]    @relation("FeedbackReceiver")
+  reports                 Report[]      @relation("Reporter")
+  payouts                 Payout[]
+  studyLogs               StudyLog[]
+  studyPosts              StudyPost[]
+  likes                   Like[]
+
   @@index([email])
-  @@index([userType])
+  @@index([role])
+  @@index([lastLoginAt])
   @@map("users")
 }
 
-model Resume {
-  id         String   @id @default(uuid())
-  userId     String
-  fileUrl    String
-  fileName   String
-  uploadedAt DateTime @default(now())
-  isLatest   Boolean  @default(false)
+// 予約枠（日本人が作成）
+model Slot {
+  id          String   @id @default(cuid())
+  hostId      String
+  host        User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // セッションタイプ
+  sessionType String   // "business" | "casual" | "both"
 
-  // Indexes
-  @@index([userId])
-  @@index([userId, isLatest])
-  @@map("resumes")
+  // 日時（UTC）
+  startTime   DateTime
+  endTime     DateTime // startTime + 25分
+
+  // ステータス
+  status      String   @default("available") // "available" | "reserved" | "completed" | "cancelled"
+
+  // 予約情報
+  reservation Reservation?
+
+  createdAt   DateTime @default(now())
+
+  @@index([hostId, startTime])
+  @@index([status, startTime])
+  @@index([sessionType])
+  @@map("slots")
 }
 
-model InterviewSlot {
-  id            String     @id @default(uuid())
-  interviewerId String
-  startTime     DateTime
-  endTime       DateTime
-  status        SlotStatus @default(AVAILABLE)
-  jobCategory   String
+// 予約
+model Reservation {
+  id          String   @id @default(cuid())
 
-  // Relations
-  interviewer User        @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
-  interviews  Interview[]
+  // スロット
+  slotId      String   @unique
+  slot        Slot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
 
-  // Indexes
-  @@index([interviewerId])
-  @@index([startTime, endTime])
+  // 参加者
+  learnerId   String
+  learner     User     @relation("LearnerReservations", fields: [learnerId], references: [id], onDelete: Cascade)
+
+  hostId      String
+  host        User     @relation("HostReservations", fields: [hostId], references: [id], onDelete: Cascade)
+
+  // セッション情報
+  status      String   @default("pending") // "pending" | "active" | "completed" | "cancelled" | "noshow"
+  sessionType String   // "business" | "casual"
+
+  // Agora/ビデオ通話情報
+  channelName String?
+  token       String?
+
+  // 学習準備状態
+  readyToTalk   Boolean  @default(false) // 4枚提出完了
+  studyLogCount Int      @default(0)     // 提出済み枚数
+
+  // タイムスタンプ
+  startedAt   DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+
+  createdAt   DateTime @default(now())
+
+  // リレーション
+  feedback    Feedback[]
+  studyLogs   StudyLog[]
+
+  @@index([learnerId])
+  @@index([hostId])
   @@index([status])
-  @@index([jobCategory])
-  @@map("interview_slots")
+  @@map("reservations")
 }
 
-model Interview {
-  id            String          @id @default(uuid())
-  candidateId   String
-  interviewerId String
-  slotId        String
-  videoUrl      String?
-  status        InterviewStatus @default(PENDING)
-  scheduledAt   DateTime
-  conductedAt   DateTime?
-  createdAt     DateTime        @default(now())
+// 学習記録（写真提出）
+model StudyLog {
+  id              String   @id @default(cuid())
 
-  // Relations
-  candidate       User              @relation("CandidateInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
-  interviewer     User              @relation("InterviewerInterviews", fields: [interviewerId], references: [id], onDelete: Cascade)
-  slot            InterviewSlot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  evaluation      Evaluation?
-  fluencyAnalysis FluencyAnalysis?
+  // 関連
+  reservationId   String
+  reservation     Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  learnerId       String
+  learner         User     @relation(fields: [learnerId], references: [id])
 
-  // Indexes
-  @@index([candidateId])
-  @@index([interviewerId])
-  @@index([slotId])
+  // 写真情報
+  imageUrl        String   // 画像URL
+  imageOrder      Int      // 1〜4の順番
+
+  // AI分析結果（JSON）
+  analysisResult  Json?    // 構造化データ
+
+  // ホストからのリアクション
+  hostLiked       Boolean  @default(false)
+  hostComment     String?
+  hostReactions   Json?    // { liked: boolean, likeCount: number, stamps: string[], hostComment?: string }
+
+  // タイムスタンプ
+  uploadedAt      DateTime @default(now())
+
+  @@unique([reservationId, imageOrder])
+  @@index([learnerId])
+  @@index([reservationId])
+  @@map("study_logs")
+}
+
+// 評価
+model Feedback {
+  id            String   @id @default(cuid())
+
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  giverId       String
+  giver         User     @relation("FeedbackGiver", fields: [giverId], references: [id])
+
+  receiverId    String
+  receiver      User     @relation("FeedbackReceiver", fields: [receiverId], references: [id])
+
+  // 評価内容
+  rating        Int      // 1-5
+  enjoyment     Int?     // 楽しさ（1-5）
+  wantAgain     Boolean? // また話したいか
+
+  // 日本語評価（日本人→学習者のみ）
+  vocabularyLevel    Int? // 語彙力（1-5）
+  pronunciationLevel Int? // 発音（1-5）
+  communicationLevel Int? // コミュニケーション（1-5）
+
+  // 会話評価（学習者→日本人）
+  teachingQuality    Int? // 教え方（1-5）
+  friendliness       Int? // 親しみやすさ（1-5）
+  patience           Int? // 忍耐力（1-5）
+
+  comment       String?  @db.Text
+
+  createdAt     DateTime @default(now())
+
+  @@unique([reservationId, giverId])
+  @@index([receiverId])
+  @@map("feedback")
+}
+
+// 支払い（大学生・シニア向け）
+model Payout {
+  id          String   @id @default(cuid())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  amount      Int      // 支払い額（円）
+  sessions    Int      // セッション数
+  status      String   @default("pending") // "pending" | "paid" | "cancelled"
+
+  // 振込情報
+  bankName      String?
+  branchName    String?
+  accountType   String?  // "普通" | "当座"
+  accountNumber String?
+  accountHolder String?
+
+  requestedAt DateTime @default(now())
+  paidAt      DateTime?
+
+  @@index([userId, status])
+  @@map("payouts")
+}
+
+// 通報
+model Report {
+  id             String   @id @default(cuid())
+
+  reporterId     String
+  reporter       User     @relation("Reporter", fields: [reporterId], references: [id])
+
+  reportedUserId String
+  reason         String   // "inappropriate" | "noshow" | "spam" | "other"
+  description    String?  @db.Text
+
+  status         String   @default("pending") // "pending" | "resolved" | "dismissed"
+
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+
   @@index([status])
-  @@index([scheduledAt])
-  @@map("interviews")
+  @@map("reports")
 }
 
-model Evaluation {
-  id                    String   @id @default(uuid())
-  interviewId           String   @unique
-  interviewerId         String
-  scores                Json
-  comments              String   @db.Text
-  advice                String   @db.Text
-  encouragementMessage  String   @db.Text
-  submittedAt           DateTime @default(now())
+// 運営からのメッセージ
+model AdminMessage {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @db.Text
+  messageType String    // "info" | "warning" | "success" | "announcement"
+  targetRole  String?   // "all" | "learner" | "senior" | "student" | null(=all)
+  isActive    Boolean   @default(true)
+  startsAt    DateTime  @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  // Relations
-  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-  interviewer User      @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
-
-  // Indexes
-  @@index([interviewId])
-  @@index([interviewerId])
-  @@index([submittedAt])
-  @@map("evaluations")
+  @@index([isActive, startsAt, expiresAt])
+  @@index([targetRole])
+  @@map("admin_messages")
 }
 
-model FluencyAnalysis {
-  id             String   @id @default(uuid())
-  interviewId    String   @unique
-  speechRate     Float
-  pauseFrequency Float
-  fillerCount    Int
-  totalDuration  Int
-  overallScore   Int
-  analyzedAt     DateTime @default(now())
+// SNS風学習記録投稿
+model StudyPost {
+  id          String   @id @default(cuid())
 
-  // Relations
-  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  // 投稿者
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Indexes
-  @@index([interviewId])
-  @@index([analyzedAt])
-  @@map("fluency_analyses")
-}
+  // 投稿内容
+  imageUrl    String   // 写真URL
+  caption     String?  @db.Text // キャプション（コメント）
 
-model UsageTracking {
-  id          String   @id @default(uuid())
-  candidateId String
-  month       DateTime
-  usageCount  Int      @default(0)
-  limit       Int      @default(2)
+  // AI分析（オプション）
+  analysisResult Json?
 
-  // Relations
-  candidate User @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  // いいねカウント（非正規化）
+  likeCount   Int      @default(0)
 
-  // Unique constraint: one record per candidate per month
-  @@unique([candidateId, month])
-  @@index([candidateId])
-  @@index([month])
-  @@map("usage_tracking")
-}
+  // タイムスタンプ
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-model Notification {
-  id         String           @id @default(uuid())
-  userId     String
-  type       NotificationType
-  title      String
-  message    String           @db.Text
-  link       String?
-  isRead     Boolean          @default(false)
-  createdAt  DateTime         @default(now())
-  readAt     DateTime?
+  // リレーション
+  likes       Like[]
 
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Indexes
-  @@index([userId])
-  @@index([userId, isRead])
+  @@index([userId, createdAt])
   @@index([createdAt])
-  @@map("notifications")
+  @@map("study_posts")
+}
+
+// いいね
+model Like {
+  id          String   @id @default(cuid())
+
+  postId      String
+  post        StudyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId      String   // いいねしたユーザー
+  user        User     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@unique([postId, userId]) // 1人1回まで
+  @@index([postId])
+  @@index([userId])
+  @@map("likes")
 }

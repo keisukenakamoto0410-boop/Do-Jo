@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Noto_Sans_JP } from "next/font/google";
 import SessionProvider from "@/components/SessionProvider";
-import ToastProvider from "@/components/providers/ToastProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,16 +17,17 @@ const notoSansJP = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "Do Jo - Japanese Interview Practice Platform",
+  title: "Do Jo - 日本人と外国人をつなぐビデオ通話プラットフォーム",
   description:
-    "Practice Japanese interviews with experienced interviewers. Improve your language skills and interview performance.",
+    "25分間のビデオ通話で、本物の日本語会話を体験しよう。日本人シニア・大学生と外国人学習者をマッチング。",
   keywords: [
+    "日本語",
+    "会話練習",
+    "ビデオ通話",
+    "マッチング",
+    "国際交流",
     "Japanese",
-    "interview",
-    "practice",
-    "learning",
-    "language",
-    "career",
+    "conversation",
   ],
 };
 
@@ -37,11 +37,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${notoSansJP.variable}`}>
+    <html lang="ja" className={`${inter.variable} ${notoSansJP.variable}`}>
       <body className="antialiased">
         <SessionProvider>
           {children}
-          <ToastProvider />
         </SessionProvider>
       </body>
     </html>

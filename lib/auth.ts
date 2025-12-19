@@ -3,7 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { UserType } from "@prisma/client";
+
+// User role type
+type UserRole = "learner" | "senior" | "student" | "admin";
 
 // Extend NextAuth types
 declare module "next-auth" {
@@ -12,8 +14,8 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      userType: UserType;
-      japaneseLevel?: string;
+      role: UserRole;
+      avatar?: string;
     };
   }
 
@@ -21,16 +23,16 @@ declare module "next-auth" {
     id: string;
     email: string;
     name: string;
-    userType: UserType;
-    japaneseLevel?: string;
+    role: UserRole;
+    avatar?: string;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    userType: UserType;
-    japaneseLevel?: string;
+    role: UserRole;
+    avatar?: string;
   }
 }
 
@@ -48,18 +50,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("メールアドレスとパスワードを入力してください");
         }
 
-        // Find user by email
         const user = await db.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
+          where: { email: credentials.email },
         });
 
-        if (!user) {
+        if (!user || !user.password) {
           throw new Error("ユーザーが見つかりません");
         }
 
-        // Verify password
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
@@ -69,12 +67,18 @@ export const authOptions: NextAuthOptions = {
           throw new Error("パスワードが正しくありません");
         }
 
+        // Update last login
+        await db.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          userType: user.userType,
-          japaneseLevel: user.japaneseLevel || undefined,
+          role: user.role as UserRole,
+          avatar: user.avatar || undefined,
         };
       },
     }),
@@ -89,17 +93,16 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in
       if (user) {
         token.id = user.id;
-        token.userType = user.userType;
-        token.japaneseLevel = user.japaneseLevel;
+        token.role = user.role;
+        token.avatar = user.avatar;
       }
 
-      // Update session
       if (trigger === "update" && session) {
         token.name = session.name;
         token.email = session.email;
+        token.avatar = session.avatar;
       }
 
       return token;
@@ -107,17 +110,33 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
-        session.user.userType = token.userType;
-        session.user.japaneseLevel = token.japaneseLevel;
+        session.user.role = token.role;
+        session.user.avatar = token.avatar;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // ログイン後のリダイレクト処理
+      console.log("Redirect:", { url, baseUrl });
+
+      // 相対URLの場合
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+
+      // 同じオリジンの場合
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+
+      // デフォルトはベースURL
+      return baseUrl;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
 };
 
-// Password utilities
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }

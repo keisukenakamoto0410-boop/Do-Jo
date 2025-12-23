@@ -228,12 +228,12 @@ export default async function HomePage() {
                 University Students
               </h4>
               <p className="text-neutral-600 mb-6">
-                Earn money while helping foreigners with casual Japanese.
+                Help foreigners practice casual Japanese conversation.
               </p>
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-sm text-neutral-600">
                   <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
-                  ¥560 per 25-min session
+                  Share your language
                 </li>
                 <li className="flex items-center gap-3 text-sm text-neutral-600">
                   <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
@@ -248,7 +248,7 @@ export default async function HomePage() {
                 href="/register?type=student"
                 className="mt-6 inline-flex items-center text-purple-600 font-semibold group-hover:text-purple-700"
               >
-                Start earning
+                Become a host
                 <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

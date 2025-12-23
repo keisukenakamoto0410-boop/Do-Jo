@@ -173,34 +173,16 @@ export default function LearnerDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Business Japanese */}
-          <Link
-            href="/learner/browse?type=business"
-            className="group bg-gradient-to-br from-accent to-accent-warm rounded-2xl shadow-lg p-8 text-white hover:shadow-xl transition-all transform hover:scale-[1.02]"
-          >
-            <div className="text-5xl mb-4">🏯</div>
-            <h2 className="text-2xl font-bold mb-2">Business Japanese</h2>
-            <p className="opacity-90 mb-4">
-              Learn keigo & business manners with experienced professionals
-            </p>
-            <span className="inline-flex items-center px-4 py-2 bg-white/20 rounded-lg text-sm font-medium group-hover:bg-white/30 transition-colors">
-              Find Available Slots
-              <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </span>
-          </Link>
-
+        <div className="mb-8">
           {/* Casual Conversation */}
           <Link
-            href="/learner/browse?type=casual"
-            className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-8 text-white hover:shadow-xl transition-all transform hover:scale-[1.02]"
+            href="/learner/browse"
+            className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-8 text-white hover:shadow-xl transition-all transform hover:scale-[1.02] block"
           >
             <div className="text-5xl mb-4">🎓</div>
             <h2 className="text-2xl font-bold mb-2">Casual Conversation</h2>
             <p className="opacity-90 mb-4">
-              Enjoy casual Japanese chat with university students
+              Practice natural Japanese conversation with friendly native speakers
             </p>
             <span className="inline-flex items-center px-4 py-2 bg-white/20 rounded-lg text-sm font-medium group-hover:bg-white/30 transition-colors">
               Find Available Slots

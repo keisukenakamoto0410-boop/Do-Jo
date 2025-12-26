@@ -37,7 +37,8 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as any,
+  // Note: PrismaAdapter is removed because it's not compatible with CredentialsProvider
+  // CredentialsProvider requires JWT strategy which doesn't use the adapter for sessions
   providers: [
     CredentialsProvider({
       name: "credentials",

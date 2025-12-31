@@ -147,7 +147,7 @@ export default function UploadPage() {
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert(error instanceof Error ? error.message : "アップロードに失敗しました");
+      alert(error instanceof Error ? error.message : "Upload failed");
     } finally {
       setUploadingSlot(null);
       setAnalyzingSlot(null);
@@ -156,8 +156,8 @@ export default function UploadPage() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("ja-JP", {
-      month: "long",
+    return date.toLocaleDateString("en-US", {
+      month: "short",
       day: "numeric",
       weekday: "short",
       hour: "2-digit",
@@ -170,7 +170,7 @@ export default function UploadPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-green-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">読み込み中...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -208,9 +208,9 @@ export default function UploadPage() {
               href={`/learner/reservations`}
               className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
             >
-              ← 戻る
+              ← Back
             </Link>
-            <h1 className="text-lg font-bold text-gray-900">学習記録の提出</h1>
+            <h1 className="text-lg font-bold text-gray-900">Submit Study Logs</h1>
             <div className="w-16"></div>
           </div>
         </div>
@@ -222,36 +222,30 @@ export default function UploadPage() {
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">セッション予定</p>
+              <p className="text-sm text-gray-500">Scheduled Session</p>
               <p className="font-bold text-lg text-gray-900">
                 {formatDate(reservation.slot.startTime)}
               </p>
               <p className="text-gray-600">with {reservation.host.name}</p>
             </div>
-            <span
-              className={`px-4 py-2 rounded-full text-sm font-bold ${
-                reservation.sessionType === "business"
-                  ? "bg-amber-100 text-amber-800"
-                  : "bg-purple-100 text-purple-800"
-              }`}
-            >
-              {reservation.sessionType === "business" ? "🏯 ビジネス" : "🎓 カジュアル"}
+            <span className="px-4 py-2 rounded-full text-sm font-bold bg-purple-100 text-purple-800">
+              🎓 Casual
             </span>
           </div>
         </div>
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">📚 学習記録を提出しよう</h2>
+          <h2 className="text-3xl font-bold mb-2">📚 Submit Your Study Logs</h2>
           <p className="text-gray-600">
-            ノート、教科書、勉強アプリの画面など、4枚の写真を提出してください
+            Upload 4 photos of your notes, textbooks, study apps, etc.
           </p>
         </div>
 
         {/* Progress Card */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-900">進捗状況</h3>
+            <h3 className="text-xl font-bold text-gray-900">Progress</h3>
             <span className="text-2xl font-bold text-blue-600">
               {studyLogs.length}/4
             </span>
@@ -318,7 +312,7 @@ export default function UploadPage() {
         {studyLogs.length > 0 && (
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
             <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <span>📊</span> AI分析結果
+              <span>📊</span> AI Analysis Results
             </h3>
 
             <div className="space-y-4">
@@ -333,14 +327,14 @@ export default function UploadPage() {
         {isReady && studyLogs[0]?.analysisResult && (
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-xl p-8 text-white mb-8">
             <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <span>🎯</span> 今回のミッション
+              <span>🎯</span> Today's Mission
             </h3>
             <div className="bg-white/20 backdrop-blur rounded-xl p-6">
               <p className="text-lg mb-4">
                 {studyLogs[0].analysisResult.ai_generated_output.learning_focus}
               </p>
               <div className="space-y-3">
-                <p className="font-bold text-white/80">会話で使えるトピック:</p>
+                <p className="font-bold text-white/80">Topics for Conversation:</p>
                 {studyLogs
                   .flatMap((log) => log.analysisResult?.ai_generated_output?.suggested_questions || [])
                   .slice(0, 4)
@@ -365,7 +359,7 @@ export default function UploadPage() {
               href={`/learner/reservations`}
               className="inline-block px-12 py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xl font-bold rounded-full shadow-lg transform hover:scale-105 transition-all"
             >
-              完了 ✓
+              Done ✓
             </Link>
           </div>
         )}
@@ -408,17 +402,17 @@ function UploadSlot({
             className="w-full h-48 object-cover"
           />
           <div className="absolute top-2 left-2 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-            <span>✓</span> 完了
+            <span>✓</span> Done
           </div>
           {log.hostLiked && (
             <div className="absolute top-2 right-2 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-              👍 いいね!
+              👍 Liked!
             </div>
           )}
         </div>
         <div className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="font-bold text-gray-900">写真 {slot}</span>
+            <span className="font-bold text-gray-900">Photo {slot}</span>
           </div>
           {log.analysisResult?.ai_generated_output?.praise_comment && (
             <p className="text-sm text-green-700 bg-green-50 rounded-lg p-3 border border-green-200">
@@ -447,7 +441,7 @@ function UploadSlot({
       {isUploading ? (
         <>
           <div className="animate-bounce text-6xl mb-4">⬆️</div>
-          <p className="font-bold text-blue-600 mb-2">アップロード中...</p>
+          <p className="font-bold text-blue-600 mb-2">Uploading...</p>
           <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div className="h-full bg-blue-500 animate-pulse rounded-full" style={{ width: "60%" }} />
           </div>
@@ -455,17 +449,17 @@ function UploadSlot({
       ) : isAnalyzing ? (
         <>
           <div className="animate-spin text-6xl mb-4">🔍</div>
-          <p className="font-bold text-purple-600 mb-2">AI分析中...</p>
-          <p className="text-sm text-gray-500">あなたの学習内容を確認しています</p>
+          <p className="font-bold text-purple-600 mb-2">AI Analyzing...</p>
+          <p className="text-sm text-gray-500">Reviewing your study materials</p>
         </>
       ) : (
         <>
           <div className={`text-6xl mb-4 ${isDragActive ? "animate-bounce" : ""}`}>
             {isDragActive ? "📥" : "📷"}
           </div>
-          <p className="font-bold text-gray-900 mb-2">写真 {slot}</p>
+          <p className="font-bold text-gray-900 mb-2">Photo {slot}</p>
           <p className="text-sm text-gray-600">
-            {isDragActive ? "ここにドロップ！" : "クリックまたはドロップ"}
+            {isDragActive ? "Drop here!" : "Click or drop to upload"}
           </p>
         </>
       )}
@@ -502,7 +496,7 @@ function AnalysisCard({ log }: { log: StudyLog }) {
 
           {analysis.extracted_data.grammar_points.length > 0 && (
             <div className="mb-2">
-              <span className="text-sm font-bold text-gray-700">文法: </span>
+              <span className="text-sm font-bold text-gray-700">Grammar: </span>
               <span className="text-sm text-gray-600">
                 {analysis.extracted_data.grammar_points.join(", ")}
               </span>
@@ -511,7 +505,7 @@ function AnalysisCard({ log }: { log: StudyLog }) {
 
           {analysis.extracted_data.vocabulary.length > 0 && (
             <div>
-              <span className="text-sm font-bold text-gray-700">語彙: </span>
+              <span className="text-sm font-bold text-gray-700">Vocabulary: </span>
               <span className="text-sm text-gray-600">
                 {analysis.extracted_data.vocabulary.slice(0, 5).join(", ")}
                 {analysis.extracted_data.vocabulary.length > 5 && "..."}

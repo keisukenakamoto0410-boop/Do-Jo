@@ -94,11 +94,11 @@ function BrowseContent() {
         router.push("/learner/reservations");
       } else {
         const data = await res.json();
-        alert(data.error || "予約に失敗しました");
+        alert(data.error || "Failed to book slot");
       }
     } catch (error) {
       console.error("Failed to book slot:", error);
-      alert("予約に失敗しました");
+      alert("Failed to book slot");
     } finally {
       setBookingSlotId(null);
     }
@@ -106,8 +106,8 @@ function BrowseContent() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("ja-JP", {
-      month: "long",
+    return date.toLocaleDateString("en-US", {
+      month: "short",
       day: "numeric",
       weekday: "short",
     });
@@ -115,7 +115,7 @@ function BrowseContent() {
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleTimeString("ja-JP", {
+    return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -161,13 +161,13 @@ function BrowseContent() {
                 href="/learner/browse"
                 className="text-green-600 font-medium"
               >
-                ホストを探す
+                Find Hosts
               </Link>
               <Link
                 href="/learner/reservations"
                 className="text-gray-600 hover:text-green-600"
               >
-                予約一覧
+                My Sessions
               </Link>
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🌍</span>
@@ -181,7 +181,7 @@ function BrowseContent() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          ホストを探す
+          Find Hosts
         </h1>
 
         {/* Filters */}
@@ -197,17 +197,7 @@ function BrowseContent() {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                すべて
-              </button>
-              <button
-                onClick={() => setSelectedType("business")}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  selectedType === "business"
-                    ? "bg-amber-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                🏯 ビジネス
+                All
               </button>
               <button
                 onClick={() => setSelectedType("casual")}
@@ -217,7 +207,7 @@ function BrowseContent() {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                🎓 カジュアル
+                🎓 Casual
               </button>
             </div>
 
@@ -234,7 +224,7 @@ function BrowseContent() {
                 onClick={() => setSelectedDate("")}
                 className="text-gray-500 hover:text-gray-700"
               >
-                日付をクリア
+                Clear Date
               </button>
             )}
           </div>
@@ -249,10 +239,10 @@ function BrowseContent() {
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <p className="text-5xl mb-4">📭</p>
             <p className="text-xl text-gray-600">
-              利用可能な予約枠が見つかりませんでした
+              No available slots found
             </p>
             <p className="text-gray-500 mt-2">
-              フィルターを変更するか、後でもう一度お試しください
+              Try changing filters or check back later
             </p>
           </div>
         ) : (
@@ -290,15 +280,15 @@ function BrowseContent() {
                             </h3>
                             <p className="text-sm text-gray-500">
                               {slot.host.role === "senior"
-                                ? "シニア"
-                                : "大学生"}
+                                ? "Senior Professional"
+                                : "University Student"}
                               {slot.host.university &&
-                                ` ・ ${slot.host.university}`}
+                                ` • ${slot.host.university}`}
                             </p>
                             {slot.host.averageRating > 0 && (
                               <p className="text-sm text-yellow-600">
                                 ⭐ {slot.host.averageRating.toFixed(1)} (
-                                {slot.host.totalSessions}回)
+                                {slot.host.totalSessions} sessions)
                               </p>
                             )}
                           </div>
@@ -329,18 +319,14 @@ function BrowseContent() {
                             <p className="font-bold text-lg text-gray-900">
                               {formatTime(slot.startTime)}
                             </p>
-                            <p className="text-xs text-gray-500">25分間</p>
+                            <p className="text-xs text-gray-500">25 min</p>
                           </div>
                           <button
                             onClick={() => handleBookSlot(slot.id)}
                             disabled={bookingSlotId === slot.id}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                              slot.sessionType === "business"
-                                ? "bg-amber-600 text-white hover:bg-amber-700"
-                                : "bg-purple-600 text-white hover:bg-purple-700"
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            className="px-4 py-2 rounded-lg font-medium transition-colors bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {bookingSlotId === slot.id ? "予約中..." : "予約する"}
+                            {bookingSlotId === slot.id ? "Booking..." : "Book Now"}
                           </button>
                         </div>
                       </div>

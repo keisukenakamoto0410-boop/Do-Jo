@@ -212,7 +212,7 @@ function RegisterContent() {
               >
                 <div className="text-6xl mb-4">🎓</div>
                 <h3 className="text-2xl font-bold text-neutral-900 mb-2 group-hover:text-purple-600">
-                  Earn while helping (Student)
+                  Help learners (Student)
                 </h3>
                 <p className="text-neutral-600 mb-4">
                   University students welcome
@@ -220,7 +220,7 @@ function RegisterContent() {
                 <ul className="text-sm space-y-2 text-neutral-500">
                   <li className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
-                    ¥560 per 25-min session
+                    Flexible schedule
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
@@ -231,9 +231,6 @@ function RegisterContent() {
                     International experience
                   </li>
                 </ul>
-                <div className="mt-4 px-3 py-1.5 bg-green-50 text-success rounded-lg text-sm font-semibold inline-block">
-                  💰 Earn ¥50,000+/month
-                </div>
               </button>
             </div>
 

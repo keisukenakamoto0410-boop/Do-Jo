@@ -35,6 +35,9 @@ model User {
   // 日本人シニア用フィールド
   careerHistory   String?   @db.Text  // これまでの経歴
   expertise       String[]  // 得意分野 ["営業", "人事", "製造"]
+  birthDate       DateTime? // 生年月日
+  emergencyContactEmail String? // 緊急連絡先メールアドレス
+  emergencyContactName  String? // 緊急連絡先名前
 
   // 日本人大学生用フィールド
   university      String?   // 大学名

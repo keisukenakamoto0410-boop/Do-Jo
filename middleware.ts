@@ -10,6 +10,7 @@ export const config = {
   matcher: [
     "/learner/:path*",
     "/host/:path*",
+    "/senior/:path*",
     "/admin/:path*",
     "/session/:path*",
   ],

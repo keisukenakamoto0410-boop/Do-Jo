@@ -28,6 +28,9 @@ function RegisterContent() {
     // Senior fields
     careerHistory: "",
     expertise: [] as string[],
+    birthDate: "",
+    emergencyContactEmail: "",
+    emergencyContactName: "",
     // Student fields
     university: "",
     major: "",
@@ -113,6 +116,8 @@ function RegisterContent() {
 
       if (role === "learner") {
         router.push("/learner/dashboard");
+      } else if (role === "senior") {
+        router.push("/senior/dashboard");
       } else {
         router.push("/host/dashboard");
       }
@@ -468,6 +473,20 @@ function RegisterContent() {
 
                   <div>
                     <label className="label">
+                      生年月日 <span className="text-error">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="birthDate"
+                      value={formData.birthDate}
+                      onChange={handleChange}
+                      required
+                      className="input-field text-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">
                       これまでのキャリア
                     </label>
                     <textarea
@@ -504,6 +523,41 @@ function RegisterContent() {
                         </label>
                       ))}
                     </div>
+                  </div>
+
+                  <h3 className="font-semibold text-neutral-700 border-b border-neutral-100 pb-2 mt-6">
+                    緊急連絡先
+                  </h3>
+                  <p className="text-sm text-neutral-500 -mt-2">
+                    ご家族などの連絡先をご登録ください（任意）
+                  </p>
+
+                  <div>
+                    <label className="label">
+                      緊急連絡先のお名前
+                    </label>
+                    <input
+                      type="text"
+                      name="emergencyContactName"
+                      value={formData.emergencyContactName}
+                      onChange={handleChange}
+                      className="input-field"
+                      placeholder="例: 山田 花子（娘）"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      緊急連絡先のメールアドレス
+                    </label>
+                    <input
+                      type="email"
+                      name="emergencyContactEmail"
+                      value={formData.emergencyContactEmail}
+                      onChange={handleChange}
+                      className="input-field"
+                      placeholder="例: hanako@example.com"
+                    />
                   </div>
                 </div>
               )}

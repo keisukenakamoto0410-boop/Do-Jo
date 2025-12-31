@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
-// Agora型定義（動的インポート用）
+// Agora type definitions (for dynamic import)
 type IAgoraRTCClient = any;
 type ICameraVideoTrack = any;
 type IMicrophoneAudioTrack = any;
@@ -55,7 +55,7 @@ export default function SessionPage() {
     };
   }, [client]);
 
-  // タイマー
+  // Timer
   useEffect(() => {
     if (!joined) return;
 
@@ -87,7 +87,7 @@ export default function SessionPage() {
       const data = await response.json();
       console.log("Reservation data received:", data);
 
-      // 【テスト用】時間チェックを無効化
+      // [For testing] Skip time check
       console.log("WARNING: Skipping time check for testing");
 
       setReservation(data);
@@ -104,7 +104,7 @@ export default function SessionPage() {
       console.log("STEP 1: Starting Agora initialization");
       console.log("=".repeat(50));
 
-      // カメラ・マイクの権限を先に確認
+      // Check camera/microphone permissions first
       console.log("Checking camera/microphone permissions...");
 
       try {
@@ -117,7 +117,7 @@ export default function SessionPage() {
         console.log("Video tracks:", permissions.getVideoTracks().length);
         console.log("Audio tracks:", permissions.getAudioTracks().length);
 
-        // 一旦停止（Agoraが再度取得するため）
+        // Stop tracks temporarily (Agora will acquire them again)
         permissions.getTracks().forEach((track) => track.stop());
       } catch (permError) {
         console.error("Permission denied:", permError);
@@ -126,17 +126,17 @@ export default function SessionPage() {
         );
       }
 
-      // Agora SDK動的インポート
+      // Dynamic import Agora SDK
       console.log("Importing Agora SDK...");
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
       console.log("Agora SDK loaded");
 
-      // クライアント作成
+      // Create client
       console.log("Creating Agora client...");
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
       console.log("Agora client created");
 
-      // トークン取得
+      // Get token
       console.log("Fetching Agora token...");
       const response = await fetch(
         `/api/reservations/${reservationId}/agora-token`
@@ -154,7 +154,7 @@ export default function SessionPage() {
       console.log("  - Channel:", channelName);
       console.log("  - UID:", uid);
 
-      // リモートユーザーイベントを設定（参加前に設定）
+      // Set up remote user events (before joining)
       agoraClient.on("user-published", async (user: any, mediaType: "audio" | "video") => {
         console.log("Remote user published:", user.uid, mediaType);
 
@@ -200,12 +200,12 @@ export default function SessionPage() {
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
-      // チャンネルに参加
+      // Join channel
       console.log("Joining channel...");
       await agoraClient.join(appId, channelName, token, uid);
       console.log("Joined channel successfully!");
 
-      // ローカルトラック作成
+      // Create local tracks
       console.log("Creating local tracks...");
       const [audioTrack, videoTrack] =
         await AgoraRTC.createMicrophoneAndCameraTracks(
@@ -229,7 +229,7 @@ export default function SessionPage() {
 
       setLocalTracks({ audioTrack, videoTrack });
 
-      // ローカルビデオを表示
+      // Display local video
       console.log("Playing local video...");
       const localVideoDiv = document.getElementById("local-video");
 
@@ -242,12 +242,12 @@ export default function SessionPage() {
       videoTrack.play("local-video");
       console.log("Local video is now playing");
 
-      // トラックを公開
+      // Publish tracks
       console.log("Publishing tracks to channel...");
       await agoraClient.publish([audioTrack, videoTrack]);
       console.log("Tracks published!");
 
-      // クライアントをstateに保存
+      // Save client to state
       setClient(agoraClient);
       setJoined(true);
       setLoading(false);

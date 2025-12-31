@@ -31,13 +31,13 @@ export default function LoginPage() {
 
       console.log("Login successful");
 
-      // セッション情報を取得
+      // Get session info
       const sessionRes = await fetch("/api/auth/session");
       const session = await sessionRes.json();
 
       console.log("Session:", session);
 
-      // ロールに応じてリダイレクト
+      // Redirect based on role
       if (session?.user?.role === "learner") {
         router.push("/learner/dashboard");
       } else if (session?.user?.role === "senior" || session?.user?.role === "student") {

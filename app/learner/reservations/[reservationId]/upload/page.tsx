@@ -51,7 +51,7 @@ export default function UploadPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const reservationId = params.id as string;
+  const reservationId = params.reservationId as string;
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [studyLogs, setStudyLogs] = useState<StudyLog[]>([]);

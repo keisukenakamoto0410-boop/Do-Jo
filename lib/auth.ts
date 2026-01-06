@@ -116,12 +116,22 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // ログイン後のリダイレクト処理
-      console.log("Redirect:", { url, baseUrl });
+      // 開発環境で複数オリジン（localhost, IPアドレス）からアクセスを許可
+      const allowedHosts = ["localhost", "127.0.0.1", "192.168.0.10"];
 
       // 相対URLの場合
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
+      }
+
+      try {
+        const urlObj = new URL(url);
+        // 許可されたホストからのリクエストはそのまま通す
+        if (allowedHosts.includes(urlObj.hostname)) {
+          return url;
+        }
+      } catch {
+        // URL解析エラーの場合はbaseUrlを使用
       }
 
       // 同じオリジンの場合

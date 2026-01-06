@@ -31,6 +31,8 @@ model User {
   learningGoal    String?   // "business" | "casual" | "both"
   country         String?   // 出身国
   wantsToWorkInJapan Boolean @default(false)
+  textbook        String?   // 使用教科書 "minna_no_nihongo" | "genki" | etc.
+  currentLesson   Int?      // 現在の課
 
   // 日本人シニア用フィールド
   careerHistory   String?   @db.Text  // これまでの経歴
@@ -38,6 +40,11 @@ model User {
   birthDate       DateTime? // 生年月日
   emergencyContactEmail String? // 緊急連絡先メールアドレス
   emergencyContactName  String? // 緊急連絡先名前
+  prefecture      String?   // 都道府県
+  hobbies         String[]  // 趣味
+  expertiseTopics String[]  // 得意な話題
+  speakingStyle   String?   // 話し方の特徴
+  isDummy         Boolean   @default(false) // ダミーフラグ
 
   // 日本人大学生用フィールド
   university      String?   // 大学名
@@ -74,6 +81,7 @@ model User {
   studyLogs               StudyLog[]
   studyPosts              StudyPost[]
   likes                   Like[]
+  conversationHistories   ConversationHistory[]
 
   @@index([email])
   @@index([role])
@@ -134,6 +142,15 @@ model Reservation {
   // 学習準備状態
   readyToTalk   Boolean  @default(false) // 4枚提出完了
   studyLogCount Int      @default(0)     // 提出済み枚数
+
+  // 会話準備（学習者が入力）
+  selectedTopic           String?    // 選択したトピック
+  grammarToStudy          String[]   // 練習したい文法
+  conversationGoal        String?    // 会話の目標
+  additionalNotes         String?    @db.Text // 補足メモ
+  sharedMaterial          String?    // 共有資料（PDF URL等）
+  generatedAgenda         Json?      // 生成されたアジェンダ
+  progressSinceLastSession String?   // "new_lesson" | "same_lesson_new_grammar" | "same" | "review"
 
   // タイムスタンプ
   startedAt   DateTime?
@@ -329,4 +346,63 @@ model Like {
   @@index([postId])
   @@index([userId])
   @@map("likes")
+}
+
+// 会話履歴（重複防止用）
+model ConversationHistory {
+  id            String   @id @default(cuid())
+
+  learnerId     String
+  learner       User     @relation(fields: [learnerId], references: [id])
+
+  seniorId      String
+  reservationId String
+
+  date          DateTime
+  topic         String   // 話したトピック
+  grammarPoints String[] // 使った文法
+  vocabulary    String[] // 使った語彙
+
+  // アジェンダ（JSON）
+  agenda        Json?
+
+  // フィードバック
+  seniorComment String?
+  learnerRating Int?
+
+  createdAt     DateTime @default(now())
+
+  @@index([learnerId])
+  @@index([seniorId])
+  @@map("conversation_histories")
+}
+
+// トピックマスター
+model Topic {
+  id          String   @id @default(cuid())
+  name        String   // 表示名（英語）
+  nameJa      String   // 表示名（日本語）
+  category    String   // カテゴリ
+  level       String   // 推奨レベル（N5, N4, N3...）
+  keywords    String[] // 関連キーワード
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+
+  @@map("topics")
+}
+
+// 文法マスター
+model GrammarPoint {
+  id            String   @id @default(cuid())
+  pattern       String   // 〜てもいいですか
+  meaning       String   // May I...?
+  level         String   // N5, N4, N3...
+  textbookRefs  String[] // ["minna_12", "genki_8"]
+  exampleSentences Json  // 例文
+  relatedTopics String[] // 関連トピック
+
+  createdAt     DateTime @default(now())
+
+  @@map("grammar_points")
 }

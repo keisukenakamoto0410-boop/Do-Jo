@@ -39,6 +39,36 @@ interface Slot {
   status: string;
 }
 
+interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  isOwn: boolean;
+}
+
+interface StudyPost {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    country: string | null;
+    jlptLevel: string | null;
+  };
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
+  comments: Comment[];
+}
+
 interface DaySchedule {
   enabled: boolean;
   startTime: string;
@@ -66,6 +96,11 @@ export default function SeniorDashboard() {
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
 
+  // Study posts feed
+  const [posts, setPosts] = useState<StudyPost[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [activeTab, setActiveTab] = useState<"schedule" | "feed">("feed");
+
   // Slot management state
   const [mySlots, setMySlots] = useState<Slot[]>([]);
   const [slotMessage, setSlotMessage] = useState<{type: "success" | "error", text: string} | null>(null);
@@ -89,10 +124,15 @@ export default function SeniorDashboard() {
   const [selectedTime, setSelectedTime] = useState("");
   const [creatingSlot, setCreatingSlot] = useState(false);
 
+  // Comment input
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [submittingComment, setSubmittingComment] = useState<string | null>(null);
+
   useEffect(() => {
     if (session?.user) {
       fetchNextReservation();
       fetchMySlots();
+      fetchPosts();
     }
   }, [session]);
 
@@ -117,7 +157,6 @@ export default function SeniorDashboard() {
       const response = await fetch("/api/host/slots");
       if (response.ok) {
         const data = await response.json();
-        // Filter to only future slots
         const now = new Date();
         const futureSlots = (data.slots || []).filter(
           (slot: Slot) => new Date(slot.startTime) > now
@@ -126,6 +165,105 @@ export default function SeniorDashboard() {
       }
     } catch (error) {
       console.error("Failed to fetch slots:", error);
+    }
+  };
+
+  const fetchPosts = async () => {
+    setLoadingPosts(true);
+    try {
+      const response = await fetch("/api/study-posts/feed");
+      if (response.ok) {
+        const data = await response.json();
+        setPosts(data.posts || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
+    } finally {
+      setLoadingPosts(false);
+    }
+  };
+
+  // Handle like
+  const handleLikePost = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/study-posts/${postId}/like`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        setPosts(prev => prev.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              isLiked: !post.isLiked,
+              likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+            };
+          }
+          return post;
+        }));
+      }
+    } catch (error) {
+      console.error("Like error:", error);
+    }
+  };
+
+  // Handle comment submit
+  const handleCommentSubmit = async (postId: string) => {
+    const content = commentInputs[postId]?.trim();
+    if (!content) return;
+
+    setSubmittingComment(postId);
+    try {
+      const response = await fetch(`/api/study-posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPosts(prev => prev.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: [data.comment, ...post.comments],
+              commentCount: post.commentCount + 1,
+            };
+          }
+          return post;
+        }));
+        setCommentInputs(prev => ({ ...prev, [postId]: "" }));
+      }
+    } catch (error) {
+      console.error("Comment error:", error);
+    } finally {
+      setSubmittingComment(null);
+    }
+  };
+
+  // Handle comment delete
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!confirm("このコメントを削除しますか？")) return;
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setPosts(prev => prev.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: post.comments.filter(c => c.id !== commentId),
+              commentCount: post.commentCount - 1,
+            };
+          }
+          return post;
+        }));
+      }
+    } catch (error) {
+      console.error("Delete comment error:", error);
     }
   };
 
@@ -247,7 +385,7 @@ export default function SeniorDashboard() {
     }
   };
 
-  // Generate time options (9:00 - 21:00, 30 min intervals)
+  // Generate time options
   const timeOptions = [];
   for (let hour = 9; hour <= 21; hour++) {
     timeOptions.push(`${hour.toString().padStart(2, "0")}:00`);
@@ -256,10 +394,7 @@ export default function SeniorDashboard() {
     }
   }
 
-  // Get min date (today)
   const today = new Date().toISOString().split("T")[0];
-
-  // Get max date (4 weeks from now)
   const maxDate = new Date();
   maxDate.setDate(maxDate.getDate() + 28);
   const maxDateStr = maxDate.toISOString().split("T")[0];
@@ -307,6 +442,21 @@ export default function SeniorDashboard() {
     return `${hours}:${minutes}`;
   };
 
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (minutes < 1) return "たった今";
+    if (minutes < 60) return `${minutes}分前`;
+    if (hours < 24) return `${hours}時間前`;
+    if (days < 7) return `${days}日前`;
+    return formatDate(dateStr);
+  };
+
   const isSessionTime = (startTime: string) => {
     const now = new Date();
     const start = new Date(startTime);
@@ -340,7 +490,7 @@ export default function SeniorDashboard() {
       </div>
 
       {/* Next Session Card */}
-      {nextReservation ? (
+      {nextReservation && (
         <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
           <div className="bg-sky-600 text-white px-8 py-6">
             <h2 className="text-2xl font-bold mb-1">次の会話予定</h2>
@@ -383,37 +533,6 @@ export default function SeniorDashboard() {
               </div>
             </div>
 
-            {nextReservation.studyLogs.length > 0 && (
-              <div className="mb-8">
-                <h4 className="text-xl font-bold text-gray-900 mb-4">
-                  最近の学習記録
-                </h4>
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <img
-                    src={nextReservation.studyLogs[0].imageUrl}
-                    alt="学習記録"
-                    className="w-full max-h-80 object-contain rounded-lg mb-4"
-                  />
-
-                  {!nextReservation.studyLogs[0].hostLiked ? (
-                    <button
-                      onClick={() => handleLike(nextReservation.studyLogs[0].id)}
-                      disabled={liking}
-                      className="w-full py-5 bg-pink-500 hover:bg-pink-600 text-white text-2xl font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
-                    >
-                      <span className="text-3xl">👍</span>
-                      いいね！を送る
-                    </button>
-                  ) : (
-                    <div className="w-full py-5 bg-pink-100 text-pink-700 text-2xl font-bold rounded-xl flex items-center justify-center gap-3">
-                      <span className="text-3xl">✓</span>
-                      いいね！済み
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {canJoinSession ? (
               <Link
                 href={`/senior/session/${nextReservation.id}`}
@@ -428,230 +547,392 @@ export default function SeniorDashboard() {
             )}
           </div>
         </div>
-      ) : (
-        <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-12 text-center mb-8">
-          <div className="text-6xl mb-4">📅</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            予定されている会話はありません
-          </h2>
-          <p className="text-xl text-gray-600">
-            新しい予約が入りましたらお知らせします
-          </p>
-        </div>
       )}
 
-      {/* Message */}
-      {slotMessage && (
-        <div className={`mb-6 p-4 rounded-xl text-lg font-medium ${
-          slotMessage.type === "success"
-            ? "bg-green-100 text-green-700 border-2 border-green-200"
-            : "bg-red-100 text-red-700 border-2 border-red-200"
-        }`}>
-          {slotMessage.text}
-        </div>
-      )}
-
-      {/* Available Now Button */}
-      <div className="mb-8">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 mb-6">
         <button
-          onClick={handleAvailableNow}
-          disabled={creatingNow}
-          className="w-full py-8 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-2xl transition-colors shadow-lg border-4 border-green-600"
+          onClick={() => setActiveTab("feed")}
+          className={`flex-1 py-4 text-xl font-bold rounded-xl transition-colors ${
+            activeTab === "feed"
+              ? "bg-orange-500 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
         >
-          <div className="text-4xl font-bold mb-2">
-            {creatingNow ? "登録中..." : "🟢 今から話せます！"}
-          </div>
-          <div className="text-xl opacity-90">
-            （10分後から30分間、予約を受け付けます）
-          </div>
+          📚 学習者の投稿
+        </button>
+        <button
+          onClick={() => setActiveTab("schedule")}
+          className={`flex-1 py-4 text-xl font-bold rounded-xl transition-colors ${
+            activeTab === "schedule"
+              ? "bg-sky-500 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          📅 スケジュール管理
         </button>
       </div>
 
-      {/* Weekly Schedule Section */}
-      <div className="bg-white border-2 border-sky-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-        <div className="bg-sky-600 text-white px-8 py-6">
-          <h2 className="text-2xl font-bold mb-1">毎週の予定を登録</h2>
-          <p className="text-sky-100 text-lg">
-            曜日ごとに対応可能な時間を設定（4週間分まとめて登録）
-          </p>
-        </div>
-
-        <div className="p-6">
-          <div className="space-y-4">
-            {DAYS.map((day) => (
-              <div key={day.key} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={weeklySchedule[day.key].enabled}
-                    onChange={(e) => updateDaySchedule(day.key, "enabled", e.target.checked)}
-                    className="w-6 h-6 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
-                  />
-                  <span className="text-xl font-bold text-gray-900 w-20">{day.label}</span>
-                </label>
-
-                {weeklySchedule[day.key].enabled && (
-                  <div className="flex items-center gap-2 ml-auto">
-                    <select
-                      value={weeklySchedule[day.key].startTime}
-                      onChange={(e) => updateDaySchedule(day.key, "startTime", e.target.value)}
-                      className="px-4 py-2 text-lg border-2 border-gray-300 rounded-lg focus:border-sky-500 focus:outline-none"
-                    >
-                      {timeOptions.map((time) => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                    <span className="text-xl text-gray-600">〜</span>
-                    <select
-                      value={weeklySchedule[day.key].endTime}
-                      onChange={(e) => updateDaySchedule(day.key, "endTime", e.target.value)}
-                      className="px-4 py-2 text-lg border-2 border-gray-300 rounded-lg focus:border-sky-500 focus:outline-none"
-                    >
-                      {timeOptions.map((time) => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={handleWeeklySchedule}
-            disabled={savingSchedule || !DAYS.some(d => weeklySchedule[d.key].enabled)}
-            className="w-full mt-6 py-5 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white text-2xl font-bold rounded-xl transition-colors"
-          >
-            {savingSchedule ? "登録中..." : "この予定で登録する"}
-          </button>
-        </div>
-      </div>
-
-      {/* Single Slot (Collapsible) */}
-      <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-        <button
-          onClick={() => setShowSingleSlot(!showSingleSlot)}
-          className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-        >
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">単発で時間を登録</h2>
-            <p className="text-gray-600">特定の日時を1つずつ登録する場合</p>
-          </div>
-          <span className="text-2xl text-gray-400">
-            {showSingleSlot ? "▲" : "▼"}
-          </span>
-        </button>
-
-        {showSingleSlot && (
-          <div className="p-8 border-t-2 border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-xl font-bold text-gray-900 mb-3">
-                  日付を選ぶ
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  min={today}
-                  max={maxDateStr}
-                  className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xl font-bold text-gray-900 mb-3">
-                  時間を選ぶ
-                </label>
-                <select
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-sky-500 focus:outline-none"
-                >
-                  <option value="">時間を選んでください</option>
-                  {timeOptions.map((time) => (
-                    <option key={time} value={time}>{time}</option>
-                  ))}
-                </select>
-              </div>
+      {/* Feed Tab */}
+      {activeTab === "feed" && (
+        <div className="space-y-6">
+          {loadingPosts ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-600">投稿を読み込み中...</p>
             </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-12 text-center">
+              <div className="text-6xl mb-4">📭</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                まだ投稿がありません
+              </h2>
+              <p className="text-xl text-gray-600">
+                学習者が投稿するとここに表示されます
+              </p>
+            </div>
+          ) : (
+            posts.map((post) => (
+              <div key={post.id} className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+                {/* Post Header */}
+                <div className="flex items-center gap-4 p-6 border-b border-gray-100">
+                  <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-2xl">
+                    {post.user.avatar ? (
+                      <img
+                        src={post.user.avatar}
+                        alt={post.user.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      "🌏"
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{post.user.name}</h3>
+                    <div className="flex items-center gap-2 text-gray-500">
+                      {post.user.country && <span>{post.user.country}</span>}
+                      {post.user.jlptLevel && (
+                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-sm">
+                          {post.user.jlptLevel}
+                        </span>
+                      )}
+                      <span>・{formatRelativeTime(post.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
 
+                {/* Post Image */}
+                <img
+                  src={post.imageUrl}
+                  alt="学習記録"
+                  className="w-full max-h-[500px] object-contain bg-gray-50"
+                />
+
+                {/* Post Actions */}
+                <div className="p-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <button
+                      onClick={() => handleLikePost(post.id)}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-bold transition-colors ${
+                        post.isLiked
+                          ? "bg-pink-100 text-pink-600"
+                          : "bg-gray-100 text-gray-600 hover:bg-pink-50"
+                      }`}
+                    >
+                      {post.isLiked ? "❤️" : "🤍"} {post.likeCount}
+                    </button>
+                    <span className="text-gray-500 text-lg">
+                      💬 {post.commentCount} コメント
+                    </span>
+                  </div>
+
+                  {post.caption && (
+                    <p className="text-gray-700 text-lg mb-4">{post.caption}</p>
+                  )}
+
+                  {/* Comments */}
+                  {post.comments.length > 0 && (
+                    <div className="space-y-3 mb-4">
+                      {post.comments.map((comment) => (
+                        <div key={comment.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg flex-shrink-0">
+                            {comment.user.avatar ? (
+                              <img
+                                src={comment.user.avatar}
+                                alt={comment.user.name}
+                                className="w-full h-full rounded-full object-cover"
+                              />
+                            ) : (
+                              "👤"
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900">{comment.user.name}</span>
+                              <span className="text-gray-400 text-sm">{formatRelativeTime(comment.createdAt)}</span>
+                            </div>
+                            <p className="text-gray-700">{comment.content}</p>
+                          </div>
+                          {comment.isOwn && (
+                            <button
+                              onClick={() => handleDeleteComment(post.id, comment.id)}
+                              className="text-gray-400 hover:text-red-500 text-sm"
+                            >
+                              削除
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Comment Input */}
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={commentInputs[post.id] || ""}
+                      onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                      placeholder="コメントを入力..."
+                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none text-lg"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleCommentSubmit(post.id);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleCommentSubmit(post.id)}
+                      disabled={!commentInputs[post.id]?.trim() || submittingComment === post.id}
+                      className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 disabled:bg-gray-300 transition-colors"
+                    >
+                      {submittingComment === post.id ? "..." : "送信"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Schedule Tab */}
+      {activeTab === "schedule" && (
+        <>
+          {/* Message */}
+          {slotMessage && (
+            <div className={`mb-6 p-4 rounded-xl text-lg font-medium ${
+              slotMessage.type === "success"
+                ? "bg-green-100 text-green-700 border-2 border-green-200"
+                : "bg-red-100 text-red-700 border-2 border-red-200"
+            }`}>
+              {slotMessage.text}
+            </div>
+          )}
+
+          {/* Available Now Button */}
+          <div className="mb-8">
             <button
-              onClick={handleCreateSlot}
-              disabled={creatingSlot || !selectedDate || !selectedTime}
-              className="w-full py-4 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white text-xl font-bold rounded-xl transition-colors"
+              onClick={handleAvailableNow}
+              disabled={creatingNow}
+              className="w-full py-8 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white rounded-2xl transition-colors shadow-lg border-4 border-green-600"
             >
-              {creatingSlot ? "登録中..." : "この時間を登録する"}
+              <div className="text-4xl font-bold mb-2">
+                {creatingNow ? "登録中..." : "🟢 今から話せます！"}
+              </div>
+              <div className="text-xl opacity-90">
+                （10分後から30分間、予約を受け付けます）
+              </div>
             </button>
           </div>
-        )}
-      </div>
 
-      {/* My Slots List */}
-      {mySlots.length > 0 && (
-        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-          <div className="px-8 py-6 border-b-2 border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">
-              登録済みの時間（{mySlots.length}件）
-            </h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {mySlots.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border-2 border-gray-200"
-                >
-                  <div className="text-lg">
-                    <span className="font-bold text-gray-900">
-                      {formatDate(slot.startTime)}
-                    </span>
-                    <span className="text-gray-600 ml-2">
-                      {formatTime(slot.startTime)}〜
-                    </span>
-                    <span className={`ml-3 px-3 py-1 rounded-lg text-sm font-medium ${
-                      slot.status === "available"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}>
-                      {slot.status === "available" ? "予約可能" : "予約済み"}
-                    </span>
+          {/* Weekly Schedule Section */}
+          <div className="bg-white border-2 border-sky-200 rounded-2xl shadow-lg overflow-hidden mb-8">
+            <div className="bg-sky-600 text-white px-8 py-6">
+              <h2 className="text-2xl font-bold mb-1">毎週の予定を登録</h2>
+              <p className="text-sky-100 text-lg">
+                曜日ごとに対応可能な時間を設定（4週間分まとめて登録）
+              </p>
+            </div>
+
+            <div className="p-6">
+              <div className="space-y-4">
+                {DAYS.map((day) => (
+                  <div key={day.key} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={weeklySchedule[day.key].enabled}
+                        onChange={(e) => updateDaySchedule(day.key, "enabled", e.target.checked)}
+                        className="w-6 h-6 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+                      />
+                      <span className="text-xl font-bold text-gray-900 w-20">{day.label}</span>
+                    </label>
+
+                    {weeklySchedule[day.key].enabled && (
+                      <div className="flex items-center gap-2 ml-auto">
+                        <select
+                          value={weeklySchedule[day.key].startTime}
+                          onChange={(e) => updateDaySchedule(day.key, "startTime", e.target.value)}
+                          className="px-4 py-2 text-lg border-2 border-gray-300 rounded-lg focus:border-sky-500 focus:outline-none"
+                        >
+                          {timeOptions.map((time) => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                        <span className="text-xl text-gray-600">〜</span>
+                        <select
+                          value={weeklySchedule[day.key].endTime}
+                          onChange={(e) => updateDaySchedule(day.key, "endTime", e.target.value)}
+                          className="px-4 py-2 text-lg border-2 border-gray-300 rounded-lg focus:border-sky-500 focus:outline-none"
+                        >
+                          {timeOptions.map((time) => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  {slot.status === "available" && (
-                    <button
-                      onClick={() => handleDeleteSlot(slot.id)}
-                      className="px-4 py-2 text-red-600 hover:bg-red-100 rounded-lg font-bold transition-colors"
-                    >
-                      削除
-                    </button>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+
+              <button
+                onClick={handleWeeklySchedule}
+                disabled={savingSchedule || !DAYS.some(d => weeklySchedule[d.key].enabled)}
+                className="w-full mt-6 py-5 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white text-2xl font-bold rounded-xl transition-colors"
+              >
+                {savingSchedule ? "登録中..." : "この予定で登録する"}
+              </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Help Section */}
-      <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span className="text-2xl">💡</span>
-          会話のヒント
-        </h3>
-        <ul className="space-y-3 text-lg text-gray-700">
-          <li className="flex items-start gap-3">
-            <span className="text-green-500 text-xl">✓</span>
-            <span>ゆっくり、はっきり話しましょう</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="text-green-500 text-xl">✓</span>
-            <span>相手の学習記録について質問してみましょう</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="text-green-500 text-xl">✓</span>
-            <span>間違いがあっても優しく教えてあげましょう</span>
-          </li>
-        </ul>
-      </div>
+          {/* Single Slot (Collapsible) */}
+          <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
+            <button
+              onClick={() => setShowSingleSlot(!showSingleSlot)}
+              className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+            >
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">単発で時間を登録</h2>
+                <p className="text-gray-600">特定の日時を1つずつ登録する場合</p>
+              </div>
+              <span className="text-2xl text-gray-400">
+                {showSingleSlot ? "▲" : "▼"}
+              </span>
+            </button>
+
+            {showSingleSlot && (
+              <div className="p-8 border-t-2 border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label className="block text-xl font-bold text-gray-900 mb-3">
+                      日付を選ぶ
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      min={today}
+                      max={maxDateStr}
+                      className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xl font-bold text-gray-900 mb-3">
+                      時間を選ぶ
+                    </label>
+                    <select
+                      value={selectedTime}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                      className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="">時間を選んでください</option>
+                      {timeOptions.map((time) => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleCreateSlot}
+                  disabled={creatingSlot || !selectedDate || !selectedTime}
+                  className="w-full py-4 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white text-xl font-bold rounded-xl transition-colors"
+                >
+                  {creatingSlot ? "登録中..." : "この時間を登録する"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* My Slots List */}
+          {mySlots.length > 0 && (
+            <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
+              <div className="px-8 py-6 border-b-2 border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">
+                  登録済みの時間（{mySlots.length}件）
+                </h2>
+              </div>
+              <div className="p-6">
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {mySlots.map((slot) => (
+                    <div
+                      key={slot.id}
+                      className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border-2 border-gray-200"
+                    >
+                      <div className="text-lg">
+                        <span className="font-bold text-gray-900">
+                          {formatDate(slot.startTime)}
+                        </span>
+                        <span className="text-gray-600 ml-2">
+                          {formatTime(slot.startTime)}〜
+                        </span>
+                        <span className={`ml-3 px-3 py-1 rounded-lg text-sm font-medium ${
+                          slot.status === "available"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}>
+                          {slot.status === "available" ? "予約可能" : "予約済み"}
+                        </span>
+                      </div>
+                      {slot.status === "available" && (
+                        <button
+                          onClick={() => handleDeleteSlot(slot.id)}
+                          className="px-4 py-2 text-red-600 hover:bg-red-100 rounded-lg font-bold transition-colors"
+                        >
+                          削除
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Help Section */}
+          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-2xl">💡</span>
+              会話のヒント
+            </h3>
+            <ul className="space-y-3 text-lg text-gray-700">
+              <li className="flex items-start gap-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span>ゆっくり、はっきり話しましょう</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span>相手の学習記録について質問してみましょう</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-green-500 text-xl">✓</span>
+                <span>間違いがあっても優しく教えてあげましょう</span>
+              </li>
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 }

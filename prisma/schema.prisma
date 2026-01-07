@@ -81,6 +81,7 @@ model User {
   studyLogs               StudyLog[]
   studyPosts              StudyPost[]
   likes                   Like[]
+  comments                Comment[]
   conversationHistories   ConversationHistory[]
 
   @@index([email])
@@ -322,8 +323,12 @@ model StudyPost {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // コメント数（非正規化）
+  commentCount Int @default(0)
+
   // リレーション
   likes       Like[]
+  comments    Comment[]
 
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -346,6 +351,26 @@ model Like {
   @@index([postId])
   @@index([userId])
   @@map("likes")
+}
+
+// コメント
+model Comment {
+  id          String   @id @default(cuid())
+
+  postId      String
+  post        StudyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  content     String   @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([postId])
+  @@index([userId])
+  @@map("comments")
 }
 
 // 会話履歴（重複防止用）

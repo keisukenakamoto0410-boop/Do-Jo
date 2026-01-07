@@ -40,6 +40,25 @@ export async function GET(request: NextRequest) {
             id: true,
           },
         },
+        comments: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -58,9 +77,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       posts: items.map((post) => ({
-        ...post,
+        id: post.id,
+        imageUrl: post.imageUrl,
+        caption: post.caption,
+        createdAt: post.createdAt,
+        user: post.user,
+        likeCount: post._count.likes,
+        commentCount: post._count.comments,
         isLiked: post.likes.length > 0,
-        likes: undefined,
+        comments: post.comments.map((c) => ({
+          id: c.id,
+          content: c.content,
+          createdAt: c.createdAt,
+          user: c.user,
+          isOwn: c.userId === session.user.id,
+        })),
       })),
       nextCursor: hasMore ? items[items.length - 1].id : null,
     });

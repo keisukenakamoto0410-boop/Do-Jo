@@ -18,61 +18,6 @@ const TOPICS = [
   { id: "health", name: "Health & Wellness", nameJa: "健康" },
 ];
 
-// 教科書選択肢
-const TEXTBOOKS = [
-  { id: "minna_no_nihongo", name: "Minna no Nihongo (みんなの日本語)" },
-  { id: "genki", name: "Genki (げんき)" },
-  { id: "marugoto", name: "Marugoto (まるごと)" },
-  { id: "dekiru_nihongo", name: "Dekiru Nihongo (できる日本語)" },
-  { id: "tobira", name: "Tobira (とびら)" },
-  { id: "other", name: "Other / Self-study" },
-];
-
-// 文法ポイント（教科書・課に応じて動的に変更可能）
-const GRAMMAR_POINTS: Record<
-  string,
-  { id: string; pattern: string; meaning: string }[]
-> = {
-  minna_12: [
-    { id: "te_mo_ii_desu_ka", pattern: "〜てもいいですか", meaning: "May I...?" },
-    { id: "te_wa_ikemasen", pattern: "〜てはいけません", meaning: "Must not..." },
-  ],
-  minna_13: [
-    { id: "tai_desu", pattern: "〜たいです", meaning: "I want to..." },
-    { id: "mashou", pattern: "〜ましょう", meaning: "Let's..." },
-    { id: "ni_ikimasu", pattern: "〜に行きます", meaning: "Go to do..." },
-  ],
-  minna_14: [
-    { id: "te_kudasai", pattern: "〜てください", meaning: "Please do..." },
-    { id: "te_imasu", pattern: "〜ています", meaning: "Is doing... / State" },
-  ],
-  minna_15: [
-    { id: "te_mo_ii", pattern: "〜てもいいです", meaning: "It's okay to..." },
-    {
-      id: "te_wa_dame",
-      pattern: "〜てはだめです",
-      meaning: "You shouldn't...",
-    },
-  ],
-  genki_7: [
-    { id: "te_form", pattern: "〜て", meaning: "Te-form basics" },
-    { id: "te_kudasai", pattern: "〜てください", meaning: "Please do..." },
-  ],
-  genki_8: [
-    { id: "short_form", pattern: "Short form", meaning: "Casual speech" },
-    {
-      id: "to_omoimasu",
-      pattern: "〜と思います",
-      meaning: "I think that...",
-    },
-  ],
-  default: [
-    { id: "basic_desu", pattern: "〜です/ます", meaning: "Polite form" },
-    { id: "basic_question", pattern: "〜ですか", meaning: "Question form" },
-    { id: "wa_ga", pattern: "〜は/〜が", meaning: "Topic/Subject markers" },
-  ],
-};
-
 // 進捗選択肢
 const PROGRESS_OPTIONS = [
   {
@@ -119,9 +64,6 @@ export default function PreparationPage() {
 
   // フォームステート
   const [progress, setProgress] = useState("");
-  const [textbook, setTextbook] = useState("");
-  const [currentLesson, setCurrentLesson] = useState("");
-  const [selectedGrammar, setSelectedGrammar] = useState<string[]>([]);
   const [selectedTopic, setSelectedTopic] = useState("");
   const [conversationGoal, setConversationGoal] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
@@ -136,10 +78,6 @@ export default function PreparationPage() {
           if (data.previousSession) {
             setIsFirstSession(false);
             setPreviousTopic(data.previousSession.topic);
-            setTextbook(data.previousSession.textbook || "");
-            setCurrentLesson(
-              data.previousSession.currentLesson?.toString() || ""
-            );
           }
         }
       } catch (err) {
@@ -148,12 +86,6 @@ export default function PreparationPage() {
     };
     fetchPreviousSession();
   }, []);
-
-  // 教科書と課に基づいて文法ポイントを取得
-  const getGrammarPoints = () => {
-    const key = `${textbook}_${currentLesson}`;
-    return GRAMMAR_POINTS[key] || GRAMMAR_POINTS["default"];
-  };
 
   // フォーム送信
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,9 +102,6 @@ export default function PreparationPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             progressSinceLastSession: progress,
-            textbook,
-            currentLesson: parseInt(currentLesson) || null,
-            grammarToStudy: selectedGrammar,
             selectedTopic,
             conversationGoal,
             additionalNotes,
@@ -255,95 +184,6 @@ export default function PreparationPage() {
               </div>
             </div>
           )}
-
-          {/* 教科書と課 */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              What are you studying?
-            </h2>
-
-            <div className="space-y-4">
-              {/* 教科書選択 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Textbook
-                </label>
-                <select
-                  value={textbook}
-                  onChange={(e) => setTextbook(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">Select your textbook...</option>
-                  {TEXTBOOKS.map((tb) => (
-                    <option key={tb.id} value={tb.id}>
-                      {tb.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 課の選択 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Lesson
-                </label>
-                <select
-                  value={currentLesson}
-                  onChange={(e) => setCurrentLesson(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">Select lesson number...</option>
-                  {Array.from({ length: 50 }, (_, i) => i + 1).map((num) => (
-                    <option key={num} value={num}>
-                      Lesson {num}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* 文法選択 */}
-          <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Grammar you want to practice
-            </h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Select the grammar patterns you learned recently
-            </p>
-            <div className="space-y-3">
-              {getGrammarPoints().map((grammar) => (
-                <label
-                  key={grammar.id}
-                  className="flex items-center gap-3 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    value={grammar.id}
-                    checked={selectedGrammar.includes(grammar.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedGrammar([...selectedGrammar, grammar.id]);
-                      } else {
-                        setSelectedGrammar(
-                          selectedGrammar.filter((g) => g !== grammar.id)
-                        );
-                      }
-                    }}
-                    className="w-4 h-4 text-orange-500 rounded"
-                  />
-                  <div>
-                    <span className="font-medium text-gray-900">
-                      {grammar.pattern}
-                    </span>
-                    <span className="text-gray-500 ml-2">
-                      ({grammar.meaning})
-                    </span>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
 
           {/* トピック選択 */}
           <div className="bg-white p-6 rounded-xl shadow-sm">

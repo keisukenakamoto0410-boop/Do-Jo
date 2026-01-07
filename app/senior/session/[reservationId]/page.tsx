@@ -9,6 +9,49 @@ type IAgoraRTCClient = any;
 type ICameraVideoTrack = any;
 type IMicrophoneAudioTrack = any;
 
+// Agenda types
+interface AgendaSection {
+  name: string;
+  nameJa: string;
+  duration: number;
+  startTime: string;
+  endTime: string;
+  goal: string;
+  suggestedPhrases?: string[];
+  questions?: { question: string; grammarUsed?: string; hint?: string }[];
+  vocabulary?: { word: string; reading: string; meaning: string }[];
+  prompts?: string[];
+  note?: string;
+  tips?: string;
+}
+
+interface Agenda {
+  summary: {
+    topic: string;
+    topicJa: string;
+    duration: number;
+    seniorName: string;
+    mainGoal: string;
+  };
+  sections: AgendaSection[];
+  todaysGoals: string[];
+  grammarFocus: {
+    pattern: string;
+    meaning: string;
+    examplesForToday: string[];
+  }[];
+  usefulPhrases: {
+    japanese: string;
+    meaning: string;
+    when: string;
+  }[];
+  seniorInfo: {
+    name: string;
+    strengths: string;
+    conversationTips: string;
+  };
+}
+
 export default function SeniorSessionPage() {
   const router = useRouter();
   const params = useParams();
@@ -28,6 +71,9 @@ export default function SeniorSessionPage() {
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [reservation, setReservation] = useState<any>(null);
   const [agoraInitialized, setAgoraInitialized] = useState(false);
+  const [agenda, setAgenda] = useState<Agenda | null>(null);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [showAgenda, setShowAgenda] = useState(true);
 
   useEffect(() => {
     fetchReservation();
@@ -79,6 +125,11 @@ export default function SeniorSessionPage() {
       }
       const data = await response.json();
       setReservation(data);
+
+      // Set agenda if available
+      if (data.generatedAgenda) {
+        setAgenda(data.generatedAgenda);
+      }
     } catch (err) {
       console.error("Failed to fetch reservation:", err);
       setError("接続できませんでした。もう一度お試しください。");
@@ -231,6 +282,8 @@ export default function SeniorSessionPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const currentSection = agenda?.sections?.[currentSectionIndex];
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
       {/* Loading Overlay */}
@@ -279,69 +332,266 @@ export default function SeniorSessionPage() {
       )}
 
       {/* Header */}
-      <div className="bg-sky-600 px-6 py-5 flex items-center justify-between">
+      <div className="bg-sky-600 px-6 py-4 flex items-center justify-between">
         <div className="text-white">
-          <h2 className="text-2xl font-bold">ビデオ通話中</h2>
-          <p className="text-sky-100 text-lg">
+          <h2 className="text-xl font-bold">ビデオ通話中</h2>
+          <p className="text-sky-100">
             {reservation?.learner?.name}さんと会話中
           </p>
         </div>
 
-        {/* Timer - Large and visible */}
-        <div
-          className={`px-8 py-4 rounded-xl font-bold text-3xl ${
-            timeLeft <= 5 * 60 ? "bg-red-500 animate-pulse" : "bg-white text-sky-600"
-          } ${timeLeft <= 5 * 60 ? "text-white" : ""}`}
-        >
-          残り {formatTime(timeLeft)}
+        <div className="flex items-center gap-4">
+          {/* Toggle Agenda Button */}
+          <button
+            onClick={() => setShowAgenda(!showAgenda)}
+            className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium transition-colors"
+          >
+            {showAgenda ? "📋 アジェンダを隠す" : "📋 アジェンダを表示"}
+          </button>
+
+          {/* Timer */}
+          <div
+            className={`px-6 py-3 rounded-xl font-bold text-2xl ${
+              timeLeft <= 5 * 60 ? "bg-red-500 animate-pulse text-white" : "bg-white text-sky-600"
+            }`}
+          >
+            残り {formatTime(timeLeft)}
+          </div>
         </div>
       </div>
 
-      {/* Video Grid - Simplified */}
-      <div className="flex-1 grid grid-cols-2 gap-4 p-4">
-        {/* Local Video (Senior) */}
-        <div className="relative bg-gray-800 rounded-2xl overflow-hidden">
-          <div
-            id="local-video"
-            className="w-full h-full"
-            style={{ minHeight: "400px" }}
-          ></div>
-          <div className="absolute bottom-4 left-4 bg-black/70 px-5 py-3 rounded-xl text-white text-xl font-bold">
-            あなた
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Video Section */}
+        <div className={`flex-1 flex flex-col p-4 ${showAgenda ? "" : ""}`}>
+          {/* Video Grid */}
+          <div className="flex-1 grid grid-cols-2 gap-4">
+            {/* Local Video (Senior) */}
+            <div className="relative bg-gray-800 rounded-2xl overflow-hidden">
+              <div
+                id="local-video"
+                className="w-full h-full"
+                style={{ minHeight: "300px" }}
+              ></div>
+              <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-lg text-white font-bold">
+                あなた
+              </div>
+            </div>
+
+            {/* Remote Video (Learner) */}
+            <div className="relative bg-gray-800 rounded-2xl overflow-hidden">
+              <div
+                id="remote-video"
+                className="w-full h-full"
+                style={{ minHeight: "300px" }}
+              ></div>
+              {remoteUsers.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50">
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">👋</div>
+                    <p className="text-xl font-bold">相手を待っています...</p>
+                  </div>
+                </div>
+              )}
+              {remoteUsers.length > 0 && reservation?.learner && (
+                <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-lg text-white font-bold">
+                  {reservation.learner.name}さん
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* End Session Button */}
+          <div className="mt-4">
+            <button
+              onClick={handleSessionEnd}
+              className="w-full max-w-md mx-auto block py-4 bg-red-600 hover:bg-red-700 text-white text-xl font-bold rounded-xl transition-colors shadow-lg"
+            >
+              🛑 通話を終了する
+            </button>
           </div>
         </div>
 
-        {/* Remote Video (Learner) */}
-        <div className="relative bg-gray-800 rounded-2xl overflow-hidden">
-          <div
-            id="remote-video"
-            className="w-full h-full"
-            style={{ minHeight: "400px" }}
-          ></div>
-          {remoteUsers.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50">
-              <div className="text-center">
-                <div className="text-6xl mb-4">👋</div>
-                <p className="text-2xl font-bold">相手を待っています...</p>
+        {/* Agenda Panel */}
+        {showAgenda && agenda && (
+          <div className="w-96 bg-gray-100 border-l border-gray-300 overflow-y-auto">
+            <div className="p-4">
+              {/* Topic Header */}
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 text-white mb-4">
+                <p className="text-sm opacity-80">今日のトピック</p>
+                <h3 className="text-xl font-bold">{agenda.summary.topicJa}</h3>
+                <p className="text-sm opacity-80">{agenda.summary.topic}</p>
               </div>
-            </div>
-          )}
-          {remoteUsers.length > 0 && reservation?.learner && (
-            <div className="absolute bottom-4 left-4 bg-black/70 px-5 py-3 rounded-xl text-white text-xl font-bold">
-              {reservation.learner.name}さん
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Controls - Large and Simple */}
-      <div className="bg-gray-800 px-6 py-6">
-        <button
-          onClick={handleSessionEnd}
-          className="w-full max-w-md mx-auto block py-6 bg-red-600 hover:bg-red-700 text-white text-2xl font-bold rounded-xl transition-colors shadow-lg"
-        >
-          🛑 通話を終了する
-        </button>
+              {/* Today's Goals */}
+              <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+                <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <span>🎯</span> 今日の目標
+                </h4>
+                <ul className="space-y-1">
+                  {agenda.todaysGoals.map((goal, i) => (
+                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                      <span className="text-orange-500 mt-0.5">✓</span>
+                      {goal}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Section Navigator */}
+              <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-gray-900">📋 会話の流れ</h4>
+                  <span className="text-sm text-gray-500">
+                    {currentSectionIndex + 1} / {agenda.sections.length}
+                  </span>
+                </div>
+
+                {/* Section Tabs */}
+                <div className="flex gap-1 mb-3 overflow-x-auto">
+                  {agenda.sections.map((section, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentSectionIndex(i)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                        i === currentSectionIndex
+                          ? "bg-orange-500 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {section.nameJa}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Current Section Detail */}
+                {currentSection && (
+                  <div className="border-l-4 border-orange-400 pl-3 py-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="font-bold text-gray-900">
+                        {currentSection.nameJa}
+                      </h5>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        {currentSection.duration}分
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{currentSection.goal}</p>
+
+                    {/* Questions */}
+                    {currentSection.questions && currentSection.questions.length > 0 && (
+                      <div className="bg-yellow-50 rounded-lg p-3 mb-2">
+                        <p className="text-xs font-bold text-yellow-800 mb-2">
+                          💬 聞いてみましょう：
+                        </p>
+                        <ul className="space-y-2">
+                          {currentSection.questions.map((q, j) => (
+                            <li key={j} className="text-sm text-yellow-900">
+                              <span className="font-medium">{q.question}</span>
+                              {q.hint && (
+                                <p className="text-xs text-yellow-700 mt-0.5">
+                                  ヒント: {q.hint}
+                                </p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Prompts */}
+                    {currentSection.prompts && currentSection.prompts.length > 0 && (
+                      <div className="bg-green-50 rounded-lg p-3 mb-2">
+                        <p className="text-xs font-bold text-green-800 mb-2">
+                          📝 話題のヒント：
+                        </p>
+                        <ul className="space-y-1">
+                          {currentSection.prompts.map((p, j) => (
+                            <li key={j} className="text-sm text-green-900">
+                              • {p}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Tips */}
+                    {currentSection.tips && (
+                      <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
+                        💡 {currentSection.tips}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Navigation Buttons */}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => setCurrentSectionIndex(Math.max(0, currentSectionIndex - 1))}
+                    disabled={currentSectionIndex === 0}
+                    className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
+                  >
+                    ← 前へ
+                  </button>
+                  <button
+                    onClick={() => setCurrentSectionIndex(Math.min(agenda.sections.length - 1, currentSectionIndex + 1))}
+                    disabled={currentSectionIndex === agenda.sections.length - 1}
+                    className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    次へ →
+                  </button>
+                </div>
+              </div>
+
+              {/* Grammar Focus */}
+              {agenda.grammarFocus && agenda.grammarFocus.length > 0 && (
+                <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <span>✏️</span> 今日の文法
+                  </h4>
+                  <div className="space-y-2">
+                    {agenda.grammarFocus.map((g, i) => (
+                      <div key={i} className="bg-blue-50 rounded-lg p-2">
+                        <span className="font-bold text-blue-700">{g.pattern}</span>
+                        <span className="text-sm text-blue-600 ml-2">({g.meaning})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Learner Info */}
+              {reservation?.learner && (
+                <div className="bg-white rounded-xl p-4 shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <span>👤</span> 学習者情報
+                  </h4>
+                  <div className="text-sm space-y-1 text-gray-700">
+                    <p><span className="font-medium">名前:</span> {reservation.learner.name}</p>
+                    {reservation.learner.country && (
+                      <p><span className="font-medium">出身:</span> {reservation.learner.country}</p>
+                    )}
+                    {reservation.learner.jlptLevel && (
+                      <p><span className="font-medium">レベル:</span> {reservation.learner.jlptLevel}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* No Agenda Message */}
+        {showAgenda && !agenda && (
+          <div className="w-96 bg-gray-100 border-l border-gray-300 flex items-center justify-center">
+            <div className="text-center p-8">
+              <div className="text-5xl mb-4">📋</div>
+              <p className="text-gray-600">
+                アジェンダがありません<br />
+                学習者がまだ準備していないようです
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

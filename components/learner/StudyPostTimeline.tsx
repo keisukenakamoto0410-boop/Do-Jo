@@ -26,9 +26,6 @@ export default function StudyPostTimeline({ userId }: StudyPostTimelineProps) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalPosts: 0,
-    canBookSession: false,
-    postsUntilBooking: 7,
-    minPostsRequired: 7,
   });
   const [canPostToday, setCanPostToday] = useState(true);
 
@@ -43,10 +40,7 @@ export default function StudyPostTimeline({ userId }: StudyPostTimelineProps) {
       const data = await response.json();
       setPosts(data.posts || []);
       if (data.stats) {
-        setStats({
-          ...data.stats,
-          minPostsRequired: data.stats.minPostsRequired || data.stats.totalPosts + data.stats.postsUntilBooking || 7,
-        });
+        setStats(data.stats);
       }
     } catch (error) {
       console.error("Failed to fetch posts:", error);
@@ -106,15 +100,6 @@ export default function StudyPostTimeline({ userId }: StudyPostTimelineProps) {
           </h2>
           <div className="flex items-center gap-4 text-sm text-neutral-600">
             <span className="font-medium">{stats.totalPosts} posts</span>
-            {stats.canBookSession ? (
-              <span className="badge-success">
-                Session booking unlocked!
-              </span>
-            ) : (
-              <span className="badge-warning">
-                {stats.postsUntilBooking} more to unlock booking
-              </span>
-            )}
           </div>
         </div>
 
@@ -133,25 +118,6 @@ export default function StudyPostTimeline({ userId }: StudyPostTimelineProps) {
         </Link>
       </div>
 
-      {/* Progress Bar */}
-      {!stats.canBookSession && (
-        <div className="mb-6 bg-gradient-to-r from-accent-50 to-warning/10 border border-accent-200 rounded-xl p-4">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-accent-700 font-medium">
-              Unlock session booking
-            </span>
-            <span className="text-accent-700 font-bold">
-              {stats.totalPosts}/{stats.minPostsRequired} posts
-            </span>
-          </div>
-          <div className="bg-accent-200 rounded-full h-3">
-            <div
-              className="bg-gradient-to-r from-accent to-accent-warm h-3 rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, (stats.totalPosts / stats.minPostsRequired) * 100)}%` }}
-            ></div>
-          </div>
-        </div>
-      )}
 
       {/* Posts Grid */}
       {posts.length > 0 ? (
@@ -199,16 +165,6 @@ export default function StudyPostTimeline({ userId }: StudyPostTimelineProps) {
         </div>
       )}
 
-      {/* Motivation Message */}
-      {!stats.canBookSession && stats.postsUntilBooking > 0 && stats.postsUntilBooking <= 3 && (
-        <div className="mt-6 text-center p-4 bg-primary-50 rounded-xl">
-          <p className="text-primary-dark font-medium">
-            {stats.postsUntilBooking === 3 && "Great progress! Just 3 more posts to go!"}
-            {stats.postsUntilBooking === 2 && "Almost there! Only 2 more posts needed!"}
-            {stats.postsUntilBooking === 1 && "One more post to unlock booking!"}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

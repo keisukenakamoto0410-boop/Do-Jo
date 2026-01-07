@@ -14,8 +14,6 @@ export default function CreatePostPage() {
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
   const [canPostToday, setCanPostToday] = useState(true);
-  const [postsUntilBooking, setPostsUntilBooking] = useState(0);
-  const [canBookSession, setCanBookSession] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,8 +31,6 @@ export default function CreatePostPage() {
       const response = await fetch("/api/study-posts/check-today");
       const data = await response.json();
       setCanPostToday(!data.hasPostedToday);
-      setPostsUntilBooking(data.postsUntilBooking);
-      setCanBookSession(data.canBookSession);
     } catch (error) {
       console.error("Failed to check today's post:", error);
     } finally {
@@ -86,15 +82,7 @@ export default function CreatePostPage() {
         throw new Error(error.details || error.error || "Failed to post");
       }
 
-      const data = await response.json();
-
-      if (data.canBookSession && !canBookSession) {
-        alert("Post successful! Session booking is now unlocked!");
-      } else if (data.postsUntilBooking > 0) {
-        alert(`Post successful! ${data.postsUntilBooking} more posts to unlock booking`);
-      } else {
-        alert("Post successful!");
-      }
+      alert("Post successful!");
 
       router.push("/learner/dashboard");
     } catch (error) {
@@ -144,15 +132,6 @@ export default function CreatePostPage() {
             <p className="text-neutral-600 mb-6">
               Come back tomorrow to post again
             </p>
-            {postsUntilBooking > 0 ? (
-              <p className="text-accent font-medium mb-6">
-                {postsUntilBooking} more posts to unlock session booking!
-              </p>
-            ) : (
-              <p className="text-success font-medium mb-6">
-                Session booking is unlocked!
-              </p>
-            )}
             <button
               onClick={() => router.push("/learner/dashboard")}
               className="btn-primary"
@@ -201,28 +180,6 @@ export default function CreatePostPage() {
           </p>
         </div>
 
-        {/* Progress */}
-        {postsUntilBooking > 0 && (
-          <div className="bg-gradient-to-r from-accent-50 to-warning/10 border-2 border-accent-200 rounded-xl p-4 mb-6">
-            <p className="text-center text-accent-700 font-bold">
-              <span className="text-2xl mx-1">{postsUntilBooking}</span> more posts to unlock session booking!
-            </p>
-            <div className="mt-2 bg-accent-200 rounded-full h-3">
-              <div
-                className="bg-gradient-to-r from-accent to-accent-warm h-3 rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(10, ((7 - postsUntilBooking) / 7) * 100)}%` }}
-              ></div>
-            </div>
-          </div>
-        )}
-
-        {canBookSession && (
-          <div className="bg-gradient-to-r from-success/10 to-success/5 border-2 border-success/30 rounded-xl p-4 mb-6">
-            <p className="text-center text-success font-bold">
-              Session booking unlocked! Keep posting to maintain your streak!
-            </p>
-          </div>
-        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="card">

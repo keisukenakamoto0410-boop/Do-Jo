@@ -62,8 +62,6 @@ export async function GET(
       where: { id: userId },
       select: {
         totalPosts: true,
-        canBookSession: true,
-        minPostsRequired: true,
       },
     });
 
@@ -76,9 +74,6 @@ export async function GET(
       nextCursor: hasMore ? items[items.length - 1].id : null,
       stats: {
         totalPosts: user?.totalPosts || 0,
-        canBookSession: user?.canBookSession || false,
-        postsUntilBooking: Math.max(0, (user?.minPostsRequired || 4) - (user?.totalPosts || 0)),
-        minPostsRequired: user?.minPostsRequired || 4,
       },
     });
   } catch (error) {

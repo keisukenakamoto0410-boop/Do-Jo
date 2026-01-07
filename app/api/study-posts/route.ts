@@ -76,29 +76,24 @@ export async function POST(request: NextRequest) {
       // Get current user
       const user = await tx.user.findUnique({
         where: { id: session.user.id },
-        select: { totalPosts: true, minPostsRequired: true, canBookSession: true },
+        select: { totalPosts: true },
       });
 
       const newTotalPosts = (user?.totalPosts || 0) + 1;
-      const minRequired = user?.minPostsRequired || 4;
-      const canBookSession = newTotalPosts >= minRequired;
 
       // Update user stats
       await tx.user.update({
         where: { id: session.user.id },
         data: {
           totalPosts: newTotalPosts,
-          canBookSession: canBookSession,
         },
       });
 
-      console.log("📊 User stats updated - totalPosts:", newTotalPosts, "canBookSession:", canBookSession);
+      console.log("📊 User stats updated - totalPosts:", newTotalPosts);
 
       return {
         post,
         totalPosts: newTotalPosts,
-        canBookSession,
-        postsUntilBooking: Math.max(0, minRequired - newTotalPosts),
       };
     });
 

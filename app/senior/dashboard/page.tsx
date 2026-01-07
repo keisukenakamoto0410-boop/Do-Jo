@@ -386,7 +386,7 @@ export default function SeniorDashboard() {
   };
 
   // Generate time options
-  const timeOptions = [];
+  const timeOptions: string[] = [];
   for (let hour = 9; hour <= 21; hour++) {
     timeOptions.push(`${hour.toString().padStart(2, "0")}:00`);
     if (hour < 21) {
@@ -481,12 +481,22 @@ export default function SeniorDashboard() {
     <div className="max-w-3xl mx-auto px-6 py-8">
       {/* Welcome Message */}
       <div className="bg-sky-50 border-2 border-sky-200 rounded-2xl p-8 mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          こんにちは、{session?.user?.name}さん
-        </h1>
-        <p className="text-xl text-gray-600">
-          今日も外国人の方との会話を楽しみましょう
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              こんにちは、{session?.user?.name}さん
+            </h1>
+            <p className="text-xl text-gray-600">
+              今日も外国人の方との会話を楽しみましょう
+            </p>
+          </div>
+          <Link
+            href="/senior/profile"
+            className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white text-lg font-bold rounded-xl transition-colors"
+          >
+            プロフィール編集
+          </Link>
+        </div>
       </div>
 
       {/* Next Session Card */}

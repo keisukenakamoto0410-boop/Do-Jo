@@ -28,8 +28,9 @@ export async function GET(
         totalPosts: true,
         totalSessions: true,
         averageRating: true,
-        canBookSession: true,
         createdAt: true,
+        prefecture: true,
+        hobbies: true,
       },
     });
 
@@ -63,6 +64,8 @@ export async function PATCH(
     const name = formData.get("name") as string;
     const bio = formData.get("bio") as string;
     const avatarFile = formData.get("avatar") as File | null;
+    const prefecture = formData.get("prefecture") as string | null;
+    const hobbiesJson = formData.get("hobbies") as string | null;
 
     let avatarUrl: string | undefined = undefined;
 
@@ -74,6 +77,16 @@ export async function PATCH(
       avatarUrl = `data:${avatarFile.type};base64,${base64}`;
     }
 
+    // Parse hobbies from JSON
+    let hobbies: string[] | undefined;
+    if (hobbiesJson) {
+      try {
+        hobbies = JSON.parse(hobbiesJson);
+      } catch {
+        hobbies = undefined;
+      }
+    }
+
     // ユーザー更新
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -81,6 +94,8 @@ export async function PATCH(
         name,
         bio: bio || null,
         ...(avatarUrl && { avatar: avatarUrl }),
+        ...(prefecture !== null && { prefecture: prefecture || null }),
+        ...(hobbies !== undefined && { hobbies }),
       },
     });
 

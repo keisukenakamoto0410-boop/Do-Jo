@@ -43,16 +43,12 @@ export async function GET() {
       where: { id: session.user.id },
       select: {
         totalPosts: true,
-        minPostsRequired: true,
-        canBookSession: true,
       },
     });
 
     console.log("👤 check-today: User stats:", user);
 
-    const minRequired = user?.minPostsRequired || 4;
     const totalPosts = user?.totalPosts || 0;
-    const postsUntilBooking = Math.max(0, minRequired - totalPosts);
 
     console.log("✅ check-today: Success");
 
@@ -60,8 +56,6 @@ export async function GET() {
       hasPostedToday: !!existingPost,
       todayPost: existingPost,
       totalPosts,
-      postsUntilBooking,
-      canBookSession: user?.canBookSession || false,
     });
   } catch (error) {
     console.error("❌ check-today: Error:", error);

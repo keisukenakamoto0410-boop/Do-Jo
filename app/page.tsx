@@ -3,7 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
-// Test auto-deploy from main branch
+// Test auto-deploy via merge to main branch
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
 

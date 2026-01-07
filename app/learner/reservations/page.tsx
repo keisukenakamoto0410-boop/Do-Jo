@@ -34,6 +34,7 @@ interface Reservation {
   token: string | null;
   readyToTalk: boolean;
   studyLogCount: number;
+  hasAgenda: boolean;
   slot: Slot;
   host: Host;
   createdAt: string;
@@ -326,16 +327,33 @@ export default function LearnerReservationsPage() {
                     {activeTab === "upcoming" &&
                       reservation.status === "confirmed" && (
                         <div className="flex gap-2">
-                          <Link
-                            href={`/session/${reservation.id}`}
-                            className={`px-4 py-2 rounded-lg font-medium text-white ${
-                              reservation.sessionType === "business"
-                                ? "bg-accent hover:bg-accent-warm"
-                                : "bg-purple-600 hover:bg-purple-700"
-                            } transition-colors`}
-                          >
-                            Join Session
-                          </Link>
+                          {reservation.hasAgenda ? (
+                            <>
+                              <Link
+                                href={`/learner/prepare/${reservation.id}/agenda`}
+                                className="px-4 py-2 rounded-lg font-medium text-neutral-700 border border-neutral-200 hover:bg-neutral-50 transition-colors"
+                              >
+                                View Agenda
+                              </Link>
+                              <Link
+                                href={`/learner/session/${reservation.id}`}
+                                className={`px-4 py-2 rounded-lg font-medium text-white ${
+                                  reservation.sessionType === "business"
+                                    ? "bg-accent hover:bg-accent-warm"
+                                    : "bg-purple-600 hover:bg-purple-700"
+                                } transition-colors`}
+                              >
+                                Join Session
+                              </Link>
+                            </>
+                          ) : (
+                            <Link
+                              href={`/learner/prepare/${reservation.id}`}
+                              className="px-4 py-2 rounded-lg font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors flex items-center gap-2"
+                            >
+                              <span>📝</span> Prepare for Session
+                            </Link>
+                          )}
                           <button
                             onClick={() => cancelReservation(reservation.id)}
                             className="px-4 py-2 border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 transition-colors"
@@ -344,33 +362,26 @@ export default function LearnerReservationsPage() {
                           </button>
                         </div>
                       )}
-                    {/* Study Log Upload Button */}
+                    {/* Preparation Status */}
                     {activeTab === "upcoming" &&
                       reservation.status === "confirmed" && (
-                        <Link
-                          href={`/learner/reservations/${reservation.id}/upload`}
-                          className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-                            reservation.readyToTalk
+                        <div
+                          className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${
+                            reservation.hasAgenda
                               ? "bg-gradient-to-r from-success to-success-light text-white"
-                              : reservation.studyLogCount > 0
-                                ? "bg-warning/10 text-warning-dark hover:bg-warning/20"
-                                : "bg-primary-50 text-primary-dark hover:bg-primary-100"
+                              : "bg-warning/10 text-warning-dark"
                           }`}
                         >
-                          {reservation.readyToTalk ? (
+                          {reservation.hasAgenda ? (
                             <>
                               <span>✓</span> Ready to Talk!
                             </>
-                          ) : reservation.studyLogCount > 0 ? (
-                            <>
-                              <span>📚</span> Study Logs ({reservation.studyLogCount}/4)
-                            </>
                           ) : (
                             <>
-                              <span>📚</span> Submit Study Logs
+                              <span>⚠️</span> Preparation Required
                             </>
                           )}
-                        </Link>
+                        </div>
                       )}
                     {activeTab === "past" &&
                       reservation.status === "completed" && (

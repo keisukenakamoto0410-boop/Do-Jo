@@ -87,6 +87,13 @@ export default function SessionPage() {
       const data = await response.json();
       console.log("Reservation data received:", data);
 
+      // Check if agenda is generated - required before joining
+      if (!data.generatedAgenda) {
+        console.log("No agenda found - redirecting to preparation page");
+        router.push(`/learner/prepare/${reservationId}`);
+        return;
+      }
+
       // [For testing] Skip time check
       console.log("WARNING: Skipping time check for testing");
 

@@ -65,7 +65,13 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ reservations });
+    // Add hasAgenda flag for each reservation
+    const reservationsWithAgendaFlag = reservations.map((r) => ({
+      ...r,
+      hasAgenda: !!r.generatedAgenda,
+    }));
+
+    return NextResponse.json({ reservations: reservationsWithAgendaFlag });
   } catch (error) {
     console.error("Error fetching reservations:", error);
     return NextResponse.json(

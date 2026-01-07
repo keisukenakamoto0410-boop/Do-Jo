@@ -148,3 +148,4 @@ This project is licensed under the MIT License.
 ## Support
 
 For support, email support@dojo-platform.com or open an issue on GitHub.
+

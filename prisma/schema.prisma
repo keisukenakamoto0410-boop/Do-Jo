@@ -64,6 +64,10 @@ model User {
   termsAccepted   Boolean   @default(false)
   termsAcceptedAt DateTime?
 
+  // パスワードリセット
+  passwordResetToken   String?   @unique
+  passwordResetExpires DateTime?
+
   // SNS投稿関連
   totalPosts       Int      @default(0)     // 総投稿数
 

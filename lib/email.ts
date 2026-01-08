@@ -32,6 +32,12 @@ interface LearnerBookingEmailParams {
   prepareUrl: string;
 }
 
+interface PasswordResetEmailParams {
+  email: string;
+  name: string;
+  resetUrl: string;
+}
+
 interface ReminderEmailParams {
   email: string;
   name: string;
@@ -283,6 +289,70 @@ export async function sendReminderEmail({
     return { success: true };
   } catch (error) {
     console.error("Failed to send reminder email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Send password reset email
+export async function sendPasswordResetEmail({
+  email,
+  name,
+  resetUrl,
+}: PasswordResetEmailParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+    const { error } = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: "【Do Jo】Password Reset Request / パスワードリセット",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #0ea5e9; font-size: 24px; margin-bottom: 20px;">Password Reset / パスワードリセット</h1>
+
+          <p style="font-size: 16px; color: #333;">Hi ${name} / ${name}さん</p>
+
+          <p style="font-size: 16px; color: #333;">
+            We received a request to reset your password.<br />
+            パスワードリセットのリクエストを受け付けました。
+          </p>
+
+          <p style="font-size: 16px; color: #333;">
+            Click the button below to reset your password. This link will expire in 1 hour.<br />
+            下のボタンをクリックしてパスワードをリセットしてください。このリンクは1時間で期限切れになります。
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(to right, #0ea5e9, #2563eb); color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+              Reset Password / パスワードをリセット
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #666;">
+            If you didn't request this, you can safely ignore this email.<br />
+            このリクエストに心当たりがない場合は、このメールを無視してください。
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Do Jo - Japanese Conversation Practice App<br />
+            <a href="${BASE_URL}" style="color: #0ea5e9;">${BASE_URL}</a>
+          </p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Failed to send password reset email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send password reset email:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

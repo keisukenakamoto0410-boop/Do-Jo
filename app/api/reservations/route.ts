@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendBookingConfirmationEmail } from "@/lib/email";
+import { sendBookingConfirmationEmail, sendLearnerBookingConfirmationEmail } from "@/lib/email";
 
 // GET reservations for the current user
 export async function GET(req: NextRequest) {
@@ -175,22 +175,37 @@ export async function POST(req: NextRequest) {
             select: {
               id: true,
               name: true,
+              email: true,
             },
           },
         },
       });
     });
 
-    // Send booking confirmation email to host (async, don't block response)
+    // Send booking confirmation emails (async, don't block response)
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+
+    // Email to host (Japanese)
     sendBookingConfirmationEmail({
       hostEmail: reservation.host.email!,
       hostName: reservation.host.name,
       learnerName: reservation.learner.name,
       sessionDate: reservation.slot.startTime,
-      sessionUrl: `${BASE_URL}/host/session/${reservation.id}`,
+      sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
     }).catch((err) => {
-      console.error("Failed to send booking confirmation email:", err);
+      console.error("Failed to send booking confirmation email to host:", err);
+    });
+
+    // Email to learner (English)
+    sendLearnerBookingConfirmationEmail({
+      learnerEmail: reservation.learner.email!,
+      learnerName: reservation.learner.name,
+      hostName: reservation.host.name,
+      sessionDate: reservation.slot.startTime,
+      sessionUrl: `${BASE_URL}/learner/session/${reservation.id}`,
+      prepareUrl: `${BASE_URL}/learner/prepare/${reservation.id}`,
+    }).catch((err) => {
+      console.error("Failed to send booking confirmation email to learner:", err);
     });
 
     return NextResponse.json({ reservation }, { status: 201 });

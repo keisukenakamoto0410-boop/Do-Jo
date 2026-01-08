@@ -23,6 +23,15 @@ interface BookingEmailParams {
   sessionUrl: string;
 }
 
+interface LearnerBookingEmailParams {
+  learnerEmail: string;
+  learnerName: string;
+  hostName: string;
+  sessionDate: Date;
+  sessionUrl: string;
+  prepareUrl: string;
+}
+
 interface ReminderEmailParams {
   email: string;
   name: string;
@@ -108,6 +117,71 @@ export async function sendBookingConfirmationEmail({
     return { success: true };
   } catch (error) {
     console.error("Failed to send booking email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Send booking confirmation email to learner
+export async function sendLearnerBookingConfirmationEmail({
+  learnerEmail,
+  learnerName,
+  hostName,
+  sessionDate,
+  sessionUrl,
+  prepareUrl,
+}: LearnerBookingEmailParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+    const { error } = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: learnerEmail,
+      subject: "【Do Jo】Booking Confirmed - Your session is scheduled!",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #0ea5e9; font-size: 24px; margin-bottom: 20px;">Booking Confirmed!</h1>
+
+          <p style="font-size: 16px; color: #333;">Hi ${learnerName},</p>
+
+          <p style="font-size: 16px; color: #333;">Your Japanese conversation session has been confirmed!</p>
+
+          <div style="background: #e0f2fe; border-radius: 12px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 8px 0;"><strong>📅 Date & Time:</strong> ${formatDateEn(sessionDate)}</p>
+            <p style="margin: 8px 0;"><strong>👤 Partner:</strong> ${hostName}-san</p>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+            <strong>Next step:</strong> Prepare for your session by selecting a topic and setting your goals.
+          </p>
+
+          <a href="${prepareUrl}" style="display: inline-block; background: #0ea5e9; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+            Prepare for Session →
+          </a>
+
+          <p style="font-size: 14px; color: #666; margin-top: 20px;">
+            Session URL: <a href="${sessionUrl}" style="color: #0ea5e9;">${sessionUrl}</a>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Do Jo - Japanese Conversation Practice App<br />
+            <a href="${BASE_URL}" style="color: #0ea5e9;">${BASE_URL}</a>
+          </p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error("Failed to send learner booking email:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send learner booking email:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

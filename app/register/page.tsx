@@ -130,26 +130,26 @@ function RegisterContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-neutral-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+            <div className="w-14 h-14 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-sky-500/30">
               <span className="text-white font-bold text-xl">道</span>
             </div>
-            <h1 className="text-3xl font-bold text-primary">Do Jo</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Do Jo</h1>
           </Link>
-          <p className="text-neutral-600 mt-2">Bridge to Japanese Careers</p>
+          <p className="text-gray-500 mt-2">言葉を磨く場所</p>
         </div>
 
         {/* Step 1: Role Selection */}
         {step === 1 && (
           <div>
-            <h2 className="text-3xl font-bold text-center text-neutral-900 mb-3">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-3">
               Create Your Account
             </h2>
-            <p className="text-center text-neutral-600 mb-10">
+            <p className="text-center text-gray-500 mb-10">
               Choose how you want to use Do Jo
             </p>
 
@@ -157,26 +157,26 @@ function RegisterContent() {
               {/* Foreign Learner */}
               <button
                 onClick={() => handleRoleSelect("learner")}
-                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-transparent hover:border-primary group"
+                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-gray-100 hover:border-sky-500 group"
               >
                 <div className="text-6xl mb-4">🌏</div>
-                <h3 className="text-2xl font-bold text-neutral-900 mb-2 group-hover:text-primary">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-sky-600">
                   I want to learn Japanese
                 </h3>
-                <p className="text-neutral-600 mb-4">
+                <p className="text-gray-500 mb-4">
                   Practice with native speakers
                 </p>
-                <ul className="text-sm space-y-2 text-neutral-500">
+                <ul className="text-sm space-y-2 text-gray-500">
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs">✓</span>
                     Real business conversations
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs">✓</span>
                     Native Japanese speakers
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs">✓</span>
                     Cultural insights
                   </li>
                 </ul>
@@ -185,26 +185,26 @@ function RegisterContent() {
               {/* Japanese Senior */}
               <button
                 onClick={() => handleRoleSelect("senior")}
-                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-transparent hover:border-accent group"
+                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-gray-100 hover:border-amber-500 group"
               >
                 <div className="text-6xl mb-4">🏯</div>
-                <h3 className="text-2xl font-bold text-neutral-900 mb-2 group-hover:text-accent">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-amber-600">
                   Share my experience (Senior)
                 </h3>
-                <p className="text-neutral-600 mb-4">
+                <p className="text-gray-500 mb-4">
                   Help foreigners succeed in Japan
                 </p>
-                <ul className="text-sm space-y-2 text-neutral-500">
+                <ul className="text-sm space-y-2 text-gray-500">
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs">✓</span>
                     Share your expertise
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs">✓</span>
                     Flexible schedule
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs">✓</span>
                     Make an impact
                   </li>
                 </ul>
@@ -213,26 +213,26 @@ function RegisterContent() {
               {/* Japanese Student */}
               <button
                 onClick={() => handleRoleSelect("student")}
-                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-transparent hover:border-purple-500 group"
+                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-gray-100 hover:border-purple-500 group"
               >
                 <div className="text-6xl mb-4">🎓</div>
-                <h3 className="text-2xl font-bold text-neutral-900 mb-2 group-hover:text-purple-600">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-purple-600">
                   Help learners (Student)
                 </h3>
-                <p className="text-neutral-600 mb-4">
+                <p className="text-gray-500 mb-4">
                   University students welcome
                 </p>
-                <ul className="text-sm space-y-2 text-neutral-500">
+                <ul className="text-sm space-y-2 text-gray-500">
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">✓</span>
                     Flexible schedule
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">✓</span>
                     Work from home
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-success/20 text-success flex items-center justify-center text-xs">✓</span>
+                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">✓</span>
                     International experience
                   </li>
                 </ul>
@@ -240,9 +240,9 @@ function RegisterContent() {
             </div>
 
             <div className="mt-10 text-center">
-              <p className="text-neutral-600">
+              <p className="text-gray-500">
                 Already have an account?{" "}
-                <Link href="/login" className="text-primary hover:text-primary-dark font-semibold">
+                <Link href="/login" className="text-sky-600 hover:text-sky-700 font-semibold">
                   Sign In
                 </Link>
               </p>
@@ -252,10 +252,10 @@ function RegisterContent() {
 
         {/* Step 2: Registration Form */}
         {step === 2 && role && (
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-neutral-100">
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <button
               onClick={() => setStep(1)}
-              className="text-neutral-500 hover:text-neutral-700 mb-4 flex items-center gap-1 font-medium"
+              className="text-gray-400 hover:text-gray-700 mb-4 flex items-center gap-1 font-medium transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -268,10 +268,10 @@ function RegisterContent() {
                 {role === "learner" ? "🌏" : role === "senior" ? "🏯" : "🎓"}
               </span>
               <div>
-                <h2 className="text-2xl font-bold text-neutral-900">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {role === "learner" ? "Create Learner Account" : role === "senior" ? "Create Senior Host Account" : "Create Student Host Account"}
                 </h2>
-                <p className="text-sm text-neutral-500">
+                <p className="text-sm text-gray-500">
                   {role === "learner" ? "Start your Japanese learning journey" : "Help learners succeed in Japan"}
                 </p>
               </div>
@@ -279,7 +279,7 @@ function RegisterContent() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="p-4 bg-error/10 border border-error/20 rounded-lg text-error text-sm flex items-center gap-2">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -289,13 +289,13 @@ function RegisterContent() {
 
               {/* Basic Info */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-neutral-700 border-b border-neutral-100 pb-2">
+                <h3 className="font-semibold text-gray-700 border-b border-gray-100 pb-2">
                   Basic Information
                 </h3>
 
                 <div>
-                  <label className="label">
-                    Full Name <span className="text-error">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -303,14 +303,14 @@ function RegisterContent() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="input-field"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                     placeholder={role === "learner" ? "Your Name" : "山田 太郎"}
                   />
                 </div>
 
                 <div>
-                  <label className="label">
-                    Email Address <span className="text-error">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -318,14 +318,14 @@ function RegisterContent() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="input-field"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                     placeholder="your@email.com"
                   />
                 </div>
 
                 <div>
-                  <label className="label">
-                    Password <span className="text-error">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="password"
@@ -334,13 +334,13 @@ function RegisterContent() {
                     onChange={handleChange}
                     required
                     minLength={8}
-                    className="input-field"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                     placeholder="8+ characters"
                   />
                 </div>
 
                 <div>
-                  <label className="label">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Self Introduction
                   </label>
                   <textarea
@@ -348,7 +348,7 @@ function RegisterContent() {
                     value={formData.bio}
                     onChange={handleChange}
                     rows={3}
-                    className="input-field"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all resize-none"
                     placeholder={role === "learner" ? "Tell us about yourself and your goals" : "簡単な自己紹介をお書きください"}
                   />
                 </div>
@@ -357,13 +357,13 @@ function RegisterContent() {
               {/* Learner Fields */}
               {role === "learner" && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-neutral-700 border-b border-neutral-100 pb-2">
+                  <h3 className="font-semibold text-gray-700 border-b border-gray-100 pb-2">
                     About Your Learning
                   </h3>
 
                   <div>
-                    <label className="label">
-                      Country <span className="text-error">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Country <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -371,13 +371,13 @@ function RegisterContent() {
                       value={formData.country}
                       onChange={handleChange}
                       required
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                       placeholder="e.g., USA, India, Vietnam"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Native Language
                     </label>
                     <input
@@ -385,21 +385,21 @@ function RegisterContent() {
                       name="nativeLanguage"
                       value={formData.nativeLanguage}
                       onChange={handleChange}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                       placeholder="e.g., English, Hindi"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
-                      Japanese Level <span className="text-error">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Japanese Level <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="jlptLevel"
                       value={formData.jlptLevel}
                       onChange={handleChange}
                       required
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                     >
                       <option value="">Select your level</option>
                       <option value="N1">N1 (Advanced)</option>
@@ -412,7 +412,7 @@ function RegisterContent() {
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Learning Goal
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -425,8 +425,8 @@ function RegisterContent() {
                           key={item.value}
                           className={`flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all ${
                             formData.learningGoal === item.value
-                              ? "border-primary bg-primary-50"
-                              : "border-neutral-100 hover:border-neutral-200"
+                              ? "border-sky-500 bg-sky-50"
+                              : "border-gray-200 hover:border-gray-300"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -436,28 +436,28 @@ function RegisterContent() {
                               value={item.value}
                               checked={formData.learningGoal === item.value}
                               onChange={handleChange}
-                              className="text-primary"
+                              className="text-sky-500"
                             />
-                            <span className="font-medium text-neutral-900">{item.label}</span>
+                            <span className="font-medium text-gray-900">{item.label}</span>
                           </div>
-                          <p className="text-xs text-neutral-500 mt-1 ml-6">{item.desc}</p>
+                          <p className="text-xs text-gray-500 mt-1 ml-6">{item.desc}</p>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="flex items-center gap-3 cursor-pointer p-4 bg-accent-50 rounded-xl border-2 border-accent/20 hover:border-accent/40 transition-colors">
+                    <label className="flex items-center gap-3 cursor-pointer p-4 bg-sky-50 rounded-xl border-2 border-sky-200 hover:border-sky-300 transition-colors">
                       <input
                         type="checkbox"
                         name="wantsToWorkInJapan"
                         checked={formData.wantsToWorkInJapan}
                         onChange={handleChange}
-                        className="rounded text-accent w-5 h-5"
+                        className="rounded text-sky-500 w-5 h-5"
                       />
                       <div>
-                        <span className="text-neutral-900 font-medium">I want to work in Japan</span>
-                        <p className="text-xs text-neutral-500">We&apos;ll connect you with career-focused hosts</p>
+                        <span className="text-gray-900 font-medium">I want to work in Japan</span>
+                        <p className="text-xs text-gray-500">We&apos;ll connect you with career-focused hosts</p>
                       </div>
                     </label>
                   </div>
@@ -467,13 +467,13 @@ function RegisterContent() {
               {/* Senior Fields */}
               {role === "senior" && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-neutral-700 border-b border-neutral-100 pb-2">
+                  <h3 className="font-semibold text-gray-700 border-b border-gray-100 pb-2">
                     ご経験について
                   </h3>
 
                   <div>
-                    <label className="label">
-                      生年月日 <span className="text-error">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      生年月日 <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -481,12 +481,12 @@ function RegisterContent() {
                       value={formData.birthDate}
                       onChange={handleChange}
                       required
-                      className="input-field text-lg"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-lg"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       これまでのキャリア
                     </label>
                     <textarea
@@ -494,13 +494,13 @@ function RegisterContent() {
                       value={formData.careerHistory}
                       onChange={handleChange}
                       rows={3}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all resize-none"
                       placeholder="例: 大手メーカーで営業部長として30年勤務。人材育成や海外営業を担当。"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       得意分野（複数選択可）
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -509,31 +509,31 @@ function RegisterContent() {
                           key={item}
                           className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${
                             formData.expertise.includes(item)
-                              ? "border-accent bg-accent-50"
-                              : "border-neutral-100 hover:border-neutral-200"
+                              ? "border-amber-500 bg-amber-50"
+                              : "border-gray-200 hover:border-gray-300"
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={formData.expertise.includes(item)}
                             onChange={() => handleArrayChange("expertise", item)}
-                            className="rounded text-accent"
+                            className="rounded text-amber-500"
                           />
-                          <span className="text-sm">{item}</span>
+                          <span className="text-sm text-gray-900">{item}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
-                  <h3 className="font-semibold text-neutral-700 border-b border-neutral-100 pb-2 mt-6">
+                  <h3 className="font-semibold text-gray-700 border-b border-gray-100 pb-2 mt-6">
                     緊急連絡先
                   </h3>
-                  <p className="text-sm text-neutral-500 -mt-2">
+                  <p className="text-sm text-gray-500 -mt-2">
                     ご家族などの連絡先をご登録ください（任意）
                   </p>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       緊急連絡先のお名前
                     </label>
                     <input
@@ -541,13 +541,13 @@ function RegisterContent() {
                       name="emergencyContactName"
                       value={formData.emergencyContactName}
                       onChange={handleChange}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                       placeholder="例: 山田 花子（娘）"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       緊急連絡先のメールアドレス
                     </label>
                     <input
@@ -555,7 +555,7 @@ function RegisterContent() {
                       name="emergencyContactEmail"
                       value={formData.emergencyContactEmail}
                       onChange={handleChange}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                       placeholder="例: hanako@example.com"
                     />
                   </div>
@@ -565,12 +565,12 @@ function RegisterContent() {
               {/* Student Fields */}
               {role === "student" && (
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-neutral-700 border-b border-neutral-100 pb-2">
+                  <h3 className="font-semibold text-gray-700 border-b border-gray-100 pb-2">
                     大学について
                   </h3>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       大学名
                     </label>
                     <input
@@ -578,13 +578,13 @@ function RegisterContent() {
                       name="university"
                       value={formData.university}
                       onChange={handleChange}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                       placeholder="例: 東京大学"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       専攻
                     </label>
                     <input
@@ -592,20 +592,20 @@ function RegisterContent() {
                       name="major"
                       value={formData.major}
                       onChange={handleChange}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                       placeholder="例: 経済学部"
                     />
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       卒業予定年
                     </label>
                     <select
                       name="graduationYear"
                       value={formData.graduationYear}
                       onChange={handleChange}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     >
                       <option value="">選択してください</option>
                       {[2025, 2026, 2027, 2028, 2029].map((year) => (
@@ -615,7 +615,7 @@ function RegisterContent() {
                   </div>
 
                   <div>
-                    <label className="label">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       興味・趣味（複数選択可）
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -625,7 +625,7 @@ function RegisterContent() {
                           className={`flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-all ${
                             formData.interests.includes(item)
                               ? "border-purple-500 bg-purple-50"
-                              : "border-neutral-100 hover:border-neutral-200"
+                              : "border-gray-200 hover:border-gray-300"
                           }`}
                         >
                           <input
@@ -634,7 +634,7 @@ function RegisterContent() {
                             onChange={() => handleArrayChange("interests", item)}
                             className="rounded text-purple-600"
                           />
-                          <span className="text-sm">{item}</span>
+                          <span className="text-sm text-gray-900">{item}</span>
                         </label>
                       ))}
                     </div>
@@ -649,14 +649,14 @@ function RegisterContent() {
                     type="checkbox"
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="w-5 h-5 mt-1 text-primary border-gray-300 rounded focus:ring-primary"
+                    className="w-5 h-5 mt-1 text-sky-500 border-gray-300 rounded focus:ring-sky-500"
                   />
-                  <span className="text-sm text-neutral-600">
+                  <span className="text-sm text-gray-600">
                     I agree to the{" "}
                     <Link
                       href="/terms"
                       target="_blank"
-                      className="text-primary hover:underline font-medium"
+                      className="text-sky-600 hover:underline font-medium"
                     >
                       Terms of Service
                     </Link>
@@ -664,7 +664,7 @@ function RegisterContent() {
                     <Link
                       href="/privacy"
                       target="_blank"
-                      className="text-primary hover:underline font-medium"
+                      className="text-sky-600 hover:underline font-medium"
                     >
                       Privacy Policy
                     </Link>
@@ -675,7 +675,7 @@ function RegisterContent() {
               <button
                 type="submit"
                 disabled={loading || !agreedToTerms}
-                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 px-6 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-sky-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -695,7 +695,7 @@ function RegisterContent() {
 
         {/* Back to home */}
         <div className="mt-6 text-center">
-          <Link href="/" className="text-neutral-500 hover:text-neutral-700 text-sm">
+          <Link href="/" className="text-gray-400 hover:text-gray-600 text-sm transition-colors">
             ← Back to home
           </Link>
         </div>
@@ -707,12 +707,12 @@ function RegisterContent() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-neutral-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg animate-pulse">
+          <div className="w-14 h-14 bg-gradient-to-br from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-sky-500/30 animate-pulse">
             <span className="text-white font-bold text-xl">道</span>
           </div>
-          <p className="text-neutral-600">Loading...</p>
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     }>

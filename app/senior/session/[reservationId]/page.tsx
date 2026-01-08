@@ -124,6 +124,27 @@ export default function SeniorSessionPage() {
         throw new Error("予約が見つかりませんでした");
       }
       const data = await response.json();
+
+      // Check if session time has started (allow 10 minutes early)
+      const sessionStart = new Date(data.slot.startTime);
+      const now = new Date();
+      const tenMinutesBefore = new Date(sessionStart.getTime() - 10 * 60 * 1000);
+      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000); // 30 min after start
+
+      if (now < tenMinutesBefore) {
+        const waitMinutes = Math.ceil((tenMinutesBefore.getTime() - now.getTime()) / 60000);
+        const startTimeStr = sessionStart.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+        setError(`セッションはまだ始まっていません。あと${waitMinutes}分後にお越しください。開始時刻: ${startTimeStr}`);
+        setLoading(false);
+        return;
+      }
+
+      if (now > sessionEnd) {
+        setError("このセッションはすでに終了しています。");
+        setLoading(false);
+        return;
+      }
+
       setReservation(data);
 
       // Set agenda if available

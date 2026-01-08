@@ -94,8 +94,24 @@ export default function SessionPage() {
         return;
       }
 
-      // [For testing] Skip time check
-      console.log("WARNING: Skipping time check for testing");
+      // Check if session time has started (allow 10 minutes early)
+      const sessionStart = new Date(data.slot.startTime);
+      const now = new Date();
+      const tenMinutesBefore = new Date(sessionStart.getTime() - 10 * 60 * 1000);
+      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000); // 30 min after start
+
+      if (now < tenMinutesBefore) {
+        const waitMinutes = Math.ceil((tenMinutesBefore.getTime() - now.getTime()) / 60000);
+        setError(`Session has not started yet. Please come back in ${waitMinutes} minutes. The session starts at ${sessionStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}.`);
+        setLoading(false);
+        return;
+      }
+
+      if (now > sessionEnd) {
+        setError("This session has already ended.");
+        setLoading(false);
+        return;
+      }
 
       setReservation(data);
     } catch (err) {

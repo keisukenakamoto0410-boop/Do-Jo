@@ -22,6 +22,23 @@ interface RankingUser {
   postCount: number;
 }
 
+interface Reservation {
+  id: string;
+  status: string;
+  slot: {
+    startTime: string;
+    endTime: string;
+  };
+  host: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  sessionFeedback?: {
+    id: string;
+  } | null;
+}
+
 export default function LearnerDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -36,6 +53,8 @@ export default function LearnerDashboard() {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPostCount, setMyPostCount] = useState(0);
   const [rankingLoading, setRankingLoading] = useState(true);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [reservationsLoading, setReservationsLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -48,6 +67,27 @@ export default function LearnerDashboard() {
   // Fetch user stats (placeholder for now)
   useEffect(() => {
     // TODO: Fetch actual stats from API
+  }, [session?.user?.id]);
+
+  // Fetch reservations
+  useEffect(() => {
+    const fetchReservations = async () => {
+      try {
+        const res = await fetch("/api/reservations");
+        if (res.ok) {
+          const data = await res.json();
+          setReservations(data.reservations || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch reservations:", error);
+      } finally {
+        setReservationsLoading(false);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchReservations();
+    }
   }, [session?.user?.id]);
 
   // Fetch rankings
@@ -74,6 +114,60 @@ export default function LearnerDashboard() {
     }
   };
 
+  // Check if session is joinable (15 minutes before to session end)
+  const isJoinable = (startTime: string, endTime: string) => {
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const joinableFrom = new Date(start.getTime() - 15 * 60000);
+    return now >= joinableFrom && now <= end;
+  };
+
+  // Check if session is today
+  const isToday = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+
+  // Get relative time string
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
+
+    if (diffMins < 0) return "In progress";
+    if (diffMins < 60) return `in ${diffMins} min`;
+    if (diffHours < 24) return `in ${diffHours} hours`;
+    return `in ${diffDays} days`;
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 via-white to-neutral-50">
@@ -85,6 +179,35 @@ export default function LearnerDashboard() {
   if (!session?.user) return null;
 
   const user = session.user;
+
+  // Filter reservations
+  const now = new Date();
+  const futureReservations = reservations
+    .filter(
+      (r) =>
+        r.status === "confirmed" && new Date(r.slot.endTime) > now
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.slot.startTime).getTime() -
+        new Date(b.slot.startTime).getTime()
+    );
+
+  const todayReservations = futureReservations.filter((r) =>
+    isToday(r.slot.startTime)
+  );
+  const upcomingReservations = futureReservations.filter(
+    (r) => !isToday(r.slot.startTime)
+  );
+
+  // Get completed sessions with feedback
+  const completedReservations = reservations
+    .filter((r) => r.status === "completed")
+    .sort(
+      (a, b) =>
+        new Date(b.slot.startTime).getTime() -
+        new Date(a.slot.startTime).getTime()
+    );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-neutral-50">
@@ -136,7 +259,7 @@ export default function LearnerDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-neutral-900 mb-2">
-                Welcome back, {user.name}! 👋
+                Hi {user.name}! 👋
               </h1>
               <p className="text-neutral-600">
                 Practice Japanese with native speakers through 25-minute video sessions
@@ -149,6 +272,72 @@ export default function LearnerDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Today's Session - Prominent display */}
+        {todayReservations.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-neutral-900 mb-4 flex items-center gap-2">
+              <span className="text-2xl">🟢</span>
+              Today&apos;s Session
+            </h2>
+            {todayReservations.map((reservation) => (
+              <div
+                key={reservation.id}
+                className={`rounded-2xl shadow-lg p-6 border-2 ${
+                  isJoinable(reservation.slot.startTime, reservation.slot.endTime)
+                    ? "bg-green-50 border-green-500"
+                    : "bg-white border-blue-200"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
+                      {reservation.host.avatar ? (
+                        <img
+                          src={reservation.host.avatar}
+                          alt={reservation.host.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        reservation.host.name.charAt(0)
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-neutral-900">
+                        {formatTime(reservation.slot.startTime)} -{" "}
+                        {formatTime(reservation.slot.endTime)} (JST)
+                      </p>
+                      <p className="text-neutral-600">
+                        Conversation with {reservation.host.name}-san
+                      </p>
+                      {!isJoinable(reservation.slot.startTime, reservation.slot.endTime) && (
+                        <p className="text-sm text-blue-600 mt-1">
+                          Starts {getRelativeTime(reservation.slot.startTime)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    {isJoinable(reservation.slot.startTime, reservation.slot.endTime) ? (
+                      <Link
+                        href={`/learner/session/${reservation.id}`}
+                        className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-lg transition-colors animate-pulse inline-flex items-center gap-2"
+                      >
+                        <span>🎥</span>
+                        Join Session
+                      </Link>
+                    ) : (
+                      <div className="px-6 py-3 bg-gray-200 text-gray-500 font-medium rounded-xl text-center">
+                        Available 15 min before
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -191,6 +380,136 @@ export default function LearnerDashboard() {
               </svg>
             </span>
           </Link>
+        </div>
+
+        {/* Upcoming Sessions */}
+        <div className="card mb-8">
+          <h2 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
+            <span className="text-2xl">📅</span>
+            Upcoming Sessions
+          </h2>
+          {reservationsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : upcomingReservations.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl">📅</span>
+              </div>
+              <p className="text-neutral-600 mb-4">No upcoming sessions</p>
+              <Link href="/learner/browse" className="btn-primary">
+                Find a Host
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {upcomingReservations.slice(0, 5).map((reservation) => (
+                <div
+                  key={reservation.id}
+                  className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold overflow-hidden">
+                      {reservation.host.avatar ? (
+                        <img
+                          src={reservation.host.avatar}
+                          alt={reservation.host.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        reservation.host.name.charAt(0)
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-neutral-900">
+                        with {reservation.host.name}-san
+                      </p>
+                      <p className="text-sm text-neutral-600">
+                        {formatDate(reservation.slot.startTime)}{" "}
+                        {formatTime(reservation.slot.startTime)} (JST)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm text-neutral-500">
+                    {getRelativeTime(reservation.slot.startTime)}
+                  </span>
+                </div>
+              ))}
+              {upcomingReservations.length > 5 && (
+                <Link
+                  href="/learner/reservations"
+                  className="block text-center py-3 text-primary hover:text-primary-dark font-medium"
+                >
+                  View all sessions ({upcomingReservations.length}) →
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Your Progress / Feedback History */}
+        <div className="card mb-8">
+          <h2 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
+            <span className="text-2xl">📊</span>
+            Your Progress
+          </h2>
+          {completedReservations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-neutral-600">
+                Complete your first session to see your progress!
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-neutral-600 mb-4">
+                You&apos;ve completed {completedReservations.length} session
+                {completedReservations.length !== 1 ? "s" : ""}!
+              </p>
+              <div className="space-y-3 mb-4">
+                {completedReservations.slice(0, 3).map((reservation) => (
+                  <div
+                    key={reservation.id}
+                    className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-sm">
+                        {reservation.host.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-medium text-neutral-900 text-sm">
+                          with {reservation.host.name}-san
+                        </p>
+                        <p className="text-xs text-neutral-500">
+                          {formatDate(reservation.slot.startTime)}
+                        </p>
+                      </div>
+                    </div>
+                    {reservation.sessionFeedback ? (
+                      <Link
+                        href={`/learner/feedback/${reservation.id}`}
+                        className="px-3 py-1.5 bg-green-100 text-green-700 text-sm font-medium rounded-lg hover:bg-green-200 transition-colors"
+                      >
+                        View Feedback
+                      </Link>
+                    ) : (
+                      <span className="px-3 py-1.5 bg-gray-100 text-gray-500 text-sm rounded-lg">
+                        Awaiting feedback
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {completedReservations.length > 3 && (
+                <Link
+                  href="/learner/reservations"
+                  className="text-primary hover:text-primary-dark font-medium text-sm"
+                >
+                  View all completed sessions →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Ranking Section */}
@@ -343,26 +662,6 @@ export default function LearnerDashboard() {
         {/* Article Feed */}
         <div className="mb-8">
           <ArticleFeed />
-        </div>
-
-        {/* Upcoming Sessions */}
-        <div className="card">
-          <h2 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
-            <span className="text-2xl">📅</span>
-            Upcoming Sessions
-          </h2>
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">📅</span>
-            </div>
-            <p className="text-neutral-600 mb-4">No upcoming sessions</p>
-            <Link
-              href="/learner/browse"
-              className="btn-primary"
-            >
-              Find a Host
-            </Link>
-          </div>
         </div>
       </main>
 

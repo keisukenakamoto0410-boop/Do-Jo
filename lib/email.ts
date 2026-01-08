@@ -1,19 +1,17 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-let resendInstance: Resend | null = null;
+// Create Gmail transporter
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
-function getResend(): Resend {
-  if (!resendInstance) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error("RESEND_API_KEY is not set");
-    }
-    resendInstance = new Resend(apiKey);
-  }
-  return resendInstance;
-}
-
-const FROM_EMAIL = "Do Jo <noreply@do-jo.vercel.app>";
+const FROM_EMAIL = process.env.GMAIL_USER || "noreply@do-jo.vercel.app";
 
 interface BookingEmailParams {
   hostEmail: string;
@@ -85,8 +83,8 @@ export async function sendBookingConfirmationEmail({
 }: BookingEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
-    const { error } = await getResend().emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `Do Jo <${FROM_EMAIL}>`,
       to: hostEmail,
       subject: "【Do Jo】新しい予約が入りました",
       html: `
@@ -115,11 +113,6 @@ export async function sendBookingConfirmationEmail({
       `,
     });
 
-    if (error) {
-      console.error("Failed to send booking email:", error);
-      return { success: false, error: error.message };
-    }
-
     return { success: true };
   } catch (error) {
     console.error("Failed to send booking email:", error);
@@ -141,8 +134,8 @@ export async function sendLearnerBookingConfirmationEmail({
 }: LearnerBookingEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
-    const { error } = await getResend().emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `Do Jo <${FROM_EMAIL}>`,
       to: learnerEmail,
       subject: "【Do Jo】Booking Confirmed - Your session is scheduled!",
       html: `
@@ -180,11 +173,6 @@ export async function sendLearnerBookingConfirmationEmail({
       `,
     });
 
-    if (error) {
-      console.error("Failed to send learner booking email:", error);
-      return { success: false, error: error.message };
-    }
-
     return { success: true };
   } catch (error) {
     console.error("Failed to send learner booking email:", error);
@@ -208,8 +196,8 @@ export async function sendReminderEmail({
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
     // Japanese email for hosts (seniors)
     if (isHost) {
-      const { error } = await getResend().emails.send({
-        from: FROM_EMAIL,
+      await transporter.sendMail({
+        from: `Do Jo <${FROM_EMAIL}>`,
         to: email,
         subject: "【Do Jo】まもなくセッション開始です（30分前）",
         html: `
@@ -240,15 +228,10 @@ export async function sendReminderEmail({
           </div>
         `,
       });
-
-      if (error) {
-        console.error("Failed to send reminder email:", error);
-        return { success: false, error: error.message };
-      }
     } else {
       // English email for learners
-      const { error } = await getResend().emails.send({
-        from: FROM_EMAIL,
+      await transporter.sendMail({
+        from: `Do Jo <${FROM_EMAIL}>`,
         to: email,
         subject: "【Do Jo】Session starting soon (30 min reminder)",
         html: `
@@ -279,11 +262,6 @@ export async function sendReminderEmail({
           </div>
         `,
       });
-
-      if (error) {
-        console.error("Failed to send reminder email:", error);
-        return { success: false, error: error.message };
-      }
     }
 
     return { success: true };
@@ -304,8 +282,8 @@ export async function sendPasswordResetEmail({
 }: PasswordResetEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
-    const { error } = await getResend().emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `Do Jo <${FROM_EMAIL}>`,
       to: email,
       subject: "【Do Jo】Password Reset Request / パスワードリセット",
       html: `
@@ -344,11 +322,6 @@ export async function sendPasswordResetEmail({
         </div>
       `,
     });
-
-    if (error) {
-      console.error("Failed to send password reset email:", error);
-      return { success: false, error: error.message };
-    }
 
     return { success: true };
   } catch (error) {

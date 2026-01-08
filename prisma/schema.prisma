@@ -55,6 +55,9 @@ model User {
   averageRating   Float     @default(0) // 平均評価
   totalSessions   Int       @default(0) // 総セッション数
   totalEarnings   Int       @default(0) // 総収益（円） ← 大学生向け
+  consecutiveDays Int       @default(0) // 連続会話日数
+  lastConversationDate DateTime? // 最後の会話日
+  uniquePartners  Int       @default(0) // 会話した人数
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

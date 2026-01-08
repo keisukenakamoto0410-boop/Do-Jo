@@ -157,9 +157,13 @@ model Reservation {
 
   createdAt   DateTime @default(now())
 
+  // リマインダーメール送信済みフラグ
+  reminderSent Boolean @default(false)
+
   // リレーション
   feedback    Feedback[]
   studyLogs   StudyLog[]
+  sessionFeedback SessionFeedback?
 
   @@index([learnerId])
   @@index([hostId])
@@ -427,4 +431,26 @@ model GrammarPoint {
   createdAt     DateTime @default(now())
 
   @@map("grammar_points")
+}
+
+// セッション後フィードバック（シニア→学習者への評価）
+model SessionFeedback {
+  id              String   @id @default(cuid())
+  reservationId   String   @unique
+  reservation     Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  // Q1-Q4の回答 (0=いいえ/よくあった, 1=ときどき, 2=はい/なかった)
+  q1Accurate     Int      // 的確な応答
+  q2Keigo        Int      // 敬語使用
+  q3Naturalness  Int      // 自然さ (逆転: 0=よくあった, 1=ときどき, 2=なかった)
+  q4NativeFeel   Int      // ネイティブ感覚
+
+  totalScore      Int      // 合計スコア (0-8)
+  level           String   // N/F/B/L
+  message         String?  @db.Text // シニアからのメッセージ
+
+  createdAt       DateTime @default(now())
+
+  @@index([reservationId])
+  @@map("session_feedback")
 }

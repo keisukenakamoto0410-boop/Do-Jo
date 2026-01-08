@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 // GET reservations for the current user
 export async function GET(req: NextRequest) {
@@ -165,12 +166,31 @@ export async function POST(req: NextRequest) {
             select: {
               id: true,
               name: true,
+              email: true,
               avatar: true,
               role: true,
             },
           },
+          learner: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       });
+    });
+
+    // Send booking confirmation email to host (async, don't block response)
+    const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+    sendBookingConfirmationEmail({
+      hostEmail: reservation.host.email!,
+      hostName: reservation.host.name,
+      learnerName: reservation.learner.name,
+      sessionDate: reservation.slot.startTime,
+      sessionUrl: `${BASE_URL}/host/session/${reservation.id}`,
+    }).catch((err) => {
+      console.error("Failed to send booking confirmation email:", err);
     });
 
     return NextResponse.json({ reservation }, { status: 201 });

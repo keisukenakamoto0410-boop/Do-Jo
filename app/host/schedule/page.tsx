@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import MobileNav from "@/components/MobileNav";
+import CalendarAvailability from "@/components/CalendarAvailability";
 
 interface Slot {
   id: string;
@@ -185,8 +187,11 @@ export default function HostSchedulePage() {
     <div
       className={`min-h-screen ${isSenior ? "bg-gradient-to-br from-amber-50 via-white to-orange-50" : "bg-gradient-to-br from-purple-50 via-white to-pink-50"}`}
     >
-      {/* Header */}
-      <header className="bg-white shadow-sm">
+      {/* Mobile Navigation */}
+      <MobileNav isLearner={false} />
+
+      {/* Desktop Header - hidden on mobile */}
+      <header className="hidden lg:block bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <Link
@@ -226,12 +231,12 @@ export default function HostSchedulePage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">スケジュール管理</h1>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8 pb-20 lg:pb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">スケジュール管理</h1>
           <button
             onClick={() => setShowModal(true)}
-            className={`px-6 py-3 rounded-xl font-medium text-white ${
+            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-medium text-white ${
               isSenior
                 ? "bg-amber-600 hover:bg-amber-700"
                 : "bg-purple-600 hover:bg-purple-700"
@@ -239,6 +244,11 @@ export default function HostSchedulePage() {
           >
             + 予約枠を作成
           </button>
+        </div>
+
+        {/* Calendar View */}
+        <div className="mb-8">
+          <CalendarAvailability onSlotsChange={fetchSlots} />
         </div>
 
         {/* Date Navigation */}

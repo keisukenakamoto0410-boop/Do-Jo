@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { COUNTRIES, PREFECTURES } from "@/lib/locationData";
 
 type UserRole = "learner" | "senior" | "student";
 
@@ -31,6 +32,7 @@ function RegisterContent() {
     birthDate: "",
     emergencyContactEmail: "",
     emergencyContactName: "",
+    prefecture: "",
     // Student fields
     university: "",
     major: "",
@@ -365,15 +367,20 @@ function RegisterContent() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Country <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="country"
                       value={formData.country}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
-                      placeholder="e.g., USA, India, Vietnam"
-                    />
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">Select your country</option>
+                      {COUNTRIES.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.flag} {c.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
@@ -483,6 +490,25 @@ function RegisterContent() {
                       required
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-lg"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      お住まいの地域
+                    </label>
+                    <select
+                      name="prefecture"
+                      value={formData.prefecture}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">選択してください</option>
+                      {PREFECTURES.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

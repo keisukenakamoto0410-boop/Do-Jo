@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { compressAvatar, formatFileSize } from "@/lib/imageCompression";
+import { PREFECTURES } from "@/lib/locationData";
 
 export default function SeniorProfilePage() {
   const { data: session } = useSession();
@@ -45,15 +47,24 @@ export default function SeniorProfilePage() {
     }
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("画像は2MB以下にしてください");
+      if (file.size > 10 * 1024 * 1024) {
+        alert("画像は10MB以下にしてください");
         return;
       }
-      setAvatar(file);
+
+      // Show preview immediately
       setAvatarPreview(URL.createObjectURL(file));
+
+      // Compress the image
+      const originalSize = formatFileSize(file.size);
+      const compressed = await compressAvatar(file);
+      const compressedSize = formatFileSize(compressed.size);
+
+      console.log(`Avatar compressed: ${originalSize} -> ${compressedSize}`);
+      setAvatar(compressed);
     }
   };
 

@@ -22,20 +22,20 @@ export default function MobileNav({ isLearner = true }: MobileNavProps) {
   const { data: session } = useSession();
 
   const learnerNavItems: NavItem[] = [
-    { href: "/learner/dashboard", label: "Dashboard", labelJa: "ダッシュボード", icon: "🏠" },
-    { href: "/learner/book", label: "Book Session", labelJa: "予約", icon: "📅" },
-    { href: "/learner/reservations", label: "My Sessions", labelJa: "予約一覧", icon: "📋" },
-    { href: "/learner/profile", label: "Profile", labelJa: "プロフィール", icon: "👤" },
+    { href: "/learner/dashboard", label: "Home", labelJa: "ホーム", icon: "🏠" },
+    { href: "/learner/browse", label: "Book", labelJa: "予約", icon: "📅" },
+    { href: "/learner/reservations", label: "Sessions", labelJa: "予約一覧", icon: "📋" },
+    { href: "/learner/post", label: "Post", labelJa: "投稿", icon: "📝" },
   ];
 
-  const seniorNavItems: NavItem[] = [
-    { href: "/senior/dashboard", label: "Dashboard", labelJa: "ダッシュボード", icon: "🏠" },
-    { href: "/senior/availability", label: "Availability", labelJa: "スケジュール", icon: "📅" },
-    { href: "/senior/reservations", label: "My Sessions", labelJa: "予約一覧", icon: "📋" },
-    { href: "/senior/profile", label: "Profile", labelJa: "プロフィール", icon: "👤" },
+  const hostNavItems: NavItem[] = [
+    { href: "/host/dashboard", label: "Home", labelJa: "ホーム", icon: "🏠" },
+    { href: "/host/schedule", label: "Schedule", labelJa: "スケジュール", icon: "📅" },
+    { href: "/host/reservations", label: "Sessions", labelJa: "予約一覧", icon: "📋" },
+    { href: "/host/earnings", label: "Earnings", labelJa: "収益", icon: "💰" },
   ];
 
-  const navItems = isLearner ? learnerNavItems : seniorNavItems;
+  const navItems = isLearner ? learnerNavItems : hostNavItems;
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
@@ -46,7 +46,7 @@ export default function MobileNav({ isLearner = true }: MobileNavProps) {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href={isLearner ? "/learner/dashboard" : "/senior/dashboard"} className="flex items-center gap-2">
+          <Link href={isLearner ? "/learner/dashboard" : "/host/dashboard"} className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">道</span>
             </div>
@@ -97,17 +97,9 @@ export default function MobileNav({ isLearner = true }: MobileNavProps) {
             {/* Menu Header */}
             <div className="p-4 border-b bg-gradient-to-r from-sky-500 to-blue-600 text-white">
               <div className="flex items-center gap-3">
-                {session?.user?.image ? (
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    className="w-10 h-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold">
-                    {session?.user?.name?.[0]?.toUpperCase() || "?"}
-                  </div>
-                )}
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold">
+                  {session?.user?.name?.[0]?.toUpperCase() || "?"}
+                </div>
                 <div>
                   <p className="font-bold">{session?.user?.name || "User"}</p>
                   <p className="text-xs text-sky-100">{session?.user?.email}</p>

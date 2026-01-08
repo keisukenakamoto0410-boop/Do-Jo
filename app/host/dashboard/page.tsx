@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import LearnerPostFeed from "@/components/host/LearnerPostFeed";
+import MobileNav from "@/components/MobileNav";
+import ConversationStats from "@/components/ConversationStats";
 
 // Admin emails that can access admin pages
 const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
@@ -149,8 +151,11 @@ export default function HostDashboard() {
     <div
       className={`min-h-screen ${isSenior ? "bg-gradient-to-br from-amber-50 via-white to-orange-50" : "bg-gradient-to-br from-purple-50 via-white to-pink-50"}`}
     >
-      {/* Header */}
-      <header className="bg-white shadow-sm">
+      {/* Mobile Navigation */}
+      <MobileNav isLearner={false} />
+
+      {/* Desktop Header - hidden on mobile */}
+      <header className="hidden lg:block bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <Link
@@ -204,7 +209,7 @@ export default function HostDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8 pb-20 lg:pb-8">
         {/* Welcome */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -292,36 +297,9 @@ export default function HostDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow p-6 text-center">
-            <p
-              className={`text-3xl font-bold ${isSenior ? "text-amber-600" : "text-purple-600"}`}
-            >
-              0
-            </p>
-            <p className="text-sm text-gray-600">総セッション数</p>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6 text-center">
-            <p className="text-3xl font-bold text-blue-600">0分</p>
-            <p className="text-sm text-gray-600">総会話時間</p>
-          </div>
-          <div className="bg-white rounded-xl shadow p-6 text-center">
-            <p className="text-3xl font-bold text-yellow-600">-</p>
-            <p className="text-sm text-gray-600">平均評価</p>
-          </div>
-          {isStudent && (
-            <div className="bg-white rounded-xl shadow p-6 text-center">
-              <p className="text-3xl font-bold text-green-600">¥0</p>
-              <p className="text-sm text-gray-600">今月の収益</p>
-            </div>
-          )}
-          {isSenior && (
-            <div className="bg-white rounded-xl shadow p-6 text-center">
-              <p className="text-3xl font-bold text-orange-600">0</p>
-              <p className="text-sm text-gray-600">今月のセッション</p>
-            </div>
-          )}
+        {/* Conversation Stats */}
+        <div className="mb-8">
+          <ConversationStats userId={user.id} isLearner={false} />
         </div>
 
         {/* Learner Post Feed */}

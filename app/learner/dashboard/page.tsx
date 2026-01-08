@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import StudyPostTimeline from "@/components/learner/StudyPostTimeline";
 import ArticleFeed from "@/components/learner/ArticleFeed";
+import MobileNav from "@/components/MobileNav";
+import ConversationStats from "@/components/ConversationStats";
 
 interface UserStats {
   totalSessions: number;
@@ -211,8 +213,11 @@ export default function LearnerDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-neutral-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-neutral-100 sticky top-0 z-50">
+      {/* Mobile Navigation */}
+      <MobileNav isLearner={true} />
+
+      {/* Desktop Header - hidden on mobile */}
+      <header className="hidden lg:block bg-white/80 backdrop-blur-sm border-b border-neutral-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <Link href="/learner/dashboard" className="flex items-center space-x-3">
@@ -253,7 +258,7 @@ export default function LearnerDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8 pb-20 lg:pb-8">
         {/* Welcome Section */}
         <div className="card mb-8">
           <div className="flex items-center justify-between">
@@ -339,26 +344,9 @@ export default function LearnerDashboard() {
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-primary">{stats.totalSessions}</p>
-            <p className="text-sm text-neutral-600 mt-1">Total Sessions</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-accent">{stats.totalMinutes} min</p>
-            <p className="text-sm text-neutral-600 mt-1">Talk Time</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-success">
-              {stats.averageRating ? stats.averageRating.toFixed(1) : "—"}
-            </p>
-            <p className="text-sm text-neutral-600 mt-1">Avg. Rating</p>
-          </div>
-          <div className="card text-center">
-            <p className="text-3xl font-bold text-warning">{stats.thisMonthSessions}</p>
-            <p className="text-sm text-neutral-600 mt-1">This Month</p>
-          </div>
+        {/* Conversation Stats */}
+        <div className="mb-8">
+          <ConversationStats userId={user.id} isLearner={true} />
         </div>
 
         {/* Quick Actions */}

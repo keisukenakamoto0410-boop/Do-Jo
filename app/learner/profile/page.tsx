@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { compressAvatar, formatFileSize, needsCompression } from "@/lib/imageCompression";
+import { COUNTRIES } from "@/lib/locationData";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -39,16 +41,25 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Image must be less than 5MB");
+      // Check file size (max 10MB before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Image must be less than 10MB");
         return;
       }
-      setAvatar(file);
+
+      // Show preview immediately
       setAvatarPreview(URL.createObjectURL(file));
+
+      // Compress the image
+      const originalSize = formatFileSize(file.size);
+      const compressed = await compressAvatar(file);
+      const compressedSize = formatFileSize(compressed.size);
+
+      console.log(`Avatar compressed: ${originalSize} -> ${compressedSize}`);
+      setAvatar(compressed);
     }
   };
 

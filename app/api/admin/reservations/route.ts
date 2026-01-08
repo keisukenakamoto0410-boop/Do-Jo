@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // Admin emails that can access this endpoint
-const ADMIN_EMAILS = ["nakamoto.keisuke.vx@gmail.com"];
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
 
 // GET: Get all reservations for admin
 export async function GET(request: NextRequest) {

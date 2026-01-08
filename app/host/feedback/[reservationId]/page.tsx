@@ -146,7 +146,7 @@ export default function HostFeedbackPage() {
         <header className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <Link
-              href="/host/dashboard"
+              href={isSenior ? "/senior/dashboard" : "/host/dashboard"}
               className={`text-2xl font-bold ${isSenior ? "text-amber-600" : "text-purple-600"}`}
             >
               Do Jo
@@ -166,7 +166,7 @@ export default function HostFeedbackPage() {
               学習者の日本語上達に役立てさせていただきます。
             </p>
             <Link
-              href="/host/dashboard"
+              href={isSenior ? "/senior/dashboard" : "/host/dashboard"}
               className={`inline-block px-8 py-3 ${isSenior ? "bg-amber-600 hover:bg-amber-700" : "bg-purple-600 hover:bg-purple-700"} text-white font-bold rounded-xl transition-colors`}
             >
               ダッシュボードに戻る
@@ -236,13 +236,13 @@ export default function HostFeedbackPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <Link
-              href="/host/dashboard"
+              href={isSenior ? "/senior/dashboard" : "/host/dashboard"}
               className={`text-2xl font-bold ${isSenior ? "text-amber-600" : "text-purple-600"}`}
             >
               Do Jo
             </Link>
             <Link
-              href="/host/dashboard"
+              href={isSenior ? "/senior/dashboard" : "/host/dashboard"}
               className="text-gray-600 hover:text-gray-900"
             >
               ← ダッシュボードに戻る

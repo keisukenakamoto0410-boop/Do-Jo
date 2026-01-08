@@ -398,31 +398,19 @@ export default function SessionPage() {
         </button>
       </div>
 
-      {/* Video Grid */}
-      <div className="flex-1 grid grid-cols-2 gap-4 p-4">
-        {/* Local Video */}
-        <div className="relative bg-gray-800 rounded-xl overflow-hidden">
-          <div
-            id="local-video"
-            className="w-full h-full"
-            style={{ minHeight: "400px" }}
-          ></div>
-          <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded text-white text-sm font-medium">
-            You {joined && "(Connected)"}
-          </div>
-        </div>
-
-        {/* Remote Video */}
-        <div className="relative bg-gray-800 rounded-xl overflow-hidden">
+      {/* Video Area - Remote video full screen, local video small */}
+      <div className="flex-1 relative p-4">
+        {/* Remote Video (Full Screen) */}
+        <div className="w-full h-full bg-gray-800 rounded-xl overflow-hidden">
           <div
             id="remote-video"
             className="w-full h-full"
             style={{ minHeight: "400px" }}
           ></div>
           {remoteUsers.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50">
+            <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 m-4 rounded-xl">
               <div className="text-center">
-                <div className="text-6xl mb-4">Waiting</div>
+                <div className="text-6xl mb-4">👋</div>
                 <p className="text-xl font-medium">Waiting for host...</p>
                 <p className="text-sm text-gray-400 mt-2">
                   {joined ? "Connected to channel" : "Connecting..."}
@@ -431,10 +419,21 @@ export default function SessionPage() {
             </div>
           )}
           {remoteUsers.length > 0 && (
-            <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded text-white text-sm font-medium">
-              Host (Connected)
+            <div className="absolute bottom-8 left-8 bg-black/70 px-4 py-2 rounded-lg text-white font-medium">
+              {reservation?.host?.name || "Host"}
             </div>
           )}
+        </div>
+
+        {/* Local Video (Small, bottom-right corner) */}
+        <div className="absolute bottom-8 right-8 w-48 h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
+          <div
+            id="local-video"
+            className="w-full h-full"
+          ></div>
+          <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-white text-xs">
+            You
+          </div>
         </div>
       </div>
 

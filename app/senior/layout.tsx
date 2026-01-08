@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
 
+// Admin emails that can access admin pages
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
+
 export default function SeniorLayout({
   children,
 }: {
@@ -63,6 +66,14 @@ export default function SeniorLayout({
               >
                 ホーム
               </Link>
+              {session?.user?.email && ADMIN_EMAILS.includes(session.user.email) && (
+                <Link
+                  href="/admin/reservations"
+                  className="px-5 py-3 bg-yellow-500 hover:bg-yellow-600 rounded-xl text-lg font-medium transition-colors"
+                >
+                  管理者
+                </Link>
+              )}
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="px-5 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-lg font-medium transition-colors"

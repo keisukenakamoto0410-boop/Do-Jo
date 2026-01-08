@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import LearnerPostFeed from "@/components/host/LearnerPostFeed";
 
+// Admin emails that can access admin pages
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
+
 interface Reservation {
   id: string;
   status: string;
@@ -175,6 +178,14 @@ export default function HostDashboard() {
                   className="text-gray-600 hover:text-gray-900"
                 >
                   収益管理
+                </Link>
+              )}
+              {user.email && ADMIN_EMAILS.includes(user.email) && (
+                <Link
+                  href="/admin/reservations"
+                  className="px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg font-medium"
+                >
+                  管理者
                 </Link>
               )}
               <div className="flex items-center gap-2">

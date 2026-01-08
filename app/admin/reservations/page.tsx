@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 // Admin emails that can access this page
-const ADMIN_EMAILS = ["nakamoto.keisuke.vx@gmail.com"];
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
 
 interface Reservation {
   id: string;
@@ -285,7 +285,7 @@ export default function AdminReservationsPage() {
                         {getStatusBadge(reservation)}
                       </div>
 
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid md:grid-cols-2 gap-4 mb-4">
                         {/* Host Info */}
                         <div className="bg-amber-50 rounded-lg p-4">
                           <p className="text-sm text-amber-600 font-medium mb-1">
@@ -319,6 +319,28 @@ export default function AdminReservationsPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Video Call Link */}
+                      <div className="bg-purple-50 rounded-lg p-4">
+                        <p className="text-sm text-purple-600 font-medium mb-2">
+                          🎥 ビデオ通話リンク
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 bg-white px-3 py-2 rounded text-sm text-gray-700 border">
+                            https://do-jo.vercel.app/session/{reservation.id}
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`https://do-jo.vercel.app/session/${reservation.id}`);
+                              setCopiedId(`link-${reservation.id}`);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors"
+                          >
+                            {copiedId === `link-${reservation.id}` ? "✓" : "コピー"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Actions */}
@@ -327,12 +349,20 @@ export default function AdminReservationsPage() {
                         reservation.slot.startTime,
                         reservation.slot.endTime
                       ) && (
-                        <Link
-                          href={`/session/${reservation.id}`}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-center transition-colors"
-                        >
-                          参加する
-                        </Link>
+                        <>
+                          <Link
+                            href={`/admin/watch/${reservation.id}`}
+                            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg text-center transition-colors"
+                          >
+                            👁 監視する
+                          </Link>
+                          <Link
+                            href={`/session/${reservation.id}`}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-center transition-colors"
+                          >
+                            参加する
+                          </Link>
+                        </>
                       )}
                       <button
                         onClick={() => copyToClipboard(reservation)}
@@ -384,6 +414,9 @@ export default function AdminReservationsPage() {
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
                       学習者
                     </th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                      ビデオリンク
+                    </th>
                     <th className="px-6 py-3 text-right text-sm font-medium text-gray-500">
                       アクション
                     </th>
@@ -417,6 +450,23 @@ export default function AdminReservationsPage() {
                           {reservation.learner.email}
                         </p>
                       </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 max-w-[200px] truncate">
+                            /session/{reservation.id.slice(0, 8)}...
+                          </code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(`https://do-jo.vercel.app/session/${reservation.id}`);
+                              setCopiedId(`table-link-${reservation.id}`);
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded transition-colors"
+                          >
+                            {copiedId === `table-link-${reservation.id}` ? "✓" : "🔗"}
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => copyToClipboard(reservation)}
@@ -425,7 +475,7 @@ export default function AdminReservationsPage() {
                           {copiedId === reservation.id ? (
                             "✓ コピー済み"
                           ) : (
-                            <>📋 コピー</>
+                            <>📋 全情報</>
                           )}
                         </button>
                       </td>
@@ -456,6 +506,9 @@ export default function AdminReservationsPage() {
                     <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
                       学習者
                     </th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">
+                      フィードバックURL
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -469,6 +522,22 @@ export default function AdminReservationsPage() {
                       </td>
                       <td className="px-6 py-4">{reservation.host.name}</td>
                       <td className="px-6 py-4">{reservation.learner.name}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`https://do-jo.vercel.app/learner/feedback/${reservation.id}`);
+                            setCopiedId(`feedback-${reservation.id}`);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          className="px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 text-sm font-medium rounded-lg inline-flex items-center gap-1 transition-colors"
+                        >
+                          {copiedId === `feedback-${reservation.id}` ? (
+                            "✓ コピー済み"
+                          ) : (
+                            <>📝 URLコピー</>
+                          )}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

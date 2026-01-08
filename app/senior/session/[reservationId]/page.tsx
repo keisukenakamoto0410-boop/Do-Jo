@@ -273,7 +273,7 @@ export default function SeniorSessionPage() {
       console.error("Failed to complete session:", err);
     }
 
-    router.push("/senior/dashboard");
+    router.push(`/host/feedback/${reservationId}`);
   };
 
   const formatTime = (seconds: number) => {
@@ -364,29 +364,17 @@ export default function SeniorSessionPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Video Section */}
         <div className={`flex-1 flex flex-col p-4 ${showAgenda ? "" : ""}`}>
-          {/* Video Grid */}
-          <div className="flex-1 grid grid-cols-2 gap-4">
-            {/* Local Video (Senior) */}
-            <div className="relative bg-gray-800 rounded-2xl overflow-hidden">
-              <div
-                id="local-video"
-                className="w-full h-full"
-                style={{ minHeight: "300px" }}
-              ></div>
-              <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-lg text-white font-bold">
-                あなた
-              </div>
-            </div>
-
-            {/* Remote Video (Learner) */}
-            <div className="relative bg-gray-800 rounded-2xl overflow-hidden">
+          {/* Video Area - Remote video full screen, local video small */}
+          <div className="flex-1 relative">
+            {/* Remote Video (Full Screen) */}
+            <div className="w-full h-full bg-gray-800 rounded-2xl overflow-hidden">
               <div
                 id="remote-video"
                 className="w-full h-full"
                 style={{ minHeight: "300px" }}
               ></div>
               {remoteUsers.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50">
+                <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 rounded-2xl">
                   <div className="text-center">
                     <div className="text-5xl mb-3">👋</div>
                     <p className="text-xl font-bold">相手を待っています...</p>
@@ -394,10 +382,21 @@ export default function SeniorSessionPage() {
                 </div>
               )}
               {remoteUsers.length > 0 && reservation?.learner && (
-                <div className="absolute bottom-3 left-3 bg-black/70 px-4 py-2 rounded-lg text-white font-bold">
+                <div className="absolute bottom-4 left-4 bg-black/70 px-4 py-2 rounded-lg text-white font-bold">
                   {reservation.learner.name}さん
                 </div>
               )}
+            </div>
+
+            {/* Local Video (Small, bottom-right corner) */}
+            <div className="absolute bottom-4 right-4 w-40 h-32 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
+              <div
+                id="local-video"
+                className="w-full h-full"
+              ></div>
+              <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-1 rounded text-white text-xs">
+                あなた
+              </div>
             </div>
           </div>
 

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 // Admin emails that can access this page
-const ADMIN_EMAILS = ["nakamoto.keisuke.vx@gmail.com"];
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
 
 interface LearnerStats {
   id: string;

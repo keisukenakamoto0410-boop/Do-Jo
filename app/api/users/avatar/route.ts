@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/supabase";
+
+const BUCKET_NAME = "avatars";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,13 +40,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert image to Base64
+    // Get file extension
+    const ext = image.type.split("/")[1] || "jpg";
+    const fileName = `${session.user.id}.${ext}`;
+
+    // Convert File to ArrayBuffer then to Buffer
     const arrayBuffer = await image.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const base64 = buffer.toString("base64");
-    const avatarUrl = `data:${image.type};base64,${base64}`;
 
-    // Update user avatar
+    // Delete existing avatar if exists
+    await supabaseAdmin.storage.from(BUCKET_NAME).remove([`${session.user.id}.jpg`, `${session.user.id}.png`, `${session.user.id}.jpeg`, `${session.user.id}.webp`]);
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .upload(fileName, buffer, {
+        contentType: image.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Supabase upload error:", uploadError);
+      return NextResponse.json(
+        { error: "画像のアップロードに失敗しました" },
+        { status: 500 }
+      );
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(fileName);
+
+    const avatarUrl = urlData.publicUrl;
+
+    // Update user avatar URL in database
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: { avatar: avatarUrl },
@@ -75,7 +106,15 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Remove avatar
+    // Delete from Supabase Storage
+    await supabaseAdmin.storage.from(BUCKET_NAME).remove([
+      `${session.user.id}.jpg`,
+      `${session.user.id}.png`,
+      `${session.user.id}.jpeg`,
+      `${session.user.id}.webp`,
+    ]);
+
+    // Remove avatar from database
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: { avatar: null },

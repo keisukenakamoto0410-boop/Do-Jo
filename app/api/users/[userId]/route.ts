@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/supabase";
+
+const BUCKET_NAME = "avatars";
 
 export async function GET(
   request: NextRequest,
@@ -69,12 +72,49 @@ export async function PATCH(
 
     let avatarUrl: string | undefined = undefined;
 
-    // アバター画像をBase64に変換
+    // アバター画像をSupabase Storageにアップロード
     if (avatarFile && avatarFile.size > 0) {
+      // Validate file size (max 2MB)
+      if (avatarFile.size > 2 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "画像サイズは2MB以下にしてください" },
+          { status: 400 }
+        );
+      }
+
+      const ext = avatarFile.type.split("/")[1] || "jpg";
+      const fileName = `${userId}.${ext}`;
+
       const arrayBuffer = await avatarFile.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const base64 = buffer.toString("base64");
-      avatarUrl = `data:${avatarFile.type};base64,${base64}`;
+
+      // Delete existing avatar if exists
+      await supabaseAdmin.storage.from(BUCKET_NAME).remove([
+        `${userId}.jpg`, `${userId}.png`, `${userId}.jpeg`, `${userId}.webp`
+      ]);
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .upload(fileName, buffer, {
+          contentType: avatarFile.type,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("Supabase upload error:", uploadError);
+        return NextResponse.json(
+          { error: "画像のアップロードに失敗しました" },
+          { status: 500 }
+        );
+      }
+
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(fileName);
+
+      avatarUrl = urlData.publicUrl;
     }
 
     // Parse hobbies from JSON

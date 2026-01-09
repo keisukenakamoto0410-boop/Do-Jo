@@ -1,8 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+
+interface Reservation {
+  id: string;
+  slot: {
+    startTime: string;
+    endTime: string;
+  };
+  host: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  generatedAgenda: Agenda | null;
+}
 
 interface AgendaSection {
   name: string;
@@ -53,8 +67,11 @@ export default function AgendaPage() {
   const { data: session } = useSession();
 
   const [agenda, setAgenda] = useState<Agenda | null>(null);
+  const [reservation, setReservation] = useState<Reservation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [timeUntilStart, setTimeUntilStart] = useState<number>(0);
+  const [canJoin, setCanJoin] = useState(false);
 
   useEffect(() => {
     const fetchAgenda = async () => {
@@ -63,6 +80,7 @@ export default function AgendaPage() {
         if (!res.ok) throw new Error("Failed to fetch reservation");
 
         const data = await res.json();
+        setReservation(data);
         if (data.generatedAgenda) {
           setAgenda(data.generatedAgenda);
         } else {
@@ -77,6 +95,44 @@ export default function AgendaPage() {
 
     fetchAgenda();
   }, [reservationId]);
+
+  // Timer to check if user can join
+  useEffect(() => {
+    if (!reservation?.slot?.startTime) return;
+
+    const updateTimer = () => {
+      const now = new Date();
+      const start = new Date(reservation.slot.startTime);
+      const diff = start.getTime() - now.getTime();
+      const minutesUntil = Math.ceil(diff / 60000);
+
+      setTimeUntilStart(minutesUntil);
+      setCanJoin(minutesUntil <= 5); // Can join 5 minutes before
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [reservation?.slot?.startTime]);
+
+  const formatSessionDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatSessionTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -298,20 +354,115 @@ export default function AgendaPage() {
           </div>
         </div>
 
+        {/* Session Ready Card */}
+        {reservation && (
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">✅</span>
+              <h2 className="text-2xl font-bold">Preparation Complete!</h2>
+            </div>
+
+            {/* Session Info */}
+            <div className="bg-white/20 rounded-xl p-4 mb-4">
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📅</span>
+                  <div>
+                    <p className="text-sm opacity-80">Date & Time</p>
+                    <p className="font-bold">
+                      {formatSessionDate(reservation.slot.startTime)} at{" "}
+                      {formatSessionTime(reservation.slot.startTime)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">👤</span>
+                  <div>
+                    <p className="text-sm opacity-80">Partner</p>
+                    <p className="font-bold">{reservation.host?.name || agenda?.summary.seniorName}-san</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📝</span>
+                  <div>
+                    <p className="text-sm opacity-80">Topic</p>
+                    <p className="font-bold">{agenda?.summary.topic}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Time Until Start */}
+            {timeUntilStart > 5 ? (
+              <div className="bg-white/20 rounded-xl p-4 text-center">
+                <p className="text-lg mb-2">Session starts in</p>
+                <p className="text-4xl font-bold">
+                  {timeUntilStart > 60
+                    ? `${Math.floor(timeUntilStart / 60)}h ${timeUntilStart % 60}m`
+                    : `${timeUntilStart} minutes`}
+                </p>
+                <p className="text-sm opacity-80 mt-2">
+                  You can join 5 minutes before the session starts
+                </p>
+              </div>
+            ) : canJoin ? (
+              <div className="bg-white/20 rounded-xl p-4 text-center">
+                <p className="text-xl font-bold animate-pulse">
+                  🟢 Ready to join now!
+                </p>
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {/* Action Buttons */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 mb-8">
           <button
             onClick={() => router.back()}
             className="flex-1 py-4 bg-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-300 transition-colors"
           >
             Edit Preparation
           </button>
-          <button
-            onClick={() => router.push(`/learner/session/${reservationId}`)}
-            className="flex-1 py-4 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition-colors"
-          >
-            Start Session
-          </button>
+          {canJoin ? (
+            <button
+              onClick={() => router.push(`/learner/session/${reservationId}`)}
+              className="flex-1 py-4 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors shadow-lg"
+            >
+              Join Session Now
+            </button>
+          ) : (
+            <button
+              disabled
+              className="flex-1 py-4 bg-gray-300 text-gray-500 font-semibold rounded-xl cursor-not-allowed"
+            >
+              Join Session (Not yet)
+            </button>
+          )}
+        </div>
+
+        {/* Tips Section */}
+        <div className="bg-blue-50 rounded-xl p-6 border-2 border-blue-200">
+          <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-xl">💡</span> Tips for your session
+          </h3>
+          <ul className="space-y-3 text-gray-700">
+            <li className="flex items-start gap-3">
+              <span className="text-green-500">✓</span>
+              Find a quiet place with good lighting
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-green-500">✓</span>
+              Test your camera and microphone
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-green-500">✓</span>
+              Review your conversation agenda above
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-green-500">✓</span>
+              Prepare a notebook to write new words
+            </li>
+          </ul>
         </div>
       </div>
     </div>

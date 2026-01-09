@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import CalendarAvailability from "@/components/CalendarAvailability";
 
 interface StudyLog {
   id: string;
@@ -69,25 +70,6 @@ interface StudyPost {
   comments: Comment[];
 }
 
-interface DaySchedule {
-  enabled: boolean;
-  startTime: string;
-  endTime: string;
-}
-
-interface WeeklySchedule {
-  [key: string]: DaySchedule;
-}
-
-const DAYS = [
-  { key: "monday", label: "月曜日" },
-  { key: "tuesday", label: "火曜日" },
-  { key: "wednesday", label: "水曜日" },
-  { key: "thursday", label: "木曜日" },
-  { key: "friday", label: "金曜日" },
-  { key: "saturday", label: "土曜日" },
-  { key: "sunday", label: "日曜日" },
-];
 
 export default function SeniorDashboard() {
   const { data: session } = useSession();
@@ -108,21 +90,6 @@ export default function SeniorDashboard() {
   // Available now button
   const [creatingNow, setCreatingNow] = useState(false);
 
-  // Weekly schedule
-  const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(() => {
-    const initial: WeeklySchedule = {};
-    DAYS.forEach(day => {
-      initial[day.key] = { enabled: false, startTime: "10:00", endTime: "12:00" };
-    });
-    return initial;
-  });
-  const [savingSchedule, setSavingSchedule] = useState(false);
-
-  // Single slot (collapsed by default)
-  const [showSingleSlot, setShowSingleSlot] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedTime, setSelectedTime] = useState("");
-  const [creatingSlot, setCreatingSlot] = useState(false);
 
   // Comment input
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -292,81 +259,6 @@ export default function SeniorDashboard() {
     }
   };
 
-  // Weekly schedule handler
-  const handleWeeklySchedule = async () => {
-    setSavingSchedule(true);
-    setSlotMessage(null);
-
-    try {
-      const response = await fetch("/api/senior/weekly-schedule", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ schedule: weeklySchedule }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSlotMessage({ type: "success", text: data.message });
-        fetchMySlots();
-      } else {
-        setSlotMessage({ type: "error", text: data.error || "登録に失敗しました" });
-      }
-    } catch (error) {
-      setSlotMessage({ type: "error", text: "エラーが発生しました" });
-    } finally {
-      setSavingSchedule(false);
-    }
-  };
-
-  const updateDaySchedule = (day: string, field: keyof DaySchedule, value: boolean | string) => {
-    setWeeklySchedule(prev => ({
-      ...prev,
-      [day]: { ...prev[day], [field]: value }
-    }));
-  };
-
-  // Single slot handler
-  const handleCreateSlot = async () => {
-    if (!selectedDate || !selectedTime) {
-      setSlotMessage({ type: "error", text: "日付と時間を選択してください" });
-      return;
-    }
-
-    setCreatingSlot(true);
-    setSlotMessage(null);
-
-    try {
-      const startTime = new Date(`${selectedDate}T${selectedTime}:00`);
-
-      const response = await fetch("/api/slots", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startTime: startTime.toISOString(),
-          sessionType: "casual",
-        }),
-      });
-
-      if (response.ok) {
-        setSlotMessage({ type: "success", text: "対応可能時間を登録しました！" });
-        setSelectedDate("");
-        setSelectedTime("");
-        fetchMySlots();
-      } else {
-        const data = await response.json();
-        if (data.error === "Slot overlaps with existing slot") {
-          setSlotMessage({ type: "error", text: "この時間はすでに登録されています" });
-        } else {
-          setSlotMessage({ type: "error", text: "登録に失敗しました" });
-        }
-      }
-    } catch (error) {
-      setSlotMessage({ type: "error", text: "エラーが発生しました" });
-    } finally {
-      setCreatingSlot(false);
-    }
-  };
 
   const handleDeleteSlot = async (slotId: string) => {
     if (!confirm("この時間を削除しますか？")) return;
@@ -385,19 +277,6 @@ export default function SeniorDashboard() {
     }
   };
 
-  // Generate time options
-  const timeOptions: string[] = [];
-  for (let hour = 9; hour <= 21; hour++) {
-    timeOptions.push(`${hour.toString().padStart(2, "0")}:00`);
-    if (hour < 21) {
-      timeOptions.push(`${hour.toString().padStart(2, "0")}:30`);
-    }
-  }
-
-  const today = new Date().toISOString().split("T")[0];
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 28);
-  const maxDateStr = maxDate.toISOString().split("T")[0];
 
   const handleLike = async (studyLogId: string) => {
     if (liking) return;
@@ -756,169 +635,16 @@ export default function SeniorDashboard() {
             </button>
           </div>
 
-          {/* Weekly Schedule Section */}
-          <div className="bg-white border-2 border-sky-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-            <div className="bg-sky-600 text-white px-8 py-6">
-              <h2 className="text-2xl font-bold mb-1">毎週の予定を登録</h2>
-              <p className="text-sky-100 text-lg">
-                曜日ごとに対応可能な時間を設定（4週間分まとめて登録）
+          {/* Calendar Schedule */}
+          <div className="mb-8">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">カレンダーから日付を選択</h2>
+              <p className="text-lg text-gray-600">
+                日付をタップして、対応可能な時間を登録してください
               </p>
             </div>
-
-            <div className="p-6">
-              <div className="space-y-4">
-                {DAYS.map((day) => (
-                  <div key={day.key} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={weeklySchedule[day.key].enabled}
-                        onChange={(e) => updateDaySchedule(day.key, "enabled", e.target.checked)}
-                        className="w-6 h-6 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
-                      />
-                      <span className="text-xl font-bold text-gray-900 w-20">{day.label}</span>
-                    </label>
-
-                    {weeklySchedule[day.key].enabled && (
-                      <div className="flex items-center gap-2 ml-auto">
-                        <select
-                          value={weeklySchedule[day.key].startTime}
-                          onChange={(e) => updateDaySchedule(day.key, "startTime", e.target.value)}
-                          className="px-4 py-2 text-lg border-2 border-gray-300 rounded-lg focus:border-sky-500 focus:outline-none"
-                        >
-                          {timeOptions.map((time) => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
-                        <span className="text-xl text-gray-600">〜</span>
-                        <select
-                          value={weeklySchedule[day.key].endTime}
-                          onChange={(e) => updateDaySchedule(day.key, "endTime", e.target.value)}
-                          className="px-4 py-2 text-lg border-2 border-gray-300 rounded-lg focus:border-sky-500 focus:outline-none"
-                        >
-                          {timeOptions.map((time) => (
-                            <option key={time} value={time}>{time}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={handleWeeklySchedule}
-                disabled={savingSchedule || !DAYS.some(d => weeklySchedule[d.key].enabled)}
-                className="w-full mt-6 py-5 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white text-2xl font-bold rounded-xl transition-colors"
-              >
-                {savingSchedule ? "登録中..." : "この予定で登録する"}
-              </button>
-            </div>
+            <CalendarAvailability onSlotsChange={fetchMySlots} />
           </div>
-
-          {/* Single Slot (Collapsible) */}
-          <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-            <button
-              onClick={() => setShowSingleSlot(!showSingleSlot)}
-              className="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-            >
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">単発で時間を登録</h2>
-                <p className="text-gray-600">特定の日時を1つずつ登録する場合</p>
-              </div>
-              <span className="text-2xl text-gray-400">
-                {showSingleSlot ? "▲" : "▼"}
-              </span>
-            </button>
-
-            {showSingleSlot && (
-              <div className="p-8 border-t-2 border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label className="block text-xl font-bold text-gray-900 mb-3">
-                      日付を選ぶ
-                    </label>
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      min={today}
-                      max={maxDateStr}
-                      className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-sky-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xl font-bold text-gray-900 mb-3">
-                      時間を選ぶ
-                    </label>
-                    <select
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
-                      className="w-full px-6 py-4 text-xl border-2 border-gray-300 rounded-xl focus:border-sky-500 focus:outline-none"
-                    >
-                      <option value="">時間を選んでください</option>
-                      {timeOptions.map((time) => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleCreateSlot}
-                  disabled={creatingSlot || !selectedDate || !selectedTime}
-                  className="w-full py-4 bg-sky-500 hover:bg-sky-600 disabled:bg-gray-300 text-white text-xl font-bold rounded-xl transition-colors"
-                >
-                  {creatingSlot ? "登録中..." : "この時間を登録する"}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* My Slots List */}
-          {mySlots.length > 0 && (
-            <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-              <div className="px-8 py-6 border-b-2 border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">
-                  登録済みの時間（{mySlots.length}件）
-                </h2>
-              </div>
-              <div className="p-6">
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {mySlots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border-2 border-gray-200"
-                    >
-                      <div className="text-lg">
-                        <span className="font-bold text-gray-900">
-                          {formatDate(slot.startTime)}
-                        </span>
-                        <span className="text-gray-600 ml-2">
-                          {formatTime(slot.startTime)}〜
-                        </span>
-                        <span className={`ml-3 px-3 py-1 rounded-lg text-sm font-medium ${
-                          slot.status === "available"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {slot.status === "available" ? "予約可能" : "予約済み"}
-                        </span>
-                      </div>
-                      {slot.status === "available" && (
-                        <button
-                          onClick={() => handleDeleteSlot(slot.id)}
-                          className="px-4 py-2 text-red-600 hover:bg-red-100 rounded-lg font-bold transition-colors"
-                        >
-                          削除
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Help Section */}
           <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-8">

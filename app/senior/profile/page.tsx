@@ -184,6 +184,7 @@ export default function SeniorProfilePage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              placeholder="お名前を入力"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-lg"
               required
             />
@@ -197,7 +198,7 @@ export default function SeniorProfilePage() {
               onChange={(e) => setBio(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-lg"
               rows={4}
-              placeholder="学習者に自己紹介しましょう..."
+              placeholder="自己紹介を入力してください（趣味、職歴など）"
             />
           </div>
 

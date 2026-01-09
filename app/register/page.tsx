@@ -42,10 +42,10 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Check for type param in URL
+  // Check for type param in URL (student registration is disabled)
   useEffect(() => {
     const typeParam = searchParams.get("type");
-    if (typeParam && ["learner", "senior", "student"].includes(typeParam)) {
+    if (typeParam && ["learner", "senior"].includes(typeParam)) {
       setRole(typeParam as UserRole);
       setStep(2);
     }
@@ -155,7 +155,7 @@ function RegisterContent() {
               Choose how you want to use Do Jo
             </p>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
               {/* Foreign Learner */}
               <button
                 onClick={() => handleRoleSelect("learner")}
@@ -208,34 +208,6 @@ function RegisterContent() {
                   <li className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs">✓</span>
                     Make an impact
-                  </li>
-                </ul>
-              </button>
-
-              {/* Japanese Student */}
-              <button
-                onClick={() => handleRoleSelect("student")}
-                className="p-8 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left border-2 border-gray-100 hover:border-purple-500 group"
-              >
-                <div className="text-6xl mb-4">🎓</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-purple-600">
-                  Help learners (Student)
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  University students welcome
-                </p>
-                <ul className="text-sm space-y-2 text-gray-500">
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">✓</span>
-                    Flexible schedule
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">✓</span>
-                    Work from home
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs">✓</span>
-                    International experience
                   </li>
                 </ul>
               </button>

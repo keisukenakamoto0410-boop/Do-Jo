@@ -94,15 +94,15 @@ export default function SessionPage() {
         return;
       }
 
-      // Check if session time has started (allow 10 minutes early)
+      // Check if session time has started (allow 5 minutes early)
       const sessionStart = new Date(data.slot.startTime);
       const now = new Date();
-      const tenMinutesBefore = new Date(sessionStart.getTime() - 10 * 60 * 1000);
+      const fiveMinutesBefore = new Date(sessionStart.getTime() - 5 * 60 * 1000);
       const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000); // 30 min after start
 
-      if (now < tenMinutesBefore) {
-        const waitMinutes = Math.ceil((tenMinutesBefore.getTime() - now.getTime()) / 60000);
-        setError(`Session has not started yet. Please come back in ${waitMinutes} minutes. The session starts at ${sessionStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}.`);
+      if (now < fiveMinutesBefore) {
+        const waitMinutes = Math.ceil((fiveMinutesBefore.getTime() - now.getTime()) / 60000);
+        setError(`Session has not started yet. Please come back in ${waitMinutes} minutes. You can join 5 minutes before the session starts at ${sessionStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}.`);
         setLoading(false);
         return;
       }

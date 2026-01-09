@@ -118,8 +118,24 @@ export default function HostSessionPage() {
       const data = await response.json();
       console.log("Reservation loaded:", data);
 
-      // 【テスト用】時間チェックを無効化
-      console.log("WARNING: Skipping time check for testing");
+      // Check if session time has started (allow 5 minutes early)
+      const sessionStart = new Date(data.slot.startTime);
+      const now = new Date();
+      const fiveMinutesBefore = new Date(sessionStart.getTime() - 5 * 60 * 1000);
+      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000); // 30 min after start
+
+      if (now < fiveMinutesBefore) {
+        const waitMinutes = Math.ceil((fiveMinutesBefore.getTime() - now.getTime()) / 60000);
+        setError(`Session has not started yet. Please come back in ${waitMinutes} minutes. You can join 5 minutes before the session starts at ${sessionStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}.`);
+        setLoading(false);
+        return;
+      }
+
+      if (now > sessionEnd) {
+        setError("This session has already ended.");
+        setLoading(false);
+        return;
+      }
 
       setReservation(data);
     } catch (err) {

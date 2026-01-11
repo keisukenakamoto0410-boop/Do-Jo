@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendBookingConfirmationEmail, sendLearnerBookingConfirmationEmail } from "@/lib/email";
+import { sendBookingLineNotification } from "@/lib/line";
 
 // GET reservations for the current user
 export async function GET(req: NextRequest) {
@@ -169,6 +170,7 @@ export async function POST(req: NextRequest) {
               email: true,
               avatar: true,
               role: true,
+              lineUserId: true,
             },
           },
           learner: {
@@ -207,6 +209,27 @@ export async function POST(req: NextRequest) {
     }).catch((err) => {
       console.error("Failed to send booking confirmation email to learner:", err);
     });
+
+    // LINE notification to host (if linked)
+    if (reservation.host.lineUserId) {
+      const formattedDateTime = reservation.slot.startTime.toLocaleString("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      sendBookingLineNotification(
+        reservation.host.lineUserId,
+        reservation.learner.name,
+        formattedDateTime,
+        `${BASE_URL}/senior/session/${reservation.id}`
+      ).catch((err) => {
+        console.error("Failed to send LINE notification to host:", err);
+      });
+    }
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {

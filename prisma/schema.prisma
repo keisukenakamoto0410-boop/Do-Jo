@@ -71,6 +71,9 @@ model User {
   passwordResetToken   String?   @unique
   passwordResetExpires DateTime?
 
+  // LINE連携
+  lineUserId    String?   @unique
+
   // SNS投稿関連
   totalPosts       Int      @default(0)     // 総投稿数
 

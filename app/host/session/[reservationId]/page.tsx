@@ -499,6 +499,74 @@ export default function HostSessionPage() {
         </div>
       </div>
 
+      {/* 会話のヒント（左側） */}
+      <div className="absolute top-20 left-4 bg-gray-800/95 rounded-xl p-4 text-white w-72 max-h-[70vh] overflow-y-auto hidden lg:block">
+        <h3 className="font-bold mb-3 text-lg flex items-center gap-2">
+          💡 会話のヒント
+        </h3>
+        <div className="space-y-4 text-sm">
+          {/* 最初の挨拶 */}
+          <div>
+            <p className="text-blue-400 font-medium mb-2">■ 最初の挨拶</p>
+            <ul className="text-gray-300 space-y-1 ml-2">
+              <li>・はじめまして！よろしくお願いします。</li>
+              <li>・今日はどこから参加していますか？</li>
+            </ul>
+          </div>
+
+          {/* 簡単な質問 */}
+          <div>
+            <p className="text-green-400 font-medium mb-2">■ 簡単な質問</p>
+            <ul className="text-gray-300 space-y-1 ml-2">
+              <li>・お名前は何ですか？</li>
+              <li>・お仕事は何をしていますか？</li>
+              <li>・日本語を勉強して何年ですか？</li>
+            </ul>
+          </div>
+
+          {/* 日本について */}
+          <div>
+            <p className="text-yellow-400 font-medium mb-2">■ 日本について</p>
+            <ul className="text-gray-300 space-y-1 ml-2">
+              <li>・日本に来たことはありますか？</li>
+              <li>・日本の食べ物で好きなものは？</li>
+              <li>・日本のどこに行きたいですか？</li>
+            </ul>
+          </div>
+
+          {/* 相手の国について */}
+          <div>
+            <p className="text-purple-400 font-medium mb-2">■ 相手の国について</p>
+            <ul className="text-gray-300 space-y-1 ml-2">
+              <li>・お国の有名な食べ物は何ですか？</li>
+              <li>・今の季節はどうですか？</li>
+              <li>・休みの日は何をしますか？</li>
+            </ul>
+          </div>
+
+          {/* 沈黙した時 */}
+          <div>
+            <p className="text-red-400 font-medium mb-2">■ 沈黙した時</p>
+            <ul className="text-gray-300 space-y-1 ml-2">
+              <li>・週末は何をしましたか？</li>
+              <li>・最近、面白かったことはありますか？</li>
+              <li>・何か質問はありますか？</li>
+            </ul>
+          </div>
+
+          {/* ポジティブな反応 */}
+          <div>
+            <p className="text-pink-400 font-medium mb-2">■ ポジティブな反応</p>
+            <ul className="text-gray-300 space-y-1 ml-2">
+              <li>・すごいですね！</li>
+              <li>・いいですね〜！</li>
+              <li>・上手ですよ！</li>
+              <li>・分かります、分かります。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Controls */}
       <div className="bg-gray-800 p-4 flex justify-center space-x-4">
         <button
@@ -534,14 +602,55 @@ export default function HostSessionPage() {
         </button>
       </div>
 
-      {/* Session Info */}
+      {/* Session Info & Learner Topic */}
       {reservation && (
-        <div className="absolute top-20 right-4 bg-gray-800 rounded-xl p-4 text-white w-64 hidden lg:block">
-          <h3 className="font-bold mb-2">Session Info</h3>
-          <div className="text-sm space-y-2">
-            <p>Type: {reservation.sessionType}</p>
-            <p>Duration: 25 minutes</p>
-            {reservation.learner && <p>Learner: {reservation.learner.name}</p>}
+        <div className="absolute top-20 right-4 bg-gray-800 rounded-xl p-4 text-white w-72 hidden lg:block max-h-[40vh] overflow-y-auto">
+          <h3 className="font-bold mb-3 text-lg">📋 セッション情報</h3>
+          <div className="text-sm space-y-3">
+            <div className="bg-gray-700/50 rounded-lg p-3">
+              <p className="text-gray-400 text-xs mb-1">学習者</p>
+              <p className="font-medium text-lg">{reservation.learner?.name}</p>
+              {reservation.learner?.country && (
+                <p className="text-gray-400 text-xs">{reservation.learner.country}</p>
+              )}
+            </div>
+
+            {reservation.selectedTopic && (
+              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-blue-400 text-xs mb-1">🎯 今日のトピック</p>
+                <p className="font-medium">{reservation.selectedTopic}</p>
+              </div>
+            )}
+
+            {reservation.conversationGoal && (
+              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                <p className="text-green-400 text-xs mb-1">🎯 会話の目標</p>
+                <p className="font-medium">{reservation.conversationGoal}</p>
+              </div>
+            )}
+
+            {reservation.grammarToStudy && reservation.grammarToStudy.length > 0 && (
+              <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3">
+                <p className="text-purple-400 text-xs mb-1">📝 練習したい文法</p>
+                <div className="flex flex-wrap gap-1">
+                  {reservation.grammarToStudy.map((g: string, i: number) => (
+                    <span key={i} className="bg-purple-600/50 px-2 py-0.5 rounded text-xs">{g}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {reservation.additionalNotes && (
+              <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3">
+                <p className="text-yellow-400 text-xs mb-1">💬 メモ</p>
+                <p className="text-sm">{reservation.additionalNotes}</p>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-400 pt-2 border-t border-gray-700">
+              <p>タイプ: {reservation.sessionType === "casual" ? "カジュアル" : "ビジネス"}</p>
+              <p>時間: 25分</p>
+            </div>
           </div>
         </div>
       )}

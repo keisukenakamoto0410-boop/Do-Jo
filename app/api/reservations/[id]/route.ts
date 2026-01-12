@@ -98,6 +98,9 @@ export async function GET(
             jlptLevel: true,
             learningGoal: true,
             interests: true,
+            textbook: true,
+            currentLesson: true,
+            wantsToWorkInJapan: true,
           },
         },
         host: {
@@ -116,6 +119,7 @@ export async function GET(
             major: true,
           },
         },
+        detailedFeedback: true,
       },
     });
 

@@ -45,6 +45,14 @@ interface ReminderEmailParams {
   isHost: boolean;
 }
 
+interface FeedbackNotificationEmailParams {
+  learnerEmail: string;
+  learnerName: string;
+  hostName: string;
+  sessionDate: Date;
+  summaryUrl: string;
+}
+
 // Format date in Japanese style
 function formatDateJa(date: Date): string {
   const options: Intl.DateTimeFormatOptions = {
@@ -267,6 +275,77 @@ export async function sendReminderEmail({
     return { success: true };
   } catch (error) {
     console.error("Failed to send reminder email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Send feedback notification email to learner
+export async function sendFeedbackNotificationEmail({
+  learnerEmail,
+  learnerName,
+  hostName,
+  sessionDate,
+  summaryUrl,
+}: FeedbackNotificationEmailParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+    await transporter.sendMail({
+      from: `Do Jo <${FROM_EMAIL}>`,
+      to: learnerEmail,
+      subject: "【Do Jo】You received feedback from your session!",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #10b981; font-size: 24px; margin-bottom: 20px;">🎉 You Received Feedback!</h1>
+
+          <p style="font-size: 16px; color: #333;">Hi ${learnerName},</p>
+
+          <p style="font-size: 16px; color: #333;">
+            Great job on completing your conversation session! ${hostName}-san has sent you detailed feedback and an encouragement message.
+          </p>
+
+          <div style="background: #d1fae5; border-radius: 12px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 8px 0;"><strong>📅 Session Date:</strong> ${formatDateEn(sessionDate)}</p>
+            <p style="margin: 8px 0;"><strong>👤 Partner:</strong> ${hostName}-san</p>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
+            Your feedback includes:
+          </p>
+          <ul style="color: #333; padding-left: 20px;">
+            <li>Pronunciation evaluation</li>
+            <li>Grammar & word usage evaluation</li>
+            <li>Communication enthusiasm evaluation</li>
+            <li>Listening comprehension evaluation</li>
+            <li>Improvement suggestions</li>
+            <li>Personal encouragement message</li>
+          </ul>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${summaryUrl}" style="display: inline-block; background: linear-gradient(to right, #10b981, #059669); color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+              View Your Feedback →
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #666;">
+            Keep practicing Japanese - every conversation brings you closer to your goals! 頑張ってください！
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Do Jo - Japanese Conversation Practice App<br />
+            <a href="${BASE_URL}" style="color: #10b981;">${BASE_URL}</a>
+          </p>
+        </div>
+      `,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send feedback notification email:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

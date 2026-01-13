@@ -34,6 +34,9 @@ export async function GET(
         createdAt: true,
         prefecture: true,
         hobbies: true,
+        careerHistory: true,
+        expertise: true,
+        expertiseTopics: true,
       },
     });
 
@@ -69,6 +72,10 @@ export async function PATCH(
     const avatarFile = formData.get("avatar") as File | null;
     const prefecture = formData.get("prefecture") as string | null;
     const hobbiesJson = formData.get("hobbies") as string | null;
+    // Senior fields
+    const careerHistory = formData.get("careerHistory") as string | null;
+    const expertiseJson = formData.get("expertise") as string | null;
+    const expertiseTopicsJson = formData.get("expertiseTopics") as string | null;
     // Learner fields
     const country = formData.get("country") as string | null;
     const jlptLevel = formData.get("jlptLevel") as string | null;
@@ -132,6 +139,26 @@ export async function PATCH(
       }
     }
 
+    // Parse expertise from JSON
+    let expertise: string[] | undefined;
+    if (expertiseJson) {
+      try {
+        expertise = JSON.parse(expertiseJson);
+      } catch {
+        expertise = undefined;
+      }
+    }
+
+    // Parse expertiseTopics from JSON
+    let expertiseTopics: string[] | undefined;
+    if (expertiseTopicsJson) {
+      try {
+        expertiseTopics = JSON.parse(expertiseTopicsJson);
+      } catch {
+        expertiseTopics = undefined;
+      }
+    }
+
     // ユーザー更新
     const updatedUser = await prisma.user.update({
       where: { id: userId },
@@ -141,6 +168,10 @@ export async function PATCH(
         ...(avatarUrl && { avatar: avatarUrl }),
         ...(prefecture !== null && { prefecture: prefecture || null }),
         ...(hobbies !== undefined && { hobbies }),
+        // Senior fields
+        ...(careerHistory !== null && { careerHistory: careerHistory || null }),
+        ...(expertise !== undefined && { expertise }),
+        ...(expertiseTopics !== undefined && { expertiseTopics }),
         // Learner fields
         ...(country !== null && { country: country || null }),
         ...(jlptLevel !== null && { jlptLevel: jlptLevel || null }),

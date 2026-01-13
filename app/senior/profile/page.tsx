@@ -18,6 +18,11 @@ export default function SeniorProfilePage() {
   const [prefecture, setPrefecture] = useState("");
   const [hobbies, setHobbies] = useState<string[]>([]);
   const [newHobby, setNewHobby] = useState("");
+  const [careerHistory, setCareerHistory] = useState("");
+  const [expertise, setExpertise] = useState<string[]>([]);
+  const [newExpertise, setNewExpertise] = useState("");
+  const [expertiseTopics, setExpertiseTopics] = useState<string[]>([]);
+  const [newExpertiseTopic, setNewExpertiseTopic] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +45,9 @@ export default function SeniorProfilePage() {
       setAvatarPreview(data.avatar || "");
       setPrefecture(data.prefecture || "");
       setHobbies(data.hobbies || []);
+      setCareerHistory(data.careerHistory || "");
+      setExpertise(data.expertise || []);
+      setExpertiseTopics(data.expertiseTopics || []);
     } catch (error) {
       console.error("Failed to fetch profile:", error);
     } finally {
@@ -79,6 +87,28 @@ export default function SeniorProfilePage() {
     setHobbies(hobbies.filter((h) => h !== hobby));
   };
 
+  const addExpertise = () => {
+    if (newExpertise.trim() && !expertise.includes(newExpertise.trim())) {
+      setExpertise([...expertise, newExpertise.trim()]);
+      setNewExpertise("");
+    }
+  };
+
+  const removeExpertise = (item: string) => {
+    setExpertise(expertise.filter((e) => e !== item));
+  };
+
+  const addExpertiseTopic = () => {
+    if (newExpertiseTopic.trim() && !expertiseTopics.includes(newExpertiseTopic.trim())) {
+      setExpertiseTopics([...expertiseTopics, newExpertiseTopic.trim()]);
+      setNewExpertiseTopic("");
+    }
+  };
+
+  const removeExpertiseTopic = (topic: string) => {
+    setExpertiseTopics(expertiseTopics.filter((t) => t !== topic));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -89,6 +119,9 @@ export default function SeniorProfilePage() {
       formData.append("bio", bio);
       formData.append("prefecture", prefecture);
       formData.append("hobbies", JSON.stringify(hobbies));
+      formData.append("careerHistory", careerHistory);
+      formData.append("expertise", JSON.stringify(expertise));
+      formData.append("expertiseTopics", JSON.stringify(expertiseTopics));
       if (avatar) {
         formData.append("avatar", avatar);
       }
@@ -198,8 +231,113 @@ export default function SeniorProfilePage() {
               onChange={(e) => setBio(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-lg"
               rows={4}
-              placeholder="自己紹介を入力してください（趣味、職歴など）"
+              placeholder="自己紹介を入力してください"
             />
+          </div>
+
+          {/* Career History */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">これまでの経歴</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              これまでの職歴や経験を教えてください。学習者が会話の参考にします。
+            </p>
+            <textarea
+              value={careerHistory}
+              onChange={(e) => setCareerHistory(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-lg"
+              rows={5}
+              placeholder="例：製造業で30年勤務。品質管理部門で課長を務め、海外工場の立ち上げにも携わりました。退職後は地域のボランティア活動に参加しています。"
+            />
+          </div>
+
+          {/* Expertise */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">得意分野</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              仕事で経験した分野や専門知識を追加してください。
+            </p>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newExpertise}
+                onChange={(e) => setNewExpertise(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addExpertise())}
+                placeholder="例：営業、人事、製造、経理..."
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={addExpertise}
+                className="px-4 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                追加
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {expertise.map((item) => (
+                <span
+                  key={item}
+                  className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm flex items-center gap-2"
+                >
+                  {item}
+                  <button
+                    type="button"
+                    onClick={() => removeExpertise(item)}
+                    className="text-amber-500 hover:text-amber-700"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {expertise.length === 0 && (
+                <p className="text-gray-500">まだ得意分野が登録されていません</p>
+              )}
+            </div>
+          </div>
+
+          {/* Expertise Topics */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">こういう話が得意！</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              話すのが得意なトピックや、詳しい話題を追加してください。
+            </p>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newExpertiseTopic}
+                onChange={(e) => setNewExpertiseTopic(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addExpertiseTopic())}
+                placeholder="例：日本の歴史、野球、料理のコツ..."
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={addExpertiseTopic}
+                className="px-4 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                追加
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {expertiseTopics.map((topic) => (
+                <span
+                  key={topic}
+                  className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-2"
+                >
+                  {topic}
+                  <button
+                    type="button"
+                    onClick={() => removeExpertiseTopic(topic)}
+                    className="text-green-500 hover:text-green-700"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {expertiseTopics.length === 0 && (
+                <p className="text-gray-500">まだ得意な話題が登録されていません</p>
+              )}
+            </div>
           </div>
 
           {/* Prefecture */}

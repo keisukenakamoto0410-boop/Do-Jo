@@ -38,7 +38,7 @@ model User {
   // 日本人シニア用フィールド
   careerHistory   String?   @db.Text  // これまでの経歴
   expertise       String[]  // 得意分野 ["営業", "人事", "製造"]
-  birthDate       DateTime? // 生年月日
+  ageRange        String?   // 年代 "40代以下" | "50代" | "60代" | "70代" | "80代以上"
   emergencyContactEmail String? // 緊急連絡先メールアドレス
   emergencyContactName  String? // 緊急連絡先名前
   prefecture      String?   // 都道府県

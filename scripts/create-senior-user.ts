@@ -17,7 +17,7 @@ async function main() {
       bio: "元大手メーカー勤務。若い人との交流を楽しみにしています。",
       careerHistory: "大手メーカーで営業部長として30年勤務。人材育成や海外営業を担当。",
       expertise: ["営業", "人事", "経営"],
-      birthDate: new Date("1960-05-15"),
+      ageRange: "60代",
       emergencyContactName: "山田 花子（娘）",
       emergencyContactEmail: "hanako@example.com",
       termsAccepted: true,

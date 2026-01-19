@@ -20,6 +20,9 @@ export async function POST(
       where: { id: reservationId },
       include: {
         slot: true,
+        learner: {
+          select: { totalSessions: true },
+        },
       },
     });
 
@@ -75,11 +78,63 @@ export async function POST(
           totalTalkTime: { increment: 25 },
         },
       });
+
+      // メダル付与処理
+      const medalsToAward: string[] = [];
+
+      // 初回セッション完了メダル
+      if (reservation.learner.totalSessions === 0) {
+        medalsToAward.push("first_session");
+      }
+
+      // スライドトピック別メダル
+      if (reservation.slideTopic) {
+        medalsToAward.push(`topic_${reservation.slideTopic}`);
+      }
+
+      // セッション数に応じたメダル
+      const newSessionCount = reservation.learner.totalSessions + 1;
+      if (newSessionCount === 5) {
+        medalsToAward.push("sessions_5");
+      } else if (newSessionCount === 10) {
+        medalsToAward.push("sessions_10");
+      } else if (newSessionCount === 25) {
+        medalsToAward.push("sessions_25");
+      } else if (newSessionCount === 50) {
+        medalsToAward.push("sessions_50");
+      }
+
+      // メダルを付与（既存のものは無視）
+      for (const medalType of medalsToAward) {
+        await tx.userMedal.upsert({
+          where: {
+            userId_medalType: {
+              userId: reservation.learnerId,
+              medalType,
+            },
+          },
+          create: {
+            userId: reservation.learnerId,
+            medalType,
+            reservationId,
+          },
+          update: {}, // 既に存在する場合は何もしない
+        });
+      }
+    });
+
+    // 付与されたメダルを取得して返す
+    const earnedMedals = await prisma.userMedal.findMany({
+      where: {
+        userId: reservation.learnerId,
+        reservationId,
+      },
     });
 
     return NextResponse.json({
       success: true,
       completedAt,
+      earnedMedals: earnedMedals.map((m) => m.medalType),
     });
   } catch (error) {
     console.error("Session completion error:", error);

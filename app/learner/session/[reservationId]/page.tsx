@@ -3,6 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
+import SlideToggleButton from "@/components/video/SlideToggleButton";
+import TargetWordsBar from "@/components/video/TargetWordsBar";
+import { useSlideSync } from "@/hooks/useSlideSync";
+import { useSessionJoin } from "@/hooks/useSessionJoin";
+import { TOPICS } from "@/components/video/TopicSelector";
+import { NewMedalsModal } from "@/components/MedalDisplay";
+
+// SlideViewerを動的インポート（SSR無効）
+const SlideViewer = dynamic(() => import("@/components/video/SlideViewer"), {
+  ssr: false,
+});
 
 // Agora type definitions (for dynamic import)
 type IAgoraRTCClient = any;
@@ -14,9 +26,6 @@ export default function SessionPage() {
   const params = useParams();
   const reservationId = params.reservationId as string;
   const { data: session } = useSession();
-
-  console.log("SessionPage loaded");
-  console.log("Reservation ID:", reservationId);
 
   const [client, setClient] = useState<IAgoraRTCClient | null>(null);
   const [localTracks, setLocalTracks] = useState<{
@@ -32,32 +41,73 @@ export default function SessionPage() {
   const [reservation, setReservation] = useState<any>(null);
   const [agoraInitialized, setAgoraInitialized] = useState(false);
 
+  // スライド関連の状態
+  const [showSlides, setShowSlides] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  // メダル関連の状態
+  const [earnedMedals, setEarnedMedals] = useState<string[]>([]);
+  const [showMedalModal, setShowMedalModal] = useState(false);
+
+  // タイマー開始フラグ
+  const [timerStarted, setTimerStarted] = useState(false);
+
+  // セッション入室管理フック
+  const {
+    partnerJoined,
+    sessionStarted,
+    sessionStartedAt,
+    isLoading: joinLoading,
+  } = useSessionJoin({
+    reservationId,
+    isHost: false,
+    onBothJoined: () => {
+      setTimerStarted(true);
+    },
+  });
+
+  // スライド同期フック
+  const { currentSlide, slideTopic, changeSlide } = useSlideSync({
+    reservationId,
+    isHost: false,
+    initialTopic: reservation?.slideTopic,
+  });
+
+  // 画面サイズ検出
   useEffect(() => {
-    console.log("Component mounted");
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  useEffect(() => {
     fetchReservation();
   }, []);
 
   useEffect(() => {
     if (reservation && !agoraInitialized && !error) {
-      console.log("Ready to initialize Agora");
       setAgoraInitialized(true);
       initAgora();
     }
   }, [reservation, agoraInitialized, error]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (client) {
-        console.log("Cleanup: leaving channel");
         leaveChannel();
       }
     };
   }, [client]);
 
-  // Timer
+  // Timer - 両者入室後に開始
   useEffect(() => {
-    if (!joined) return;
+    if (!timerStarted) return;
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -75,34 +125,29 @@ export default function SessionPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [joined]);
+  }, [timerStarted]);
 
   const fetchReservation = async () => {
     try {
-      console.log("Fetching reservation data...");
       const response = await fetch(`/api/reservations/${reservationId}`);
       if (!response.ok) {
         throw new Error("Reservation not found");
       }
       const data = await response.json();
-      console.log("Reservation data received:", data);
 
-      // Check if agenda is generated - required before joining
       if (!data.generatedAgenda) {
-        console.log("No agenda found - redirecting to preparation page");
         router.push(`/learner/prepare/${reservationId}`);
         return;
       }
 
-      // Check if session time has started (allow 5 minutes early)
       const sessionStart = new Date(data.slot.startTime);
       const now = new Date();
       const fiveMinutesBefore = new Date(sessionStart.getTime() - 5 * 60 * 1000);
-      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000); // 30 min after start
+      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000);
 
       if (now < fiveMinutesBefore) {
         const waitMinutes = Math.ceil((fiveMinutesBefore.getTime() - now.getTime()) / 60000);
-        setError(`Session has not started yet. Please come back in ${waitMinutes} minutes. You can join 5 minutes before the session starts at ${sessionStart.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}.`);
+        setError(`Session has not started yet. Please come back in ${waitMinutes} minutes.`);
         setLoading(false);
         return;
       }
@@ -123,85 +168,46 @@ export default function SessionPage() {
 
   const initAgora = async () => {
     try {
-      console.log("=".repeat(50));
-      console.log("STEP 1: Starting Agora initialization");
-      console.log("=".repeat(50));
-
-      // Check camera/microphone permissions first
-      console.log("Checking camera/microphone permissions...");
-
       try {
         const permissions = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
-
-        console.log("Permissions granted!");
-        console.log("Video tracks:", permissions.getVideoTracks().length);
-        console.log("Audio tracks:", permissions.getAudioTracks().length);
-
-        // Stop tracks temporarily (Agora will acquire them again)
         permissions.getTracks().forEach((track) => track.stop());
       } catch (permError) {
-        console.error("Permission denied:", permError);
         throw new Error(
-          "Camera/Microphone permission denied. Please click the lock icon in the address bar and allow access."
+          "Camera/Microphone permission denied. Please allow access."
         );
       }
 
-      // Dynamic import Agora SDK
-      console.log("Importing Agora SDK...");
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
-      console.log("Agora SDK loaded");
-
-      // Create client
-      console.log("Creating Agora client...");
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-      console.log("Agora client created");
 
-      // Get token
-      console.log("Fetching Agora token...");
       const response = await fetch(
         `/api/reservations/${reservationId}/agora-token`
       );
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Token fetch failed:", response.status, errorText);
         throw new Error("Failed to get Agora token");
       }
 
       const { token, channelName, appId, uid } = await response.json();
-      console.log("Token received:");
-      console.log("  - App ID:", appId);
-      console.log("  - Channel:", channelName);
-      console.log("  - UID:", uid);
 
-      // Set up remote user events (before joining)
       agoraClient.on("user-published", async (user: any, mediaType: "audio" | "video") => {
-        console.log("Remote user published:", user.uid, mediaType);
-
         try {
           await agoraClient.subscribe(user, mediaType);
-          console.log("Subscribed to:", user.uid);
 
           if (mediaType === "video") {
-            console.log("Playing remote video...");
             setTimeout(() => {
               const remoteVideoDiv = document.getElementById("remote-video");
               if (remoteVideoDiv) {
                 user.videoTrack?.play("remote-video");
-                console.log("Remote video playing");
-              } else {
-                console.error("remote-video div not found!");
               }
             }, 200);
           }
 
           if (mediaType === "audio") {
-            console.log("Playing remote audio...");
             user.audioTrack?.play();
-            console.log("Remote audio playing");
           }
 
           setRemoteUsers((prev: any[]) => {
@@ -213,28 +219,19 @@ export default function SessionPage() {
         }
       });
 
-      agoraClient.on("user-unpublished", (user: any, mediaType: "audio" | "video") => {
-        console.log("Remote user unpublished:", user.uid, mediaType);
+      agoraClient.on("user-unpublished", (user: any) => {
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
       agoraClient.on("user-left", (user: any) => {
-        console.log("Remote user left:", user.uid);
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
-      // Join channel
-      console.log("Joining channel...");
       await agoraClient.join(appId, channelName, token, uid);
-      console.log("Joined channel successfully!");
 
-      // Create local tracks
-      console.log("Creating local tracks...");
       const [audioTrack, videoTrack] =
         await AgoraRTC.createMicrophoneAndCameraTracks(
-          {
-            encoderConfig: "music_standard",
-          },
+          { encoderConfig: "music_standard" },
           {
             encoderConfig: {
               width: 640,
@@ -246,45 +243,21 @@ export default function SessionPage() {
           }
         );
 
-      console.log("Local tracks created");
-      console.log("  - Video:", videoTrack.getMediaStreamTrack().label);
-      console.log("  - Audio:", audioTrack.getMediaStreamTrack().label);
-
       setLocalTracks({ audioTrack, videoTrack });
 
-      // Display local video
-      console.log("Playing local video...");
       const localVideoDiv = document.getElementById("local-video");
-
       if (!localVideoDiv) {
-        console.error("local-video div not found!");
         throw new Error("Video container not found");
       }
-
-      console.log("Found local-video div");
       videoTrack.play("local-video");
-      console.log("Local video is now playing");
 
-      // Publish tracks
-      console.log("Publishing tracks to channel...");
       await agoraClient.publish([audioTrack, videoTrack]);
-      console.log("Tracks published!");
 
-      // Save client to state
       setClient(agoraClient);
       setJoined(true);
       setLoading(false);
-
-      console.log("=".repeat(50));
-      console.log("Agora initialization complete!");
-      console.log("=".repeat(50));
     } catch (err) {
-      console.error("=".repeat(50));
-      console.error("AGORA INITIALIZATION FAILED");
-      console.error("=".repeat(50));
-      console.error("Error:", err);
-      console.error("Stack:", err instanceof Error ? err.stack : "N/A");
-
+      console.error("Agora initialization failed:", err);
       setError(
         err instanceof Error ? err.message : "Failed to start video call"
       );
@@ -294,20 +267,14 @@ export default function SessionPage() {
 
   const leaveChannel = async () => {
     try {
-      console.log("Leaving channel...");
-
       if (localTracks.audioTrack) {
         localTracks.audioTrack.close();
-        console.log("Audio track closed");
       }
       if (localTracks.videoTrack) {
         localTracks.videoTrack.close();
-        console.log("Video track closed");
       }
-
       if (client) {
         await client.leave();
-        console.log("Left channel");
       }
     } catch (err) {
       console.error("Leave channel error:", err);
@@ -318,9 +285,18 @@ export default function SessionPage() {
     await leaveChannel();
 
     try {
-      await fetch(`/api/reservations/${reservationId}/complete`, {
+      const res = await fetch(`/api/reservations/${reservationId}/complete`, {
         method: "POST",
       });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.earnedMedals && data.earnedMedals.length > 0) {
+          setEarnedMedals(data.earnedMedals);
+          setShowMedalModal(true);
+          return; // モーダル表示後に遷移
+        }
+      }
     } catch (err) {
       console.error("Failed to complete session:", err);
     }
@@ -328,10 +304,153 @@ export default function SessionPage() {
     router.push(`/learner/feedback/${reservationId}`);
   };
 
+  const handleMedalModalClose = () => {
+    setShowMedalModal(false);
+    router.push(`/learner/feedback/${reservationId}`);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // トピック情報を取得
+  const topicInfo = slideTopic
+    ? TOPICS.find((t) => t.id === slideTopic)
+    : null;
+
+  // レイアウト判定
+  const renderLayout = () => {
+    if (!showSlides || !slideTopic) {
+      // スライド非表示：顔だけ全画面
+      return (
+        <div className="flex-1 relative p-4">
+          <div className="w-full h-full bg-gray-800 rounded-xl overflow-hidden">
+            <div
+              id="remote-video"
+              className="w-full h-full"
+              style={{ minHeight: "400px" }}
+            ></div>
+            {remoteUsers.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 m-4 rounded-xl">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">👋</div>
+                  <p className="text-xl font-medium">Waiting for host...</p>
+                  {!partnerJoined && (
+                    <p className="text-gray-400 mt-2">The host hasn&apos;t joined yet</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* セッション開始通知 */}
+            {sessionStarted && !timerStarted && (
+              <div className="absolute inset-0 flex items-center justify-center bg-green-500/90 m-4 rounded-xl z-10">
+                <div className="text-center text-white">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <p className="text-2xl font-bold">Session Started!</p>
+                  <p className="mt-2">Let&apos;s have a great conversation!</p>
+                </div>
+              </div>
+            )}
+            {remoteUsers.length > 0 && (
+              <div className="absolute bottom-8 left-8 bg-black/70 px-4 py-2 rounded-lg text-white font-medium">
+                {reservation?.host?.name || "Host"}
+              </div>
+            )}
+          </div>
+
+          {/* Local Video (Small, bottom-right corner) */}
+          <div className="absolute bottom-8 right-8 w-48 h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
+            <div id="local-video" className="w-full h-full"></div>
+            <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-white text-xs">
+              You
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // スマホ縦向き：全画面トグル
+    if (isMobile && !isLandscape) {
+      return (
+        <div className="flex-1 relative">
+          <div className="w-full h-full">
+            <SlideViewer
+              topic={slideTopic}
+              isHost={false}
+              reservationId={reservationId}
+              currentSlide={currentSlide}
+              onSlideChange={changeSlide}
+            />
+          </div>
+          {/* 小さい顔表示 */}
+          <div className="absolute top-4 right-4 w-24 h-20 bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-600">
+            <div id="remote-video" className="w-full h-full"></div>
+          </div>
+          <div className="absolute top-28 right-4 w-20 h-16 bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-600">
+            <div id="local-video" className="w-full h-full"></div>
+          </div>
+        </div>
+      );
+    }
+
+    // スマホ横向き：顔20% / スライド80%
+    if (isMobile && isLandscape) {
+      return (
+        <div className="flex-1 flex">
+          <div className="w-1/5 flex flex-col gap-2 p-2">
+            <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden">
+              <div id="remote-video" className="w-full h-full"></div>
+            </div>
+            <div className="h-20 bg-gray-800 rounded-lg overflow-hidden">
+              <div id="local-video" className="w-full h-full"></div>
+            </div>
+          </div>
+          <div className="w-4/5 p-2">
+            <SlideViewer
+              topic={slideTopic}
+              isHost={false}
+              reservationId={reservationId}
+              currentSlide={currentSlide}
+              onSlideChange={changeSlide}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // PC：Google Meet風（スライド85% / 顔15%右上）
+    return (
+      <div className="flex-1 relative p-4">
+        <div className="w-full h-full">
+          <SlideViewer
+            topic={slideTopic}
+            isHost={false}
+            reservationId={reservationId}
+            currentSlide={currentSlide}
+            onSlideChange={changeSlide}
+          />
+        </div>
+        {/* 顔は右上に小さく（ピクチャーインピクチャー風） */}
+        <div className="absolute top-6 right-6 w-48 flex flex-col gap-2">
+          <div className="h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-600">
+            <div id="remote-video" className="w-full h-full"></div>
+            {remoteUsers.length > 0 && (
+              <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
+                {reservation?.host?.name}
+              </div>
+            )}
+          </div>
+          <div className="h-28 bg-gray-800 rounded-xl overflow-hidden shadow-xl border border-gray-600">
+            <div id="local-video" className="w-full h-full"></div>
+            <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
+              You
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -354,18 +473,9 @@ export default function SessionPage() {
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="max-w-md bg-white rounded-2xl p-8 text-center">
             <h2 className="text-2xl font-bold text-red-600 mb-4">
-              Camera/Microphone Error
+              Connection Error
             </h2>
             <p className="text-gray-700 mb-6">{error}</p>
-
-            <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6 text-left">
-              <p className="font-bold text-blue-900 mb-2">How to fix:</p>
-              <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                <li>Click the lock icon in the address bar</li>
-                <li>Set Camera and Microphone to &quot;Allow&quot;</li>
-                <li>Reload this page</li>
-              </ol>
-            </div>
 
             <div className="space-y-3">
               <button
@@ -397,98 +507,67 @@ export default function SessionPage() {
           </p>
         </div>
 
-        {/* Timer */}
-        <div
-          className={`px-6 py-3 rounded-lg font-bold text-2xl ${
-            timeLeft <= 5 * 60 ? "bg-red-500" : "bg-green-500"
-          } text-white`}
-        >
-          {formatTime(timeLeft)}
-        </div>
+        <div className="flex items-center gap-3">
+          {/* スライドトグルボタン */}
+          {slideTopic && (
+            <SlideToggleButton
+              isOpen={showSlides}
+              onToggle={() => setShowSlides(!showSlides)}
+              language="en"
+            />
+          )}
 
-        <button
-          onClick={handleSessionEnd}
-          className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
-        >
-          End Session
-        </button>
-      </div>
-
-      {/* Video Area - Remote video full screen, local video small */}
-      <div className="flex-1 relative p-4">
-        {/* Remote Video (Full Screen) */}
-        <div className="w-full h-full bg-gray-800 rounded-xl overflow-hidden">
-          <div
-            id="remote-video"
-            className="w-full h-full"
-            style={{ minHeight: "400px" }}
-          ></div>
-          {remoteUsers.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 m-4 rounded-xl">
-              <div className="text-center">
-                <div className="text-6xl mb-4">👋</div>
-                <p className="text-xl font-medium">Waiting for host...</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  {joined ? "Connected to channel" : "Connecting..."}
-                </p>
-              </div>
+          {/* トピック表示 */}
+          {topicInfo && (
+            <div className="hidden md:flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg">
+              <span>{topicInfo.emoji}</span>
+              <span className="text-white text-sm">{topicInfo.nameEn}</span>
             </div>
           )}
-          {remoteUsers.length > 0 && (
-            <div className="absolute bottom-8 left-8 bg-black/70 px-4 py-2 rounded-lg text-white font-medium">
-              {reservation?.host?.name || "Host"}
+
+          {/* Timer / Waiting Status */}
+          {timerStarted ? (
+            <div
+              className={`px-6 py-3 rounded-lg font-bold text-2xl ${
+                timeLeft <= 5 * 60 ? "bg-red-500" : "bg-green-500"
+              } text-white`}
+            >
+              {formatTime(timeLeft)}
+            </div>
+          ) : (
+            <div className="px-4 py-2 rounded-lg bg-yellow-500 text-white font-medium flex items-center gap-2">
+              <div className="animate-pulse w-2 h-2 bg-white rounded-full"></div>
+              {partnerJoined ? "Starting..." : "Waiting for host..."}
             </div>
           )}
-        </div>
 
-        {/* Local Video (Small, bottom-right corner) */}
-        <div className="absolute bottom-8 right-8 w-48 h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
-          <div
-            id="local-video"
-            className="w-full h-full"
-          ></div>
-          <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-white text-xs">
-            You
-          </div>
+          <button
+            onClick={handleSessionEnd}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
+          >
+            End Session
+          </button>
         </div>
       </div>
 
-      {/* Session Info */}
-      {reservation && (
-        <div className="absolute top-20 right-4 bg-gray-800 rounded-xl p-4 text-white w-64 max-w-sm hidden lg:block">
-          <h3 className="font-bold mb-3 text-lg">Session Info</h3>
-          <div className="text-sm space-y-2">
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-400">Type:</span>
-              <span className="px-2 py-1 bg-purple-600 rounded text-xs">
-                {reservation.sessionType}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-400">Duration:</span>
-              <span>25 minutes</span>
-            </div>
-            {reservation.host && (
-              <div className="pt-3 border-t border-gray-700">
-                <p className="text-gray-400 text-xs mb-2">Host</p>
-                <div className="flex items-center space-x-2">
-                  {reservation.host.avatar ? (
-                    <img
-                      src={reservation.host.avatar}
-                      alt={reservation.host.name}
-                      className="w-8 h-8 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                      {reservation.host.name?.[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <span className="font-medium">{reservation.host.name}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Video/Slide Area */}
+      {renderLayout()}
+
+      {/* Target Words Bar */}
+      {reservation?.targetWords && reservation.targetWords.length > 0 && (
+        <TargetWordsBar
+          targetWords={reservation.targetWords}
+          conversationGoal={reservation.conversationGoal}
+          language="en"
+        />
+      )}
+
+      {/* Medal Modal */}
+      {showMedalModal && (
+        <NewMedalsModal
+          medals={earnedMedals}
+          onClose={handleMedalModalClose}
+        />
       )}
     </div>
   );

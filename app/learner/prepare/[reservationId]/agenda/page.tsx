@@ -162,8 +162,22 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => router.push("/learner/dashboard")}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <span>←</span>
+            <span>Back to Home</span>
+          </button>
+          <span className="text-sm text-gray-500">Conversation Agenda</span>
+        </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white mb-8">
           <h1 className="text-2xl font-bold mb-2">Your Conversation Agenda</h1>
@@ -464,6 +478,7 @@ export default function AgendaPage() {
             </li>
           </ul>
         </div>
+      </div>
       </div>
     </div>
   );

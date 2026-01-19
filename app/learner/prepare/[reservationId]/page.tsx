@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import TopicSelector, { TOPICS as SLIDE_TOPICS } from "@/components/video/TopicSelector";
 
 // トピック選択肢
 const TOPICS = [
@@ -65,8 +66,20 @@ export default function PreparationPage() {
   // フォームステート
   const [progress, setProgress] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
+  const [slideTopic, setSlideTopic] = useState<string | null>(null);
+  const [targetWords, setTargetWords] = useState<string[]>(["", "", "", "", ""]);
   const [conversationGoal, setConversationGoal] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
+
+  // ターゲット単語の更新
+  const updateTargetWord = (index: number, value: string) => {
+    const newWords = [...targetWords];
+    newWords[index] = value;
+    setTargetWords(newWords);
+  };
+
+  // 空でない単語のみを取得
+  const getFilledTargetWords = () => targetWords.filter(word => word.trim() !== "");
 
   // 前回の会話履歴を取得
   useEffect(() => {
@@ -103,6 +116,8 @@ export default function PreparationPage() {
           body: JSON.stringify({
             progressSinceLastSession: progress,
             selectedTopic,
+            slideTopic,
+            targetWords: getFilledTargetWords(),
             conversationGoal,
             additionalNotes,
           }),
@@ -135,8 +150,22 @@ export default function PreparationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => router.push("/learner/dashboard")}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <span>←</span>
+            <span>Back to Home</span>
+          </button>
+          <span className="text-sm text-gray-500">Session Preparation</span>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
           Prepare for Your Conversation
         </h1>
@@ -215,6 +244,39 @@ export default function PreparationPage() {
             </select>
           </div>
 
+          {/* ターゲット単語 */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              Target Words to Use (Optional)
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Enter up to 5 words you want to practice using during the conversation.
+              Your host will see these and help you use them naturally.
+            </p>
+            <div className="space-y-3">
+              {targetWords.map((word, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <span className="text-gray-400 text-sm w-6">{index + 1}.</span>
+                  <input
+                    type="text"
+                    value={word}
+                    onChange={(e) => updateTargetWord(index, e.target.value)}
+                    placeholder={`Word ${index + 1}`}
+                    maxLength={50}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              ))}
+            </div>
+            {getFilledTargetWords().length > 0 && (
+              <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+                <p className="text-sm text-orange-700">
+                  <strong>Your target words:</strong> {getFilledTargetWords().join(", ")}
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* 会話の目標 */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -238,6 +300,31 @@ export default function PreparationPage() {
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* スライドトピック選択（オプション） */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              Use Conversation Slides? (Optional)
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Choose a slide topic to guide your conversation. Both you and your
+              host will see the same slides during the session.
+            </p>
+            <TopicSelector
+              selectedTopic={slideTopic}
+              onSelect={(topic) => setSlideTopic(slideTopic === topic ? null : topic)}
+              language="en"
+            />
+            {slideTopic && (
+              <button
+                type="button"
+                onClick={() => setSlideTopic(null)}
+                className="mt-4 text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear selection (no slides)
+              </button>
+            )}
           </div>
 
           {/* 補足メモ */}
@@ -285,6 +372,7 @@ export default function PreparationPage() {
             )}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

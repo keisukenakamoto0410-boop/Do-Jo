@@ -8,6 +8,7 @@ import StudyPostTimeline from "@/components/learner/StudyPostTimeline";
 import ArticleFeed from "@/components/learner/ArticleFeed";
 import MobileNav from "@/components/MobileNav";
 import ConversationStats from "@/components/ConversationStats";
+import MedalDisplay from "@/components/MedalDisplay";
 
 interface UserStats {
   totalSessions: number;
@@ -57,6 +58,7 @@ export default function LearnerDashboard() {
   const [rankingLoading, setRankingLoading] = useState(true);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [reservationsLoading, setReservationsLoading] = useState(true);
+  const [medals, setMedals] = useState<string[]>([]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -69,6 +71,25 @@ export default function LearnerDashboard() {
   // Fetch user stats (placeholder for now)
   useEffect(() => {
     // TODO: Fetch actual stats from API
+  }, [session?.user?.id]);
+
+  // Fetch medals
+  useEffect(() => {
+    const fetchMedals = async () => {
+      try {
+        const res = await fetch("/api/user/medals");
+        if (res.ok) {
+          const data = await res.json();
+          setMedals(data.medals?.map((m: { type: string }) => m.type) || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch medals:", error);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchMedals();
+    }
   }, [session?.user?.id]);
 
   // Fetch reservations
@@ -276,6 +297,18 @@ export default function LearnerDashboard() {
               </Link>
             </div>
           </div>
+
+          {/* Medals Section */}
+          {medals.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-neutral-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                  <span>🏆</span> My Medals ({medals.length})
+                </h3>
+              </div>
+              <MedalDisplay medals={medals} size="sm" />
+            </div>
+          )}
         </div>
 
         {/* Today's Session - Prominent display */}

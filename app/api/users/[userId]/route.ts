@@ -11,6 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
+    // 認証チェック
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { userId } = await params;
 
     const user = await prisma.user.findUnique({

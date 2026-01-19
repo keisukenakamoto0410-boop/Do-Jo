@@ -29,7 +29,7 @@ function RegisterContent() {
     // Senior fields
     careerHistory: "",
     expertise: [] as string[],
-    ageRange: "",
+    birthDate: "",
     emergencyContactEmail: "",
     emergencyContactName: "",
     prefecture: "",
@@ -452,22 +452,16 @@ function RegisterContent() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      年代 <span className="text-red-500">*</span>
+                      生年月日 <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      name="ageRange"
-                      value={formData.ageRange}
+                    <input
+                      type="date"
+                      name="birthDate"
+                      value={formData.birthDate}
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-lg"
-                    >
-                      <option value="">選択してください</option>
-                      <option value="40代以下">40代以下</option>
-                      <option value="50代">50代</option>
-                      <option value="60代">60代</option>
-                      <option value="70代">70代</option>
-                      <option value="80代以上">80代以上</option>
-                    </select>
+                    />
                   </div>
 
                   <div>

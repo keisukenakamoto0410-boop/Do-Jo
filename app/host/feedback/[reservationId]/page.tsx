@@ -113,7 +113,7 @@ export default function HostFeedbackPage() {
         );
         if (feedbackRes.ok) {
           const feedbackData = await feedbackRes.json();
-          if (feedbackData.detailedFeedback) {
+          if (feedbackData.feedback) {
             setSubmitted(true);
           }
         }

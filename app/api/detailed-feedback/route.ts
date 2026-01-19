@@ -134,7 +134,6 @@ export async function POST(req: NextRequest) {
             id: true,
             name: true,
             email: true,
-            lineUserId: true,
           },
         },
         host: {
@@ -202,15 +201,6 @@ export async function POST(req: NextRequest) {
     }).catch((err) => {
       console.error("Failed to send feedback notification email:", err);
     });
-
-    // LINE通知（連携済みの場合）
-    if (reservation.learner.lineUserId) {
-      const { sendLineMessage } = await import("@/lib/line");
-      const message = `🎉 ${reservation.host.name}さんからフィードバックが届きました！\n\n会話の詳細な評価とアドバイスを確認してください。\n\n▼ フィードバックを見る\n${summaryUrl}`;
-      sendLineMessage(reservation.learner.lineUserId, message).catch((err) => {
-        console.error("Failed to send LINE notification:", err);
-      });
-    }
 
     return NextResponse.json({ detailedFeedback }, { status: 201 });
   } catch (error) {

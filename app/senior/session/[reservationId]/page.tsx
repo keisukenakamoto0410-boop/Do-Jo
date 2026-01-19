@@ -3,54 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
+import SlideToggleButton from "@/components/video/SlideToggleButton";
+import SupportHints from "@/components/video/SupportHints";
+import { useSlideSync } from "@/hooks/useSlideSync";
+import { useSessionJoin } from "@/hooks/useSessionJoin";
+import { TOPICS } from "@/components/video/TopicSelector";
+
+// SlideViewerを動的インポート（SSR無効）
+const SlideViewer = dynamic(() => import("@/components/video/SlideViewer"), {
+  ssr: false,
+});
 
 // Agora type definitions (for dynamic import)
 type IAgoraRTCClient = any;
 type ICameraVideoTrack = any;
 type IMicrophoneAudioTrack = any;
-
-// Agenda types
-interface AgendaSection {
-  name: string;
-  nameJa: string;
-  duration: number;
-  startTime: string;
-  endTime: string;
-  goal: string;
-  suggestedPhrases?: string[];
-  questions?: { question: string; grammarUsed?: string; hint?: string }[];
-  vocabulary?: { word: string; reading: string; meaning: string }[];
-  prompts?: string[];
-  note?: string;
-  tips?: string;
-}
-
-interface Agenda {
-  summary: {
-    topic: string;
-    topicJa: string;
-    duration: number;
-    seniorName: string;
-    mainGoal: string;
-  };
-  sections: AgendaSection[];
-  todaysGoals: string[];
-  grammarFocus: {
-    pattern: string;
-    meaning: string;
-    examplesForToday: string[];
-  }[];
-  usefulPhrases: {
-    japanese: string;
-    meaning: string;
-    when: string;
-  }[];
-  seniorInfo: {
-    name: string;
-    strengths: string;
-    conversationTips: string;
-  };
-}
 
 export default function SeniorSessionPage() {
   const router = useRouter();
@@ -71,9 +39,47 @@ export default function SeniorSessionPage() {
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [reservation, setReservation] = useState<any>(null);
   const [agoraInitialized, setAgoraInitialized] = useState(false);
-  const [agenda, setAgenda] = useState<Agenda | null>(null);
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-  const [showAgenda, setShowAgenda] = useState(true);
+
+  // スライド関連の状態
+  const [showSlides, setShowSlides] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  // タイマー開始フラグ
+  const [timerStarted, setTimerStarted] = useState(false);
+
+  // セッション入室管理フック
+  const {
+    partnerJoined,
+    sessionStarted,
+    sessionStartedAt,
+    isLoading: joinLoading,
+  } = useSessionJoin({
+    reservationId,
+    isHost: true,
+    onBothJoined: () => {
+      setTimerStarted(true);
+    },
+  });
+
+  // スライド同期フック（シニアはisHost=trueで受信のみ）
+  const { currentSlide, slideTopic } = useSlideSync({
+    reservationId,
+    isHost: true,
+    initialTopic: reservation?.slideTopic,
+  });
+
+  // 画面サイズ検出
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   useEffect(() => {
     fetchReservation();
@@ -86,7 +92,6 @@ export default function SeniorSessionPage() {
     }
   }, [reservation, agoraInitialized, error]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (client) {
@@ -95,9 +100,9 @@ export default function SeniorSessionPage() {
     };
   }, [client]);
 
-  // Timer
+  // Timer - 両者入室後に開始
   useEffect(() => {
-    if (!joined) return;
+    if (!timerStarted) return;
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -115,7 +120,7 @@ export default function SeniorSessionPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [joined]);
+  }, [timerStarted]);
 
   const fetchReservation = async () => {
     try {
@@ -125,16 +130,15 @@ export default function SeniorSessionPage() {
       }
       const data = await response.json();
 
-      // Check if session time has started (allow 5 minutes early)
       const sessionStart = new Date(data.slot.startTime);
       const now = new Date();
       const fiveMinutesBefore = new Date(sessionStart.getTime() - 5 * 60 * 1000);
-      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000); // 30 min after start
+      const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000);
 
       if (now < fiveMinutesBefore) {
         const waitMinutes = Math.ceil((fiveMinutesBefore.getTime() - now.getTime()) / 60000);
         const startTimeStr = sessionStart.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-        setError(`セッションはまだ始まっていません。あと${waitMinutes}分後にお越しください。開始5分前から参加できます。開始時刻: ${startTimeStr}`);
+        setError(`セッションはまだ始まっていません。あと${waitMinutes}分後にお越しください。開始時刻: ${startTimeStr}`);
         setLoading(false);
         return;
       }
@@ -146,11 +150,6 @@ export default function SeniorSessionPage() {
       }
 
       setReservation(data);
-
-      // Set agenda if available
-      if (data.generatedAgenda) {
-        setAgenda(data.generatedAgenda);
-      }
     } catch (err) {
       console.error("Failed to fetch reservation:", err);
       setError("接続できませんでした。もう一度お試しください。");
@@ -160,7 +159,6 @@ export default function SeniorSessionPage() {
 
   const initAgora = async () => {
     try {
-      // Check camera/microphone permissions
       try {
         const permissions = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -173,13 +171,9 @@ export default function SeniorSessionPage() {
         );
       }
 
-      // Dynamic import Agora SDK
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
-
-      // Create client
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
-      // Get token
       const response = await fetch(
         `/api/reservations/${reservationId}/agora-token`
       );
@@ -190,7 +184,6 @@ export default function SeniorSessionPage() {
 
       const { token, channelName, appId, uid } = await response.json();
 
-      // Set up remote user events
       agoraClient.on("user-published", async (user: any, mediaType: "audio" | "video") => {
         try {
           await agoraClient.subscribe(user, mediaType);
@@ -225,10 +218,8 @@ export default function SeniorSessionPage() {
         setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
       });
 
-      // Join channel
       await agoraClient.join(appId, channelName, token, uid);
 
-      // Create local tracks
       const [audioTrack, videoTrack] =
         await AgoraRTC.createMicrophoneAndCameraTracks(
           { encoderConfig: "music_standard" },
@@ -245,14 +236,12 @@ export default function SeniorSessionPage() {
 
       setLocalTracks({ audioTrack, videoTrack });
 
-      // Display local video
       const localVideoDiv = document.getElementById("local-video");
       if (!localVideoDiv) {
         throw new Error("ビデオ画面が見つかりません");
       }
       videoTrack.play("local-video");
 
-      // Publish tracks
       await agoraClient.publish([audioTrack, videoTrack]);
 
       setClient(agoraClient);
@@ -303,7 +292,139 @@ export default function SeniorSessionPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const currentSection = agenda?.sections?.[currentSectionIndex];
+  // トピック情報を取得
+  const topicInfo = slideTopic
+    ? TOPICS.find((t) => t.id === slideTopic)
+    : null;
+
+  // レイアウト描画
+  const renderLayout = () => {
+    if (!showSlides || !slideTopic) {
+      // スライドなし：相手の顔を大きく、自分は右下に小さく
+      return (
+        <div className="flex-1 relative p-4">
+          <div className="w-full h-full bg-gray-800 rounded-2xl overflow-hidden">
+            <div
+              id="remote-video"
+              className="w-full h-full"
+              style={{ minHeight: "400px" }}
+            ></div>
+            {remoteUsers.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 m-4 rounded-2xl">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">👋</div>
+                  <p className="text-2xl font-bold">相手を待っています...</p>
+                  {!partnerJoined && (
+                    <p className="text-gray-400 mt-2">学習者がまだ入室していません</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* セッション開始通知 */}
+            {sessionStarted && !timerStarted && (
+              <div className="absolute inset-0 flex items-center justify-center bg-green-500/90 m-4 rounded-2xl z-10">
+                <div className="text-center text-white">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <p className="text-2xl font-bold">会話スタート！</p>
+                  <p className="mt-2">楽しい会話をしましょう！</p>
+                </div>
+              </div>
+            )}
+            {remoteUsers.length > 0 && reservation?.learner && (
+              <div className="absolute bottom-6 left-6 bg-black/70 px-4 py-2 rounded-lg text-white font-bold text-lg">
+                {reservation.learner.name}さん
+              </div>
+            )}
+          </div>
+
+          {/* Local Video (Small, bottom-right corner) */}
+          <div className="absolute bottom-8 right-8 w-48 h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
+            <div id="local-video" className="w-full h-full"></div>
+            <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-white text-sm">
+              あなた
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // スマホ縦向き：スライドメイン、顔は小さく
+    if (isMobile && !isLandscape) {
+      return (
+        <div className="flex-1 relative">
+          <div className="w-full h-full">
+            <SlideViewer
+              topic={slideTopic}
+              isHost={true}
+              reservationId={reservationId}
+              currentSlide={currentSlide}
+            />
+          </div>
+          <div className="absolute top-4 right-4 w-24 h-20 bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-600">
+            <div id="remote-video" className="w-full h-full"></div>
+          </div>
+          <div className="absolute top-28 right-4 w-20 h-16 bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-600">
+            <div id="local-video" className="w-full h-full"></div>
+          </div>
+        </div>
+      );
+    }
+
+    // スマホ横向き：顔20% / スライド80%
+    if (isMobile && isLandscape) {
+      return (
+        <div className="flex-1 flex">
+          <div className="w-1/5 flex flex-col gap-2 p-2">
+            <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden">
+              <div id="remote-video" className="w-full h-full"></div>
+            </div>
+            <div className="h-20 bg-gray-800 rounded-lg overflow-hidden">
+              <div id="local-video" className="w-full h-full"></div>
+            </div>
+          </div>
+          <div className="w-4/5 p-2">
+            <SlideViewer
+              topic={slideTopic}
+              isHost={true}
+              reservationId={reservationId}
+              currentSlide={currentSlide}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // PC：スライドメイン、顔は右上にPIP
+    return (
+      <div className="flex-1 relative p-4">
+        <div className="w-full h-full">
+          <SlideViewer
+            topic={slideTopic}
+            isHost={true}
+            reservationId={reservationId}
+            currentSlide={currentSlide}
+          />
+        </div>
+        {/* 顔は右上にPIP */}
+        <div className="absolute top-6 right-6 w-48 flex flex-col gap-2">
+          <div className="h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-600">
+            <div id="remote-video" className="w-full h-full"></div>
+            {remoteUsers.length > 0 && (
+              <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
+                {reservation?.learner?.name}
+              </div>
+            )}
+          </div>
+          <div className="h-28 bg-gray-800 rounded-xl overflow-hidden shadow-xl border border-gray-600">
+            <div id="local-video" className="w-full h-full"></div>
+            <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
+              あなた
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
@@ -362,257 +483,59 @@ export default function SeniorSessionPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Toggle Agenda Button */}
-          <button
-            onClick={() => setShowAgenda(!showAgenda)}
-            className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium transition-colors"
-          >
-            {showAgenda ? "📋 アジェンダを隠す" : "📋 アジェンダを表示"}
-          </button>
+          {/* スライドトグルボタン */}
+          {slideTopic && (
+            <SlideToggleButton
+              isOpen={showSlides}
+              onToggle={() => setShowSlides(!showSlides)}
+              language="ja"
+            />
+          )}
 
-          {/* Timer */}
-          <div
-            className={`px-6 py-3 rounded-xl font-bold text-2xl ${
-              timeLeft <= 5 * 60 ? "bg-red-500 animate-pulse text-white" : "bg-white text-sky-600"
-            }`}
-          >
-            残り {formatTime(timeLeft)}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Video Section */}
-        <div className={`flex-1 flex flex-col p-4 ${showAgenda ? "" : ""}`}>
-          {/* Video Area - Remote video full screen, local video small */}
-          <div className="flex-1 relative">
-            {/* Remote Video (Full Screen) */}
-            <div className="w-full h-full bg-gray-800 rounded-2xl overflow-hidden">
-              <div
-                id="remote-video"
-                className="w-full h-full"
-                style={{ minHeight: "300px" }}
-              ></div>
-              {remoteUsers.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 rounded-2xl">
-                  <div className="text-center">
-                    <div className="text-5xl mb-3">👋</div>
-                    <p className="text-xl font-bold">相手を待っています...</p>
-                  </div>
-                </div>
-              )}
-              {remoteUsers.length > 0 && reservation?.learner && (
-                <div className="absolute bottom-4 left-4 bg-black/70 px-4 py-2 rounded-lg text-white font-bold">
-                  {reservation.learner.name}さん
-                </div>
-              )}
+          {/* トピック表示 */}
+          {topicInfo && (
+            <div className="hidden md:flex items-center gap-2 bg-white/20 px-3 py-2 rounded-lg">
+              <span>{topicInfo.emoji}</span>
+              <span className="text-white text-sm">{topicInfo.nameJa}</span>
             </div>
+          )}
 
-            {/* Local Video (Small, bottom-right corner) */}
-            <div className="absolute bottom-4 right-4 w-40 h-32 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
-              <div
-                id="local-video"
-                className="w-full h-full"
-              ></div>
-              <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-1 rounded text-white text-xs">
-                あなた
-              </div>
+          {/* Timer / Waiting Status */}
+          {timerStarted ? (
+            <div
+              className={`px-6 py-3 rounded-xl font-bold text-2xl ${
+                timeLeft <= 5 * 60 ? "bg-red-500 animate-pulse text-white" : "bg-white text-sky-600"
+              }`}
+            >
+              残り {formatTime(timeLeft)}
             </div>
-          </div>
+          ) : (
+            <div className="px-4 py-2 rounded-xl bg-yellow-500 text-white font-bold flex items-center gap-2">
+              <div className="animate-pulse w-3 h-3 bg-white rounded-full"></div>
+              {partnerJoined ? "開始中..." : "相手を待っています..."}
+            </div>
+          )}
 
           {/* End Session Button */}
-          <div className="mt-4">
-            <button
-              onClick={handleSessionEnd}
-              className="w-full max-w-md mx-auto block py-4 bg-red-600 hover:bg-red-700 text-white text-xl font-bold rounded-xl transition-colors shadow-lg"
-            >
-              🛑 通話を終了する
-            </button>
-          </div>
+          <button
+            onClick={handleSessionEnd}
+            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors"
+          >
+            通話を終了
+          </button>
         </div>
-
-        {/* Agenda Panel */}
-        {showAgenda && agenda && (
-          <div className="w-96 bg-gray-100 border-l border-gray-300 overflow-y-auto">
-            <div className="p-4">
-              {/* Topic Header */}
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 text-white mb-4">
-                <p className="text-sm opacity-80">今日のトピック</p>
-                <h3 className="text-xl font-bold">{agenda.summary.topicJa}</h3>
-                <p className="text-sm opacity-80">{agenda.summary.topic}</p>
-              </div>
-
-              {/* Today's Goals */}
-              <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-                <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>🎯</span> 今日の目標
-                </h4>
-                <ul className="space-y-1">
-                  {agenda.todaysGoals.map((goal, i) => (
-                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
-                      <span className="text-orange-500 mt-0.5">✓</span>
-                      {goal}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Section Navigator */}
-              <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-bold text-gray-900">📋 会話の流れ</h4>
-                  <span className="text-sm text-gray-500">
-                    {currentSectionIndex + 1} / {agenda.sections.length}
-                  </span>
-                </div>
-
-                {/* Section Tabs */}
-                <div className="flex gap-1 mb-3 overflow-x-auto">
-                  {agenda.sections.map((section, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentSectionIndex(i)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                        i === currentSectionIndex
-                          ? "bg-orange-500 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      {section.nameJa}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Current Section Detail */}
-                {currentSection && (
-                  <div className="border-l-4 border-orange-400 pl-3 py-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <h5 className="font-bold text-gray-900">
-                        {currentSection.nameJa}
-                      </h5>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        {currentSection.duration}分
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{currentSection.goal}</p>
-
-                    {/* Questions */}
-                    {currentSection.questions && currentSection.questions.length > 0 && (
-                      <div className="bg-yellow-50 rounded-lg p-3 mb-2">
-                        <p className="text-xs font-bold text-yellow-800 mb-2">
-                          💬 聞いてみましょう：
-                        </p>
-                        <ul className="space-y-2">
-                          {currentSection.questions.map((q, j) => (
-                            <li key={j} className="text-sm text-yellow-900">
-                              <span className="font-medium">{q.question}</span>
-                              {q.hint && (
-                                <p className="text-xs text-yellow-700 mt-0.5">
-                                  ヒント: {q.hint}
-                                </p>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Prompts */}
-                    {currentSection.prompts && currentSection.prompts.length > 0 && (
-                      <div className="bg-green-50 rounded-lg p-3 mb-2">
-                        <p className="text-xs font-bold text-green-800 mb-2">
-                          📝 話題のヒント：
-                        </p>
-                        <ul className="space-y-1">
-                          {currentSection.prompts.map((p, j) => (
-                            <li key={j} className="text-sm text-green-900">
-                              • {p}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Tips */}
-                    {currentSection.tips && (
-                      <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded">
-                        💡 {currentSection.tips}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Navigation Buttons */}
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => setCurrentSectionIndex(Math.max(0, currentSectionIndex - 1))}
-                    disabled={currentSectionIndex === 0}
-                    className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
-                  >
-                    ← 前へ
-                  </button>
-                  <button
-                    onClick={() => setCurrentSectionIndex(Math.min(agenda.sections.length - 1, currentSectionIndex + 1))}
-                    disabled={currentSectionIndex === agenda.sections.length - 1}
-                    className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    次へ →
-                  </button>
-                </div>
-              </div>
-
-              {/* Grammar Focus */}
-              {agenda.grammarFocus && agenda.grammarFocus.length > 0 && (
-                <div className="bg-white rounded-xl p-4 mb-4 shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                    <span>✏️</span> 今日の文法
-                  </h4>
-                  <div className="space-y-2">
-                    {agenda.grammarFocus.map((g, i) => (
-                      <div key={i} className="bg-blue-50 rounded-lg p-2">
-                        <span className="font-bold text-blue-700">{g.pattern}</span>
-                        <span className="text-sm text-blue-600 ml-2">({g.meaning})</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Learner Info */}
-              {reservation?.learner && (
-                <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                    <span>👤</span> 学習者情報
-                  </h4>
-                  <div className="text-sm space-y-1 text-gray-700">
-                    <p><span className="font-medium">名前:</span> {reservation.learner.name}</p>
-                    {reservation.learner.country && (
-                      <p><span className="font-medium">出身:</span> {reservation.learner.country}</p>
-                    )}
-                    {reservation.learner.jlptLevel && (
-                      <p><span className="font-medium">レベル:</span> {reservation.learner.jlptLevel}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* No Agenda Message */}
-        {showAgenda && !agenda && (
-          <div className="w-96 bg-gray-100 border-l border-gray-300 flex items-center justify-center">
-            <div className="text-center p-8">
-              <div className="text-5xl mb-4">📋</div>
-              <p className="text-gray-600">
-                アジェンダがありません<br />
-                学習者がまだ準備していないようです
-              </p>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Main Content - Video/Slide Area */}
+      {renderLayout()}
+
+      {/* Support Hints for Target Words */}
+      {reservation?.targetWords && reservation.targetWords.length > 0 && (
+        <SupportHints
+          targetWords={reservation.targetWords}
+          learnerName={reservation.learner?.name}
+        />
+      )}
     </div>
   );
 }

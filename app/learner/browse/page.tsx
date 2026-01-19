@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { TOPICS as SLIDE_TOPICS } from "@/components/video/TopicSelector";
 
 interface Host {
   id: string;
@@ -42,6 +43,9 @@ function BrowseContent() {
   const [selectedType, setSelectedType] = useState(initialType);
   const [selectedDate, setSelectedDate] = useState("");
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
+  const [showSlideModal, setShowSlideModal] = useState(false);
+  const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<string | null>(null);
+  const [selectedSlideTopic, setSelectedSlideTopic] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -81,13 +85,28 @@ function BrowseContent() {
     }
   };
 
-  const handleBookSlot = async (slotId: string) => {
-    setBookingSlotId(slotId);
+  // スライド選択モーダルを開く
+  const handleOpenSlideModal = (slotId: string) => {
+    setSelectedSlotForBooking(slotId);
+    setSelectedSlideTopic(null);
+    setShowSlideModal(true);
+  };
+
+  // 予約を確定
+  const handleConfirmBooking = async () => {
+    if (!selectedSlotForBooking) return;
+
+    setBookingSlotId(selectedSlotForBooking);
+    setShowSlideModal(false);
+
     try {
       const res = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId }),
+        body: JSON.stringify({
+          slotId: selectedSlotForBooking,
+          slideTopic: selectedSlideTopic,
+        }),
       });
 
       if (res.ok) {
@@ -101,6 +120,8 @@ function BrowseContent() {
       alert("Failed to book slot");
     } finally {
       setBookingSlotId(null);
+      setSelectedSlotForBooking(null);
+      setSelectedSlideTopic(null);
     }
   };
 
@@ -322,7 +343,7 @@ function BrowseContent() {
                             <p className="text-xs text-gray-500">25 min</p>
                           </div>
                           <button
-                            onClick={() => handleBookSlot(slot.id)}
+                            onClick={() => handleOpenSlideModal(slot.id)}
                             disabled={bookingSlotId === slot.id}
                             className="px-4 py-2 rounded-lg font-medium transition-colors bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -335,6 +356,71 @@ function BrowseContent() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Slide Topic Selection Modal */}
+        {showSlideModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Choose a Conversation Slide (Optional)
+                </h2>
+                <p className="text-gray-600 text-sm mb-6">
+                  Slides help guide your conversation. Both you and your host will see the same slides during the session.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {SLIDE_TOPICS.map((topic) => (
+                    <button
+                      key={topic.id}
+                      onClick={() => setSelectedSlideTopic(
+                        selectedSlideTopic === topic.id ? null : topic.id
+                      )}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        selectedSlideTopic === topic.id
+                          ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
+                          : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{topic.emoji}</div>
+                      <div className="font-semibold text-gray-900 text-sm">
+                        {topic.nameEn}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {topic.nameJa}
+                      </div>
+                      {selectedSlideTopic === topic.id && (
+                        <div className="mt-1 text-blue-600 text-xs font-medium">
+                          ✓ Selected
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowSlideModal(false);
+                      setSelectedSlotForBooking(null);
+                      setSelectedSlideTopic(null);
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmBooking}
+                    disabled={bookingSlotId !== null}
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {selectedSlideTopic ? "Book with Slides" : "Book without Slides"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

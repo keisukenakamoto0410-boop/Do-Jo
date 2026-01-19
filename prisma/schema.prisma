@@ -38,7 +38,7 @@ model User {
   // 日本人シニア用フィールド
   careerHistory   String?   @db.Text  // これまでの経歴
   expertise       String[]  // 得意分野 ["営業", "人事", "製造"]
-  ageRange        String?   // 年代 "40代以下" | "50代" | "60代" | "70代" | "80代以上"
+  birthDate       DateTime? // 生年月日
   emergencyContactEmail String? // 緊急連絡先メールアドレス
   emergencyContactName  String? // 緊急連絡先名前
   prefecture      String?   // 都道府県
@@ -72,9 +72,6 @@ model User {
   passwordResetToken   String?   @unique
   passwordResetExpires DateTime?
 
-  // LINE連携
-  lineUserId    String?   @unique
-
   // SNS投稿関連
   totalPosts       Int      @default(0)     // 総投稿数
 
@@ -91,6 +88,7 @@ model User {
   likes                   Like[]
   comments                Comment[]
   conversationHistories   ConversationHistory[]
+  medals                  UserMedal[]
 
   @@index([email])
   @@index([role])
@@ -154,12 +152,19 @@ model Reservation {
 
   // 会話準備（学習者が入力）
   selectedTopic           String?    // 選択したトピック
+  slideTopic              String?    // スライド用トピック (food, travel, etc.)
   grammarToStudy          String[]   // 練習したい文法
+  targetWords             String[]   // ターゲット単語（最大5個）
   conversationGoal        String?    // 会話の目標
   additionalNotes         String?    @db.Text // 補足メモ
   sharedMaterial          String?    // 共有資料（PDF URL等）
   generatedAgenda         Json?      // 生成されたアジェンダ
   progressSinceLastSession String?   // "new_lesson" | "same_lesson_new_grammar" | "same" | "review"
+
+  // セッション入室管理
+  learnerJoinedAt   DateTime?  // 学習者入室時刻
+  hostJoinedAt      DateTime?  // シニア入室時刻
+  sessionStartedAt  DateTime?  // 両者揃った時刻（タイマー開始）
 
   // タイムスタンプ
   startedAt   DateTime?
@@ -493,4 +498,33 @@ model SessionFeedback {
 
   @@index([reservationId])
   @@map("session_feedback")
+}
+
+// スライド同期用セッション
+model SlideSession {
+  id            String   @id @default(cuid())
+  reservationId String   @unique
+  currentSlide  Int      @default(1)
+  slideTopic    String?  // トピックID (food, travel, etc.)
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@index([reservationId])
+  @@map("slide_sessions")
+}
+
+// ユーザーが獲得したメダル
+model UserMedal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  medalType   String   // メダルタイプ: "first_session", "topic_food", "topic_travel", etc.
+  earnedAt    DateTime @default(now())
+
+  // 関連する予約（オプション）
+  reservationId String?
+
+  @@unique([userId, medalType]) // 同じメダルは1回のみ
+  @@index([userId])
+  @@map("user_medals")
 }

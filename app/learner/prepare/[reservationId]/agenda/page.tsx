@@ -479,7 +479,6 @@ export default function AgendaPage() {
           </ul>
         </div>
       </div>
-      </div>
     </div>
   );
 }

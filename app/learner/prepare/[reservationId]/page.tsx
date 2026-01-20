@@ -373,7 +373,6 @@ export default function PreparationPage() {
           </button>
         </form>
       </div>
-      </div>
     </div>
   );
 }

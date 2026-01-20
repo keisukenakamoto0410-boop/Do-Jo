@@ -71,6 +71,9 @@ export async function POST(
         data: updateData,
         select: {
           id: true,
+          learnerId: true,
+          hostId: true,
+          status: true,
           learnerJoinedAt: true,
           hostJoinedAt: true,
           sessionStartedAt: true,

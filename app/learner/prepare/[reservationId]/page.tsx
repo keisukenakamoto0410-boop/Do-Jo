@@ -250,8 +250,11 @@ export default function PreparationPage() {
               Target Words to Use (Optional)
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Enter up to 5 words you want to practice using during the conversation.
+              Enter up to 5 Japanese words you want to practice using during the conversation.
               Your host will see these and help you use them naturally.
+            </p>
+            <p className="text-sm text-amber-600 mb-4">
+              💡 Please write words in Japanese (e.g., おいしい, 旅行, 楽しい)
             </p>
             <div className="space-y-3">
               {targetWords.map((word, index) => (
@@ -261,7 +264,7 @@ export default function PreparationPage() {
                     type="text"
                     value={word}
                     onChange={(e) => updateTargetWord(index, e.target.value)}
-                    placeholder={`Word ${index + 1}`}
+                    placeholder={index === 0 ? "例: おいしい" : index === 1 ? "例: 旅行" : `単語 ${index + 1}`}
                     maxLength={50}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />

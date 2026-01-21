@@ -122,6 +122,34 @@ export default function SeniorSessionPage() {
     return () => clearInterval(interval);
   }, [timerStarted]);
 
+  // remoteUsersまたはレイアウト変更時にビデオを再生
+  useEffect(() => {
+    if (remoteUsers.length === 0) return;
+
+    const playRemoteVideo = () => {
+      const remoteVideoDiv = document.getElementById("remote-video");
+      if (!remoteVideoDiv) {
+        console.log("[Agora] remote-video div not found in useEffect");
+        return;
+      }
+
+      for (const user of remoteUsers) {
+        if (user.videoTrack) {
+          try {
+            console.log("[Agora] Playing video from useEffect for user:", user.uid);
+            user.videoTrack.play("remote-video");
+          } catch (err) {
+            console.error("[Agora] Error playing video in useEffect:", err);
+          }
+        }
+      }
+    };
+
+    // DOMが更新されるのを待つ
+    const timeoutId = setTimeout(playRemoteVideo, 300);
+    return () => clearTimeout(timeoutId);
+  }, [remoteUsers, showSlides, isMobile, isLandscape]);
+
   const fetchReservation = async () => {
     try {
       const response = await fetch(`/api/reservations/${reservationId}`);
@@ -188,7 +216,7 @@ export default function SeniorSessionPage() {
         try {
           console.log(`[Agora] user-published: uid=${user.uid}, mediaType=${mediaType}`);
           await agoraClient.subscribe(user, mediaType);
-          console.log(`[Agora] Subscribed to ${mediaType} for uid=${user.uid}`);
+          console.log(`[Agora] subscribed to ${mediaType}, hasVideoTrack=${!!user.videoTrack}, hasAudioTrack=${!!user.audioTrack}`);
 
           // First update React state to prepare DOM
           setRemoteUsers((prev: any[]) => {
@@ -199,24 +227,42 @@ export default function SeniorSessionPage() {
           // 相手が入室したらタイマー開始
           setTimerStarted(true);
 
-          if (mediaType === "video" && user.videoTrack) {
-            // Wait for DOM to be ready, then play video with retry mechanism
+          if (mediaType === "video") {
+            // ビデオトラックの再生（リトライ機能付き）
+            let retryCount = 0;
+            const maxRetries = 10;
+
             const playVideo = () => {
               const remoteVideoDiv = document.getElementById("remote-video");
-              if (remoteVideoDiv) {
-                console.log("[Agora] Playing remote video");
-                user.videoTrack.play("remote-video");
+              const track = user.videoTrack;
+
+              console.log(`[Agora] playVideo attempt ${retryCount + 1}: div=${!!remoteVideoDiv}, track=${!!track}`);
+
+              if (remoteVideoDiv && track) {
+                try {
+                  track.play("remote-video");
+                  console.log("[Agora] Remote video playing successfully");
+                } catch (playErr) {
+                  console.error("[Agora] Video play error:", playErr);
+                }
+              } else if (retryCount < maxRetries) {
+                retryCount++;
+                setTimeout(playVideo, 500);
               } else {
-                console.log("[Agora] remote-video element not found, retrying...");
-                setTimeout(playVideo, 100);
+                console.error("[Agora] Failed to play video after max retries");
               }
             };
-            setTimeout(playVideo, 300);
+
+            // 少し待ってから再生開始
+            setTimeout(playVideo, 500);
           }
 
-          if (mediaType === "audio" && user.audioTrack) {
-            console.log("[Agora] Playing remote audio");
-            user.audioTrack.play();
+          if (mediaType === "audio") {
+            const track = user.audioTrack;
+            if (track) {
+              console.log("[Agora] Playing remote audio");
+              track.play();
+            }
           }
         } catch (subErr) {
           console.error("[Agora] Subscribe error:", subErr);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface UseSessionJoinProps {
   reservationId: string;
@@ -34,33 +34,37 @@ export function useSessionJoin({
     error: null,
   });
 
-  // Refs for cleanup and state tracking
+  // すべてのrefを先に宣言
   const mountedRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const errorCountRef = useRef(0);
   const sessionStartedRef = useRef(false);
   const onBothJoinedRef = useRef(onBothJoined);
+  const initializedRef = useRef(false);
 
-  // Keep callback ref updated
+  // コールバックrefを更新
   useEffect(() => {
     onBothJoinedRef.current = onBothJoined;
   }, [onBothJoined]);
 
-  // Cleanup function
-  const cleanup = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  // Main effect
   useEffect(() => {
+    // 二重初期化防止
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     mountedRef.current = true;
     errorCountRef.current = 0;
     sessionStartedRef.current = false;
 
-    // Initial join request
+    // クリーンアップ関数
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    // 初回のjoinリクエスト
     const doJoin = async () => {
       if (!mountedRef.current) return;
 
@@ -88,14 +92,16 @@ export function useSessionJoin({
 
           if (data.sessionStarted || data.bothJoined) {
             sessionStartedRef.current = true;
-            cleanup();
+            stopPolling();
             onBothJoinedRef.current?.();
+            return true; // セッション開始済み
           }
         } else {
-          throw new Error("Failed to join");
+          throw new Error(`HTTP ${res.status}`);
         }
       } catch (err) {
         console.error("[useSessionJoin] Join error:", err);
+        errorCountRef.current++;
         if (mountedRef.current) {
           setState((prev) => ({
             ...prev,
@@ -104,12 +110,14 @@ export function useSessionJoin({
           }));
         }
       }
+      return false;
     };
 
-    // Poll for status
+    // ポーリング
     const doPoll = async () => {
+      // ポーリング停止条件をチェック
       if (!mountedRef.current || sessionStartedRef.current) {
-        cleanup();
+        stopPolling();
         return;
       }
 
@@ -135,18 +143,20 @@ export function useSessionJoin({
 
           if (data.sessionStarted) {
             sessionStartedRef.current = true;
-            cleanup();
+            stopPolling();
             onBothJoinedRef.current?.();
           }
         } else {
-          throw new Error("Poll failed");
+          throw new Error(`HTTP ${res.status}`);
         }
       } catch (err) {
         console.error("[useSessionJoin] Poll error:", err);
         errorCountRef.current++;
 
+        // 3回連続エラーでポーリング停止
         if (errorCountRef.current >= MAX_ERRORS) {
-          cleanup();
+          console.error("[useSessionJoin] Max errors reached, stopping polling");
+          stopPolling();
           if (mountedRef.current) {
             setState((prev) => ({
               ...prev,
@@ -157,22 +167,28 @@ export function useSessionJoin({
       }
     };
 
-    // Start
-    doJoin().then(() => {
-      if (mountedRef.current && !sessionStartedRef.current) {
-        // Only start polling if not already started
-        if (!intervalRef.current) {
-          intervalRef.current = setInterval(doPoll, POLL_INTERVAL);
-        }
+    // 初期化
+    doJoin().then((sessionStarted) => {
+      // セッションが既に開始されていたらポーリングしない
+      if (sessionStarted || !mountedRef.current || sessionStartedRef.current) {
+        return;
+      }
+
+      // ポーリング開始（重複防止）
+      if (!intervalRef.current) {
+        console.log("[useSessionJoin] Starting polling with interval:", POLL_INTERVAL);
+        intervalRef.current = setInterval(doPoll, POLL_INTERVAL);
       }
     });
 
-    // Cleanup on unmount
+    // クリーンアップ
     return () => {
+      console.log("[useSessionJoin] Cleanup");
       mountedRef.current = false;
-      cleanup();
+      initializedRef.current = false;
+      stopPolling();
     };
-  }, [reservationId, cleanup]);
+  }, [reservationId]); // reservationIdのみ依存
 
   return {
     ...state,

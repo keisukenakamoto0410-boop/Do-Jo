@@ -635,6 +635,51 @@ export default function SeniorDashboard() {
             </button>
           </div>
 
+          {/* My Slots List */}
+          {mySlots.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 登録済みの時間</h2>
+              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
+                <p className="text-green-700 font-medium">✅ 予約枠を作成しました！外国人の方からの予約を待っています。</p>
+              </div>
+              <div className="space-y-3">
+                {mySlots.map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="bg-white border-2 border-gray-200 rounded-xl p-4 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                        slot.sessionType === "casual" ? "bg-purple-100" : "bg-amber-100"
+                      }`}>
+                        {slot.sessionType === "casual" ? "🎓" : "💼"}
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-gray-900">
+                          {formatDate(slot.startTime)} {formatTime(slot.startTime)}
+                        </p>
+                        <p className="text-gray-500">
+                          {slot.sessionType === "casual" ? "カジュアル" : "ビジネス"} •
+                          {slot.status === "available" ? " 予約可能" :
+                           slot.status === "reserved" ? " 予約済み" :
+                           slot.status === "completed" ? " 完了" : " キャンセル済み"}
+                        </p>
+                      </div>
+                    </div>
+                    {slot.status === "available" && (
+                      <button
+                        onClick={() => handleDeleteSlot(slot.id)}
+                        className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded-lg transition-colors"
+                      >
+                        削除
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Calendar Schedule */}
           <div className="mb-8">
             <div className="mb-4">

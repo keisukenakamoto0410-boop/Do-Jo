@@ -20,9 +20,6 @@ export async function GET(req: NextRequest) {
     // Build where clause
     const where: Record<string, unknown> = {
       status: "available",
-      startTime: {
-        gte: now,
-      },
       reservation: null, // No existing reservation
     };
 
@@ -31,18 +28,33 @@ export async function GET(req: NextRequest) {
       where.sessionType = sessionType;
     }
 
-    // Filter by date
+    // Filter by date or default to future slots
     if (date) {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
+      // If date is today, use current time as minimum
+      if (startOfDay <= now && now <= endOfDay) {
+        where.startTime = {
+          gte: now,
+          lte: endOfDay,
+        };
+      } else {
+        where.startTime = {
+          gte: startOfDay,
+          lte: endOfDay,
+        };
+      }
+    } else {
+      // Default: show all future slots
       where.startTime = {
-        gte: startOfDay,
-        lte: endOfDay,
+        gte: now,
       };
     }
+
+    console.log("[/api/slots] Query where:", JSON.stringify(where, null, 2));
 
     const slots = await prisma.slot.findMany({
       where,
@@ -72,6 +84,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    console.log("[/api/slots] Found", slots.length, "slots");
     return NextResponse.json({ slots });
   } catch (error) {
     console.error("Error fetching slots:", error);

@@ -17,6 +17,7 @@ export default function CreatePostPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user?.role !== "learner") {

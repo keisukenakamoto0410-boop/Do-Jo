@@ -25,6 +25,7 @@ export default function LearnerFeedbackPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user?.role !== "learner") {

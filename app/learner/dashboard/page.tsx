@@ -61,6 +61,7 @@ export default function LearnerDashboard() {
   const [medals, setMedals] = useState<string[]>([]);
 
   useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user?.role !== "learner") {

@@ -48,6 +48,7 @@ function BrowseContent() {
   const [selectedSlideTopic, setSelectedSlideTopic] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user?.role !== "learner") {

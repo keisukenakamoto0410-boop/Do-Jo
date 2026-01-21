@@ -49,6 +49,7 @@ export default function LearnerReservationsPage() {
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
 
   useEffect(() => {
+    if (status === "loading") return; // Wait for session to load
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user?.role !== "learner") {

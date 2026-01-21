@@ -205,6 +205,9 @@ export default function SessionPage() {
             return [...prev, user];
           });
 
+          // 相手が入室したらタイマー開始
+          setTimerStarted(true);
+
           if (mediaType === "video" && user.videoTrack) {
             // DOMの準備を待ってからビデオを再生
             const playVideo = () => {

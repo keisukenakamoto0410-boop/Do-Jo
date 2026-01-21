@@ -196,6 +196,9 @@ export default function SeniorSessionPage() {
             return [...prev, user];
           });
 
+          // 相手が入室したらタイマー開始
+          setTimerStarted(true);
+
           if (mediaType === "video" && user.videoTrack) {
             // Wait for DOM to be ready, then play video with retry mechanism
             const playVideo = () => {

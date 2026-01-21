@@ -17,8 +17,7 @@ interface JoinState {
   error: string | null;
 }
 
-const POLL_INTERVAL = 5000; // 5秒間隔
-const MAX_ERRORS = 3; // 連続エラー3回で停止
+const POLL_INTERVAL = 10000; // 10秒間隔
 
 export function useSessionJoin({
   reservationId,
@@ -34,161 +33,77 @@ export function useSessionJoin({
     error: null,
   });
 
-  // すべてのrefを先に宣言
-  const mountedRef = useRef(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const errorCountRef = useRef(0);
-  const sessionStartedRef = useRef(false);
-  const onBothJoinedRef = useRef(onBothJoined);
-  const initializedRef = useRef(false);
-
-  // コールバックrefを更新
-  useEffect(() => {
-    onBothJoinedRef.current = onBothJoined;
-  }, [onBothJoined]);
+  const intervalIdRef = useRef<number | null>(null);
+  const stoppedRef = useRef(false);
 
   useEffect(() => {
-    // 二重初期化防止
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    stoppedRef.current = false;
 
-    mountedRef.current = true;
-    errorCountRef.current = 0;
-    sessionStartedRef.current = false;
-
-    // クリーンアップ関数
     const stopPolling = () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      stoppedRef.current = true;
+      if (intervalIdRef.current !== null) {
+        window.clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
       }
     };
 
-    // 初回のjoinリクエスト
-    const doJoin = async () => {
-      if (!mountedRef.current) return;
+    const fetchJoinStatus = async (isPost: boolean) => {
+      if (stoppedRef.current) return;
 
       try {
         const res = await fetch(`/api/reservations/${reservationId}/join`, {
-          method: "POST",
+          method: isPost ? "POST" : "GET",
         });
 
-        if (!mountedRef.current) return;
+        if (stoppedRef.current) return;
 
-        if (res.ok) {
-          const data = await res.json();
-          errorCountRef.current = 0;
-
-          setState({
-            learnerJoined: data.learnerJoined,
-            hostJoined: data.hostJoined,
-            sessionStarted: data.sessionStarted,
-            sessionStartedAt: data.sessionStartedAt
-              ? new Date(data.sessionStartedAt)
-              : null,
-            isLoading: false,
-            error: null,
-          });
-
-          if (data.sessionStarted || data.bothJoined) {
-            sessionStartedRef.current = true;
-            stopPolling();
-            onBothJoinedRef.current?.();
-            return true; // セッション開始済み
-          }
-        } else {
-          throw new Error(`HTTP ${res.status}`);
-        }
-      } catch (err) {
-        console.error("[useSessionJoin] Join error:", err);
-        errorCountRef.current++;
-        if (mountedRef.current) {
-          setState((prev) => ({
-            ...prev,
-            isLoading: false,
-            error: "接続に失敗しました",
-          }));
-        }
-      }
-      return false;
-    };
-
-    // ポーリング
-    const doPoll = async () => {
-      // ポーリング停止条件をチェック
-      if (!mountedRef.current || sessionStartedRef.current) {
-        stopPolling();
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/reservations/${reservationId}/join`);
-
-        if (!mountedRef.current) return;
-
-        if (res.ok) {
-          const data = await res.json();
-          errorCountRef.current = 0;
-
-          setState({
-            learnerJoined: data.learnerJoined,
-            hostJoined: data.hostJoined,
-            sessionStarted: data.sessionStarted,
-            sessionStartedAt: data.sessionStartedAt
-              ? new Date(data.sessionStartedAt)
-              : null,
-            isLoading: false,
-            error: null,
-          });
-
-          if (data.sessionStarted) {
-            sessionStartedRef.current = true;
-            stopPolling();
-            onBothJoinedRef.current?.();
-          }
-        } else {
-          throw new Error(`HTTP ${res.status}`);
-        }
-      } catch (err) {
-        console.error("[useSessionJoin] Poll error:", err);
-        errorCountRef.current++;
-
-        // 3回連続エラーでポーリング停止
-        if (errorCountRef.current >= MAX_ERRORS) {
-          console.error("[useSessionJoin] Max errors reached, stopping polling");
+        if (!res.ok) {
+          // エラー時は即座に停止
           stopPolling();
-          if (mountedRef.current) {
-            setState((prev) => ({
-              ...prev,
-              error: "接続に失敗しました。ページを更新してください。",
-            }));
-          }
+          setState(prev => ({ ...prev, isLoading: false, error: "接続エラー" }));
+          return;
         }
+
+        const data = await res.json();
+
+        setState({
+          learnerJoined: data.learnerJoined,
+          hostJoined: data.hostJoined,
+          sessionStarted: data.sessionStarted,
+          sessionStartedAt: data.sessionStartedAt ? new Date(data.sessionStartedAt) : null,
+          isLoading: false,
+          error: null,
+        });
+
+        // セッション開始したらポーリング停止
+        if (data.sessionStarted || data.bothJoined) {
+          stopPolling();
+          onBothJoined?.();
+        }
+      } catch {
+        // エラー時は即座に停止
+        stopPolling();
+        setState(prev => ({ ...prev, isLoading: false, error: "接続エラー" }));
       }
     };
 
-    // 初期化
-    doJoin().then((sessionStarted) => {
-      // セッションが既に開始されていたらポーリングしない
-      if (sessionStarted || !mountedRef.current || sessionStartedRef.current) {
-        return;
-      }
+    // 初回POST
+    fetchJoinStatus(true).then(() => {
+      if (stoppedRef.current) return;
 
-      // ポーリング開始（重複防止）
-      if (!intervalRef.current) {
-        console.log("[useSessionJoin] Starting polling with interval:", POLL_INTERVAL);
-        intervalRef.current = setInterval(doPoll, POLL_INTERVAL);
-      }
+      // ポーリング開始
+      intervalIdRef.current = window.setInterval(() => {
+        if (!stoppedRef.current) {
+          fetchJoinStatus(false);
+        }
+      }, POLL_INTERVAL);
     });
 
     // クリーンアップ
     return () => {
-      console.log("[useSessionJoin] Cleanup");
-      mountedRef.current = false;
-      initializedRef.current = false;
       stopPolling();
     };
-  }, [reservationId]); // reservationIdのみ依存
+  }, [reservationId]);
 
   return {
     ...state,

@@ -186,27 +186,37 @@ export default function SeniorSessionPage() {
 
       agoraClient.on("user-published", async (user: any, mediaType: "audio" | "video") => {
         try {
+          console.log(`[Agora] user-published: uid=${user.uid}, mediaType=${mediaType}`);
           await agoraClient.subscribe(user, mediaType);
+          console.log(`[Agora] Subscribed to ${mediaType} for uid=${user.uid}`);
 
-          if (mediaType === "video") {
-            setTimeout(() => {
-              const remoteVideoDiv = document.getElementById("remote-video");
-              if (remoteVideoDiv) {
-                user.videoTrack?.play("remote-video");
-              }
-            }, 200);
-          }
-
-          if (mediaType === "audio") {
-            user.audioTrack?.play();
-          }
-
+          // First update React state to prepare DOM
           setRemoteUsers((prev: any[]) => {
             if (prev.find((u) => u.uid === user.uid)) return prev;
             return [...prev, user];
           });
+
+          if (mediaType === "video" && user.videoTrack) {
+            // Wait for DOM to be ready, then play video with retry mechanism
+            const playVideo = () => {
+              const remoteVideoDiv = document.getElementById("remote-video");
+              if (remoteVideoDiv) {
+                console.log("[Agora] Playing remote video");
+                user.videoTrack.play("remote-video");
+              } else {
+                console.log("[Agora] remote-video element not found, retrying...");
+                setTimeout(playVideo, 100);
+              }
+            };
+            setTimeout(playVideo, 300);
+          }
+
+          if (mediaType === "audio" && user.audioTrack) {
+            console.log("[Agora] Playing remote audio");
+            user.audioTrack.play();
+          }
         } catch (subErr) {
-          console.error("Subscribe error:", subErr);
+          console.error("[Agora] Subscribe error:", subErr);
         }
       });
 

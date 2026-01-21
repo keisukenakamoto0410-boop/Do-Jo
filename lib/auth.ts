@@ -43,39 +43,57 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("[AUTH] authorize called with email:", credentials?.email);
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("[AUTH] Error: Missing email or password");
           throw new Error("メールアドレスとパスワードを入力してください");
         }
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          console.log("[AUTH] Looking up user in database...");
+          const user = await db.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        if (!user || !user.password) {
-          throw new Error("ユーザーが見つかりません");
+          console.log("[AUTH] User found:", user ? { id: user.id, email: user.email, hasPassword: !!user.password } : null);
+
+          if (!user || !user.password) {
+            console.log("[AUTH] Error: User not found or no password set");
+            throw new Error("ユーザーが見つかりません");
+          }
+
+          console.log("[AUTH] Comparing passwords...");
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          console.log("[AUTH] Password valid:", isPasswordValid);
+
+          if (!isPasswordValid) {
+            console.log("[AUTH] Error: Invalid password");
+            throw new Error("パスワードが正しくありません");
+          }
+
+          // Update last login
+          console.log("[AUTH] Updating last login...");
+          await db.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+
+          console.log("[AUTH] Success! Returning user:", { id: user.id, email: user.email, role: user.role });
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role as UserRole,
+          };
+        } catch (error) {
+          console.error("[AUTH] Error in authorize:", error);
+          throw error;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          throw new Error("パスワードが正しくありません");
-        }
-
-        // Update last login
-        await db.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role as UserRole,
-        };
       },
     }),
   ],

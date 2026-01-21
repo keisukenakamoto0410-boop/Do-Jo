@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { getSupabase } from "@/lib/supabase";
+import { useState, useEffect, useRef } from "react";
 
 interface UseSessionJoinProps {
   reservationId: string;
@@ -18,6 +17,9 @@ interface JoinState {
   error: string | null;
 }
 
+const POLL_INTERVAL = 6000; // 6秒間隔
+const MAX_RETRIES = 3; // 最大リトライ回数
+
 export function useSessionJoin({
   reservationId,
   isHost,
@@ -33,13 +35,35 @@ export function useSessionJoin({
   });
 
   const hasCalledOnBothJoined = useRef(false);
+  const retryCountRef = useRef(0);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(true);
+  const isPollingRef = useRef(false);
 
-  // 入室状態をポーリングで確認（Supabase Realtimeの代わり）
-  const checkJoinStatus = useCallback(async () => {
+  // ポーリングを停止する関数
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    isPollingRef.current = false;
+  };
+
+  // 入室状態をチェック
+  const checkJoinStatus = async (): Promise<boolean> => {
+    if (!isMountedRef.current) return false;
+
     try {
       const res = await fetch(`/api/reservations/${reservationId}/join`);
+
+      if (!isMountedRef.current) return false;
+
       if (res.ok) {
         const data = await res.json();
+
+        // リトライカウントをリセット
+        retryCountRef.current = 0;
+
         setState((prev) => ({
           ...prev,
           learnerJoined: data.learnerJoined,
@@ -47,125 +71,122 @@ export function useSessionJoin({
           sessionStarted: data.sessionStarted,
           sessionStartedAt: data.sessionStartedAt ? new Date(data.sessionStartedAt) : null,
           isLoading: false,
+          error: null,
         }));
 
-        // 両者が入室したらコールバック
-        if (data.sessionStarted && !hasCalledOnBothJoined.current) {
-          hasCalledOnBothJoined.current = true;
-          onBothJoined?.();
+        // 両者が入室したらコールバック & ポーリング停止
+        if (data.sessionStarted) {
+          if (!hasCalledOnBothJoined.current) {
+            hasCalledOnBothJoined.current = true;
+            onBothJoined?.();
+          }
+          stopPolling();
+          return true;
         }
 
-        return data.sessionStarted;
+        return false;
+      } else {
+        throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
       console.error("Failed to check join status:", err);
+      retryCountRef.current++;
+
+      if (retryCountRef.current >= MAX_RETRIES) {
+        stopPolling();
+        setState((prev) => ({
+          ...prev,
+          error: "接続に失敗しました。ページを更新してください。",
+          isLoading: false,
+        }));
+      }
+      return false;
     }
-    return false;
-  }, [reservationId, onBothJoined]);
+  };
 
   // 入室を通知
-  const joinSession = useCallback(async () => {
+  const joinSession = async (): Promise<boolean> => {
+    if (!isMountedRef.current) return false;
+
     try {
       const res = await fetch(`/api/reservations/${reservationId}/join`, {
         method: "POST",
       });
 
+      if (!isMountedRef.current) return false;
+
       if (res.ok) {
         const data = await res.json();
+
         setState((prev) => ({
           ...prev,
           learnerJoined: data.learnerJoined,
           hostJoined: data.hostJoined,
           sessionStarted: data.sessionStarted,
           sessionStartedAt: data.sessionStartedAt ? new Date(data.sessionStartedAt) : null,
+          isLoading: false,
+          error: null,
         }));
 
-        if (data.bothJoined && !hasCalledOnBothJoined.current) {
-          hasCalledOnBothJoined.current = true;
-          onBothJoined?.();
+        if (data.bothJoined || data.sessionStarted) {
+          if (!hasCalledOnBothJoined.current) {
+            hasCalledOnBothJoined.current = true;
+            onBothJoined?.();
+          }
+          return true;
         }
 
-        return data;
+        return false;
+      } else {
+        throw new Error(`HTTP ${res.status}`);
       }
     } catch (err) {
       console.error("Failed to join session:", err);
-      setState((prev) => ({ ...prev, error: "Failed to join session" }));
+      setState((prev) => ({
+        ...prev,
+        error: "セッションへの参加に失敗しました。",
+        isLoading: false
+      }));
+      return false;
     }
-    return null;
-  }, [reservationId, onBothJoined]);
+  };
 
   // 初回入室処理とポーリング開始
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout | null = null;
+    isMountedRef.current = true;
+    retryCountRef.current = 0;
+    hasCalledOnBothJoined.current = false;
 
     const init = async () => {
       // 入室を通知
-      await joinSession();
+      const sessionStarted = await joinSession();
+
+      // セッションが既に開始されていたらポーリング不要
+      if (sessionStarted || !isMountedRef.current) return;
+
+      // 既にポーリング中なら開始しない
+      if (isPollingRef.current) return;
+      isPollingRef.current = true;
 
       // セッションが開始されるまでポーリング
-      pollInterval = setInterval(async () => {
-        const started = await checkJoinStatus();
-        if (started && pollInterval) {
-          clearInterval(pollInterval);
-          pollInterval = null;
+      pollIntervalRef.current = setInterval(async () => {
+        if (!isMountedRef.current || retryCountRef.current >= MAX_RETRIES) {
+          stopPolling();
+          return;
         }
-      }, 2000); // 2秒ごとにチェック
+
+        await checkJoinStatus();
+      }, POLL_INTERVAL);
     };
 
     init();
 
+    // クリーンアップ
     return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
+      isMountedRef.current = false;
+      stopPolling();
     };
-  }, [joinSession, checkJoinStatus]);
-
-  // Supabase Realtimeでリアルタイム更新を購読
-  useEffect(() => {
-    const supabase = getSupabase();
-
-    const channel = supabase
-      .channel(`session-join-${reservationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "reservations",
-          filter: `id=eq.${reservationId}`,
-        },
-        (payload) => {
-          const newData = payload.new as {
-            learnerJoinedAt: string | null;
-            hostJoinedAt: string | null;
-            sessionStartedAt: string | null;
-          };
-
-          const sessionStarted = !!newData.sessionStartedAt;
-
-          setState((prev) => ({
-            ...prev,
-            learnerJoined: !!newData.learnerJoinedAt,
-            hostJoined: !!newData.hostJoinedAt,
-            sessionStarted,
-            sessionStartedAt: newData.sessionStartedAt
-              ? new Date(newData.sessionStartedAt)
-              : null,
-          }));
-
-          if (sessionStarted && !hasCalledOnBothJoined.current) {
-            hasCalledOnBothJoined.current = true;
-            onBothJoined?.();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [reservationId, onBothJoined]);
+  }, [reservationId]); // reservationIdのみに依存
 
   return {
     ...state,

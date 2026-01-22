@@ -184,7 +184,7 @@ export default function LearnerReservationsPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-primary">Do Jo</h1>
-                <p className="text-xs text-neutral-500">Bridge to Japanese Careers</p>
+                <p className="text-xs text-neutral-500">Just Talk Japanese</p>
               </div>
             </Link>
             <nav className="flex items-center gap-6">

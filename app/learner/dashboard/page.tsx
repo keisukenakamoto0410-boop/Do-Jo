@@ -312,72 +312,6 @@ export default function LearnerDashboard() {
           )}
         </div>
 
-        {/* Today's Session - Prominent display */}
-        {todayReservations.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-neutral-900 mb-4 flex items-center gap-2">
-              <span className="text-2xl">🟢</span>
-              Today&apos;s Session
-            </h2>
-            {todayReservations.map((reservation) => (
-              <div
-                key={reservation.id}
-                className={`rounded-2xl shadow-lg p-6 border-2 ${
-                  isJoinable(reservation.slot.startTime, reservation.slot.endTime)
-                    ? "bg-green-50 border-green-500"
-                    : "bg-white border-blue-200"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white text-2xl font-bold overflow-hidden">
-                      {reservation.host.avatar ? (
-                        <img
-                          src={reservation.host.avatar}
-                          alt={reservation.host.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        reservation.host.name.charAt(0)
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-neutral-900">
-                        {formatTime(reservation.slot.startTime)} -{" "}
-                        {formatTime(reservation.slot.endTime)} (JST)
-                      </p>
-                      <p className="text-neutral-600">
-                        Conversation with {reservation.host.name}-san
-                      </p>
-                      {!isJoinable(reservation.slot.startTime, reservation.slot.endTime) && (
-                        <p className="text-sm text-blue-600 mt-1">
-                          Starts {getRelativeTime(reservation.slot.startTime)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    {isJoinable(reservation.slot.startTime, reservation.slot.endTime) ? (
-                      <Link
-                        href={`/learner/session/${reservation.id}`}
-                        className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-lg transition-colors animate-pulse inline-flex items-center gap-2"
-                      >
-                        <span>🎥</span>
-                        Join Session
-                      </Link>
-                    ) : (
-                      <div className="px-6 py-3 bg-gray-200 text-gray-500 font-medium rounded-xl text-center">
-                        Available 15 min before
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Article Feed */}
         <div className="mb-8">
           <ArticleFeed />
@@ -419,7 +353,7 @@ export default function LearnerDashboard() {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             </div>
-          ) : upcomingReservations.length === 0 ? (
+          ) : futureReservations.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-4xl">📅</span>
@@ -431,10 +365,14 @@ export default function LearnerDashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {upcomingReservations.slice(0, 5).map((reservation) => (
+              {futureReservations.slice(0, 5).map((reservation) => (
                 <div
                   key={reservation.id}
-                  className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors"
+                  className={`flex items-center justify-between p-4 rounded-xl transition-colors ${
+                    isJoinable(reservation.slot.startTime, reservation.slot.endTime)
+                      ? "bg-green-50 border-2 border-green-500"
+                      : "bg-neutral-50 hover:bg-neutral-100"
+                  }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold overflow-hidden">
@@ -458,17 +396,27 @@ export default function LearnerDashboard() {
                       </p>
                     </div>
                   </div>
-                  <span className="text-sm text-neutral-500">
-                    {getRelativeTime(reservation.slot.startTime)}
-                  </span>
+                  {isJoinable(reservation.slot.startTime, reservation.slot.endTime) ? (
+                    <Link
+                      href={`/learner/session/${reservation.id}`}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>🎥</span>
+                      Join
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-neutral-500">
+                      {getRelativeTime(reservation.slot.startTime)}
+                    </span>
+                  )}
                 </div>
               ))}
-              {upcomingReservations.length > 5 && (
+              {futureReservations.length > 5 && (
                 <Link
                   href="/learner/reservations"
                   className="block text-center py-3 text-primary hover:text-primary-dark font-medium"
                 >
-                  View all sessions ({upcomingReservations.length}) →
+                  View all sessions ({futureReservations.length}) →
                 </Link>
               )}
             </div>

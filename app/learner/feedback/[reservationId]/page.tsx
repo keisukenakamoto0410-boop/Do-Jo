@@ -24,6 +24,44 @@ interface ReservationData {
   sessionDate: string;
 }
 
+// Helper function to get score label
+function getScoreLabel(score: number) {
+  if (score >= 4) return { label: "Excellent", color: "text-green-600" };
+  if (score >= 3) return { label: "Good", color: "text-blue-600" };
+  if (score >= 2) return { label: "Fair", color: "text-yellow-600" };
+  return { label: "Needs Work", color: "text-orange-600" };
+}
+
+// Helper function to get bar color
+function getBarColor(score: number) {
+  if (score >= 4) return "bg-green-500";
+  if (score >= 3) return "bg-blue-500";
+  if (score >= 2) return "bg-yellow-500";
+  return "bg-orange-500";
+}
+
+// ScoreBar component defined outside main component
+function ScoreBar({ score, label }: { score: number; label: string }) {
+  const scoreInfo = getScoreLabel(score);
+  const barColor = getBarColor(score);
+  const widthPercent = (score / 5) * 100;
+
+  return (
+    <div className="mb-4">
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-gray-700 font-medium">{label}</span>
+        <span className={`text-sm font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-3">
+        <div
+          className={`h-3 rounded-full ${barColor}`}
+          style={{ width: `${widthPercent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function LearnerFeedbackPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -172,31 +210,6 @@ export default function LearnerFeedbackPage() {
       </div>
     );
   }
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 4) return { label: "Excellent", color: "text-green-600", bg: "bg-green-100" };
-    if (score >= 3) return { label: "Good", color: "text-blue-600", bg: "bg-blue-100" };
-    if (score >= 2) return { label: "Fair", color: "text-yellow-600", bg: "bg-yellow-100" };
-    return { label: "Needs Work", color: "text-orange-600", bg: "bg-orange-100" };
-  };
-
-  const ScoreBar = ({ score, label }: { score: number; label: string }) => {
-    const scoreInfo = getScoreLabel(score);
-    return (
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-gray-700 font-medium">{label}</span>
-          <span className={`text-sm font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div
-            className={`h-3 rounded-full transition-all ${score >= 4 ? 'bg-green-500' : score >= 3 ? 'bg-blue-500' : score >= 2 ? 'bg-yellow-500' : 'bg-orange-500'}`}
-            style={{ width: `${(score / 5) * 100}%` }}
-          />
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">

@@ -38,9 +38,7 @@ model User {
   // 日本人シニア用フィールド
   careerHistory   String?   @db.Text  // これまでの経歴
   expertise       String[]  // 得意分野 ["営業", "人事", "製造"]
-  birthDate       DateTime? // 生年月日
-  emergencyContactEmail String? // 緊急連絡先メールアドレス
-  emergencyContactName  String? // 緊急連絡先名前
+  ageRange        String?   // 年代 "50s" | "60s" | "70s" | "80s"
   prefecture      String?   // 都道府県
   hobbies         String[]  // 趣味
   expertiseTopics String[]  // 得意な話題
@@ -55,7 +53,7 @@ model User {
   totalTalkTime   Int       @default(0) // 総会話時間（分）
   averageRating   Float     @default(0) // 平均評価
   totalSessions   Int       @default(0) // 総セッション数
-  totalEarnings   Int       @default(0) // 総収益（円） ← 大学生向け
+  // totalEarnings removed - use external payment service
   consecutiveDays Int       @default(0) // 連続会話日数
   lastConversationDate DateTime? // 最後の会話日
   uniquePartners  Int       @default(0) // 会話した人数
@@ -82,7 +80,7 @@ model User {
   feedbackGiven           Feedback[]    @relation("FeedbackGiver")
   feedbackReceived        Feedback[]    @relation("FeedbackReceiver")
   reports                 Report[]      @relation("Reporter")
-  payouts                 Payout[]
+  // payouts removed - use external payment service
   studyLogs               StudyLog[]
   studyPosts              StudyPost[]
   likes                   Like[]
@@ -282,31 +280,6 @@ model DetailedFeedback {
 
   @@index([reservationId])
   @@map("detailed_feedback")
-}
-
-// 支払い（大学生・シニア向け）
-model Payout {
-  id          String   @id @default(cuid())
-
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-
-  amount      Int      // 支払い額（円）
-  sessions    Int      // セッション数
-  status      String   @default("pending") // "pending" | "paid" | "cancelled"
-
-  // 振込情報
-  bankName      String?
-  branchName    String?
-  accountType   String?  // "普通" | "当座"
-  accountNumber String?
-  accountHolder String?
-
-  requestedAt DateTime @default(now())
-  paidAt      DateTime?
-
-  @@index([userId, status])
-  @@map("payouts")
 }
 
 // 通報

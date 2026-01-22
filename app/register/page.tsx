@@ -29,9 +29,7 @@ function RegisterContent() {
     // Senior fields
     careerHistory: "",
     expertise: [] as string[],
-    birthDate: "",
-    emergencyContactEmail: "",
-    emergencyContactName: "",
+    ageRange: "",
     prefecture: "",
     // Student fields
     university: "",
@@ -452,16 +450,21 @@ function RegisterContent() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      生年月日 <span className="text-red-500">*</span>
+                      年代 <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="date"
-                      name="birthDate"
-                      value={formData.birthDate}
+                    <select
+                      name="ageRange"
+                      value={formData.ageRange}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-lg"
-                    />
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    >
+                      <option value="">選択してください</option>
+                      <option value="50s">50代</option>
+                      <option value="60s">60代</option>
+                      <option value="70s">70代</option>
+                      <option value="80s">80代以上</option>
+                    </select>
                   </div>
 
                   <div>
@@ -521,41 +524,6 @@ function RegisterContent() {
                         </label>
                       ))}
                     </div>
-                  </div>
-
-                  <h3 className="font-semibold text-gray-700 border-b border-gray-100 pb-2 mt-6">
-                    緊急連絡先
-                  </h3>
-                  <p className="text-sm text-gray-500 -mt-2">
-                    ご家族などの連絡先をご登録ください（任意）
-                  </p>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      緊急連絡先のお名前
-                    </label>
-                    <input
-                      type="text"
-                      name="emergencyContactName"
-                      value={formData.emergencyContactName}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                      placeholder="例: 山田 花子（娘）"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      緊急連絡先のメールアドレス
-                    </label>
-                    <input
-                      type="email"
-                      name="emergencyContactEmail"
-                      value={formData.emergencyContactEmail}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                      placeholder="例: hanako@example.com"
-                    />
                   </div>
                 </div>
               )}

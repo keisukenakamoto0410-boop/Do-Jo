@@ -24,9 +24,7 @@ export async function POST(request: Request) {
       // シニア用
       careerHistory,
       expertise,
-      birthDate,
-      emergencyContactEmail,
-      emergencyContactName,
+      ageRange,
       // 大学生用
       university,
       major,
@@ -94,9 +92,7 @@ export async function POST(request: Request) {
         // シニア用
         careerHistory: role === "senior" ? careerHistory : null,
         expertise: role === "senior" ? (expertise || []) : [],
-        birthDate: role === "senior" && birthDate ? new Date(birthDate) : null,
-        emergencyContactEmail: role === "senior" ? emergencyContactEmail : null,
-        emergencyContactName: role === "senior" ? emergencyContactName : null,
+        ageRange: role === "senior" ? ageRange : null,
         // 大学生用
         university: role === "student" ? university : null,
         major: role === "student" ? major : null,

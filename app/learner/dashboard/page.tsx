@@ -378,6 +378,11 @@ export default function LearnerDashboard() {
           </div>
         )}
 
+        {/* Article Feed */}
+        <div className="mb-8">
+          <ArticleFeed />
+        </div>
+
         {/* Conversation Stats */}
         <div className="mb-8">
           <ConversationStats userId={user.id} isLearner={true} />
@@ -679,11 +684,6 @@ export default function LearnerDashboard() {
         {/* Study Post Timeline */}
         <div className="mb-8">
           <StudyPostTimeline userId={user.id} />
-        </div>
-
-        {/* Article Feed */}
-        <div className="mb-8">
-          <ArticleFeed />
         </div>
       </main>
 

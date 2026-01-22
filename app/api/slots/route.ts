@@ -29,22 +29,26 @@ export async function GET(req: NextRequest) {
     }
 
     // Filter by date or default to future slots
+    // Use JST (UTC+9) for date filtering since hosts are in Japan
     if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
+      // Parse date as JST (Japan Standard Time)
+      // date format is YYYY-MM-DD
+      const [year, month, day] = date.split("-").map(Number);
 
-      // If date is today, use current time as minimum
-      if (startOfDay <= now && now <= endOfDay) {
+      // Create start of day in JST (JST = UTC+9, so subtract 9 hours to get UTC)
+      const startOfDayJST = new Date(Date.UTC(year, month - 1, day, -9, 0, 0, 0));
+      const endOfDayJST = new Date(Date.UTC(year, month - 1, day, 14, 59, 59, 999)); // 23:59:59.999 JST = 14:59:59 UTC
+
+      // If date includes today's range and now is within it, use current time as minimum
+      if (startOfDayJST <= now && now <= endOfDayJST) {
         where.startTime = {
           gte: now,
-          lte: endOfDay,
+          lte: endOfDayJST,
         };
       } else {
         where.startTime = {
-          gte: startOfDay,
-          lte: endOfDay,
+          gte: startOfDayJST,
+          lte: endOfDayJST,
         };
       }
     } else {

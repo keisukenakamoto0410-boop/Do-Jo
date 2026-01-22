@@ -26,16 +26,17 @@ export async function GET(req: NextRequest) {
       hostId: session.user.id,
     };
 
-    // Filter by date
+    // Filter by date using JST (UTC+9) since hosts are in Japan
     if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
+      const [year, month, day] = date.split("-").map(Number);
+
+      // Create start of day in JST (JST = UTC+9, so subtract 9 hours to get UTC)
+      const startOfDayJST = new Date(Date.UTC(year, month - 1, day, -9, 0, 0, 0));
+      const endOfDayJST = new Date(Date.UTC(year, month - 1, day, 14, 59, 59, 999)); // 23:59:59.999 JST = 14:59:59 UTC
 
       where.startTime = {
-        gte: startOfDay,
-        lte: endOfDay,
+        gte: startOfDayJST,
+        lte: endOfDayJST,
       };
     }
 

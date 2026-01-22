@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
             major: true,
           },
         },
+        detailedFeedback: true,
       },
       orderBy: {
         slot: {
@@ -66,13 +67,14 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Add hasAgenda flag for each reservation
-    const reservationsWithAgendaFlag = reservations.map((r) => ({
+    // Add hasAgenda and hasFeedback flags for each reservation
+    const reservationsWithFlags = reservations.map((r) => ({
       ...r,
       hasAgenda: !!r.generatedAgenda,
+      hasFeedback: !!r.detailedFeedback,
     }));
 
-    return NextResponse.json({ reservations: reservationsWithAgendaFlag });
+    return NextResponse.json({ reservations: reservationsWithFlags });
   } catch (error) {
     console.error("Error fetching reservations:", error);
     return NextResponse.json(

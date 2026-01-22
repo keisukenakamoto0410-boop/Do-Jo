@@ -35,6 +35,7 @@ interface Reservation {
   readyToTalk: boolean;
   studyLogCount: number;
   hasAgenda: boolean;
+  hasFeedback: boolean;
   slot: Slot;
   host: Host;
   createdAt: string;
@@ -386,12 +387,18 @@ export default function LearnerReservationsPage() {
                       )}
                     {activeTab === "past" &&
                       reservation.status === "completed" && (
-                        <Link
-                          href={`/learner/feedback/${reservation.id}`}
-                          className="btn-primary"
-                        >
-                          Send Feedback
-                        </Link>
+                        reservation.hasFeedback ? (
+                          <Link
+                            href={`/learner/feedback/${reservation.id}`}
+                            className="btn-primary"
+                          >
+                            View Feedback
+                          </Link>
+                        ) : (
+                          <span className="px-4 py-2 bg-neutral-100 text-neutral-500 rounded-lg text-sm">
+                            Awaiting Feedback
+                          </span>
+                        )
                       )}
                   </div>
                 </div>

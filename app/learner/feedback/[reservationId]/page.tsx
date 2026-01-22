@@ -5,13 +5,23 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-interface FeedbackData {
+interface DetailedFeedbackData {
   id: string;
-  message: string | null;
+  topics: string[];
+  pronunciationScore: number;
+  grammarScore: number;
+  enthusiasmScore: number;
+  comprehensionScore: number;
+  goodExpression: string | null;
+  improvementFrom: string | null;
+  improvementTo: string | null;
+  encouragementMessage: string;
+  createdAt: string;
+}
+
+interface ReservationData {
   hostName: string;
   sessionDate: string;
-  strengths: string[];
-  improvements: string[];
 }
 
 export default function LearnerFeedbackPage() {
@@ -20,7 +30,8 @@ export default function LearnerFeedbackPage() {
   const params = useParams();
   const reservationId = params.reservationId as string;
 
-  const [feedback, setFeedback] = useState<FeedbackData | null>(null);
+  const [feedback, setFeedback] = useState<DetailedFeedbackData | null>(null);
+  const [reservation, setReservation] = useState<ReservationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,14 +47,25 @@ export default function LearnerFeedbackPage() {
   useEffect(() => {
     const fetchFeedback = async () => {
       try {
-        const res = await fetch(`/api/feedback?reservationId=${reservationId}`);
+        // Fetch detailed feedback
+        const res = await fetch(`/api/detailed-feedback?reservationId=${reservationId}`);
         if (!res.ok) throw new Error("Failed to fetch feedback");
         const data = await res.json();
 
-        if (data.feedback) {
-          setFeedback(data.feedback);
+        if (data.detailedFeedback) {
+          setFeedback(data.detailedFeedback);
         } else {
           setError("Feedback not yet available");
+        }
+
+        // Fetch reservation details for host name and date
+        const resReservation = await fetch(`/api/reservations/${reservationId}`);
+        if (resReservation.ok) {
+          const reservationData = await resReservation.json();
+          setReservation({
+            hostName: reservationData.reservation?.host?.name || "Host",
+            sessionDate: reservationData.reservation?.slot?.startTime || "",
+          });
         }
       } catch (err) {
         console.error(err);
@@ -151,6 +173,31 @@ export default function LearnerFeedbackPage() {
     );
   }
 
+  const getScoreLabel = (score: number) => {
+    if (score >= 4) return { label: "Excellent", color: "text-green-600", bg: "bg-green-100" };
+    if (score >= 3) return { label: "Good", color: "text-blue-600", bg: "bg-blue-100" };
+    if (score >= 2) return { label: "Fair", color: "text-yellow-600", bg: "bg-yellow-100" };
+    return { label: "Needs Work", color: "text-orange-600", bg: "bg-orange-100" };
+  };
+
+  const ScoreBar = ({ score, label }: { score: number; label: string }) => {
+    const scoreInfo = getScoreLabel(score);
+    return (
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-gray-700 font-medium">{label}</span>
+          <span className={`text-sm font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3">
+          <div
+            className={`h-3 rounded-full transition-all ${score >= 4 ? 'bg-green-500' : score >= 3 ? 'bg-blue-500' : score >= 2 ? 'bg-yellow-500' : 'bg-orange-500'}`}
+            style={{ width: `${(score / 5) * 100}%` }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
@@ -164,10 +211,10 @@ export default function LearnerFeedbackPage() {
               Do Jo
             </Link>
             <Link
-              href="/learner/dashboard"
+              href="/learner/reservations"
               className="text-gray-600 hover:text-gray-900"
             >
-              Back to Dashboard
+              Back to Sessions
             </Link>
           </div>
         </div>
@@ -185,69 +232,103 @@ export default function LearnerFeedbackPage() {
                   Session Feedback
                 </h1>
               </div>
-              <p className="text-gray-600">
-                {formatDate(feedback.sessionDate)} with {feedback.hostName}
-              </p>
+              {reservation && (
+                <p className="text-gray-600">
+                  {formatDate(reservation.sessionDate)} with {reservation.hostName}
+                </p>
+              )}
             </div>
 
-            {/* Strengths */}
-            {feedback.strengths.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">💪</span>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    What You Did Well
-                  </h2>
-                </div>
-                <ul className="space-y-3">
-                  {feedback.strengths.map((strength, index) => (
-                    <li
-                      key={index}
-                      className="flex items-start gap-3 bg-green-50 rounded-xl p-4"
-                    >
-                      <span className="text-green-500 mt-0.5">✓</span>
-                      <span className="text-gray-700">{strength}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Improvements */}
-            {feedback.improvements.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl">📈</span>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Areas to Improve
-                  </h2>
-                </div>
-                <ul className="space-y-3">
-                  {feedback.improvements.map((improvement, index) => (
-                    <li
-                      key={index}
-                      className="flex items-start gap-3 bg-blue-50 rounded-xl p-4"
-                    >
-                      <span className="text-blue-500 mt-0.5">→</span>
-                      <span className="text-gray-700">{improvement}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Message from Host */}
-            {feedback.message && (
+            {/* Topics Discussed */}
+            {feedback.topics && feedback.topics.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-2xl">💬</span>
                   <h2 className="text-xl font-bold text-gray-900">
-                    Message from {feedback.hostName}
+                    Topics Discussed
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {feedback.topics.map((topic, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                    >
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Skill Scores */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">📈</span>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Your Performance
+                </h2>
+              </div>
+              <ScoreBar score={feedback.pronunciationScore} label="Pronunciation" />
+              <ScoreBar score={feedback.grammarScore} label="Grammar" />
+              <ScoreBar score={feedback.enthusiasmScore} label="Enthusiasm" />
+              <ScoreBar score={feedback.comprehensionScore} label="Comprehension" />
+            </div>
+
+            {/* Good Expression */}
+            {feedback.goodExpression && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">⭐</span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Great Expression You Used
+                  </h2>
+                </div>
+                <div className="bg-green-50 rounded-xl p-4 border-l-4 border-green-400">
+                  <p className="text-gray-700 text-lg font-medium">
+                    「{feedback.goodExpression}」
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Improvement Suggestion */}
+            {feedback.improvementFrom && feedback.improvementTo && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">💡</span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Tip for Improvement
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-orange-50 rounded-xl p-4 border-l-4 border-orange-400">
+                    <p className="text-sm text-orange-600 font-medium mb-1">Instead of:</p>
+                    <p className="text-gray-700">「{feedback.improvementFrom}」</p>
+                  </div>
+                  <div className="flex justify-center">
+                    <span className="text-2xl">↓</span>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-4 border-l-4 border-green-400">
+                    <p className="text-sm text-green-600 font-medium mb-1">Try saying:</p>
+                    <p className="text-gray-700">「{feedback.improvementTo}」</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Encouragement Message */}
+            {feedback.encouragementMessage && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl">💌</span>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Message from {reservation?.hostName || "Your Host"}
                   </h2>
                 </div>
                 <div className="bg-amber-50 rounded-xl p-4 border-l-4 border-amber-400">
                   <p className="text-gray-700 whitespace-pre-wrap">
-                    &ldquo;{feedback.message}&rdquo;
+                    {feedback.encouragementMessage}
                   </p>
                 </div>
               </div>
@@ -256,7 +337,7 @@ export default function LearnerFeedbackPage() {
             {/* Encouragement */}
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-xl p-6 text-white text-center">
               <p className="text-lg font-medium mb-2">
-                Keep up the great work! 🌟
+                Keep up the great work!
               </p>
               <p className="opacity-90">
                 Every conversation is a step forward in your Japanese journey.
@@ -266,10 +347,10 @@ export default function LearnerFeedbackPage() {
             {/* Back Button */}
             <div className="mt-8 text-center">
               <Link
-                href="/learner/dashboard"
+                href="/learner/reservations"
                 className="inline-block px-8 py-3 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-xl shadow-lg transition-colors"
               >
-                Back to Dashboard
+                Back to Sessions
               </Link>
             </div>
           </>

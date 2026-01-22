@@ -31,12 +31,14 @@ export default function HostSchedulePage() {
   const router = useRouter();
 
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [allSlots, setAllSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedType, setSelectedType] = useState("business");
+  const [viewMode, setViewMode] = useState<"daily" | "all">("all"); // Default to all slots
   const [viewDate, setViewDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split("T")[0];
@@ -55,9 +57,13 @@ export default function HostSchedulePage() {
 
   useEffect(() => {
     if (session?.user) {
-      fetchSlots();
+      if (viewMode === "all") {
+        fetchAllSlots();
+      } else {
+        fetchSlots();
+      }
     }
-  }, [session, viewDate]);
+  }, [session, viewDate, viewMode]);
 
   const fetchSlots = async () => {
     setLoading(true);
@@ -70,6 +76,22 @@ export default function HostSchedulePage() {
       }
     } catch (error) {
       console.error("Failed to fetch slots:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllSlots = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/host/slots?all=true`);
+      const data = await res.json();
+
+      if (res.ok) {
+        setAllSlots(data.slots);
+      }
+    } catch (error) {
+      console.error("Failed to fetch all slots:", error);
     } finally {
       setLoading(false);
     }
@@ -98,7 +120,11 @@ export default function HostSchedulePage() {
         setShowModal(false);
         setSelectedDate("");
         setSelectedTime("");
-        fetchSlots();
+        if (viewMode === "all") {
+          fetchAllSlots();
+        } else {
+          fetchSlots();
+        }
       } else {
         const data = await res.json();
         alert(data.error || "予約枠の作成に失敗しました");
@@ -120,7 +146,11 @@ export default function HostSchedulePage() {
       });
 
       if (res.ok) {
-        fetchSlots();
+        if (viewMode === "all") {
+          fetchAllSlots();
+        } else {
+          fetchSlots();
+        }
       } else {
         const data = await res.json();
         alert(data.error || "削除に失敗しました");
@@ -248,45 +278,75 @@ export default function HostSchedulePage() {
 
         {/* Calendar View */}
         <div className="mb-8">
-          <CalendarAvailability onSlotsChange={fetchSlots} />
+          <CalendarAvailability onSlotsChange={viewMode === "all" ? fetchAllSlots : fetchSlots} />
         </div>
 
-        {/* Date Navigation */}
+        {/* View Mode Toggle */}
         <div className="bg-white rounded-2xl shadow-lg p-4 mb-8">
-          <div className="flex gap-2 overflow-x-auto">
-            {dates.map((date) => {
-              const dateObj = new Date(date);
-              const isToday = date === today.toISOString().split("T")[0];
-              const isSelected = date === viewDate;
-
-              return (
-                <button
-                  key={date}
-                  onClick={() => setViewDate(date)}
-                  className={`flex-shrink-0 px-4 py-3 rounded-xl text-center transition-colors ${
-                    isSelected
-                      ? isSenior
-                        ? "bg-amber-600 text-white"
-                        : "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  <p className="text-xs">
-                    {dateObj.toLocaleDateString("ja-JP", { weekday: "short" })}
-                  </p>
-                  <p className="text-lg font-bold">{dateObj.getDate()}</p>
-                  {isToday && (
-                    <p className="text-xs">今日</p>
-                  )}
-                </button>
-              );
-            })}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setViewMode("all")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                viewMode === "all"
+                  ? isSenior
+                    ? "bg-amber-600 text-white"
+                    : "bg-purple-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              全ての予約枠
+            </button>
+            <button
+              onClick={() => setViewMode("daily")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                viewMode === "daily"
+                  ? isSenior
+                    ? "bg-amber-600 text-white"
+                    : "bg-purple-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              日別表示
+            </button>
           </div>
+
+          {/* Date Navigation - only show in daily mode */}
+          {viewMode === "daily" && (
+            <div className="flex gap-2 overflow-x-auto">
+              {dates.map((date) => {
+                const dateObj = new Date(date);
+                const isToday = date === today.toISOString().split("T")[0];
+                const isSelected = date === viewDate;
+
+                return (
+                  <button
+                    key={date}
+                    onClick={() => setViewDate(date)}
+                    className={`flex-shrink-0 px-4 py-3 rounded-xl text-center transition-colors ${
+                      isSelected
+                        ? isSenior
+                          ? "bg-amber-600 text-white"
+                          : "bg-purple-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <p className="text-xs">
+                      {dateObj.toLocaleDateString("ja-JP", { weekday: "short" })}
+                    </p>
+                    <p className="text-lg font-bold">{dateObj.getDate()}</p>
+                    {isToday && (
+                      <p className="text-xs">今日</p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Selected Date */}
+        {/* Title */}
         <h2 className="text-xl font-bold text-gray-800 mb-4">
-          {formatDate(viewDate)}
+          {viewMode === "all" ? "全ての予約枠" : formatDate(viewDate)}
         </h2>
 
         {/* Slots */}
@@ -296,10 +356,12 @@ export default function HostSchedulePage() {
               className={`animate-spin rounded-full h-12 w-12 border-b-2 ${isSenior ? "border-amber-600" : "border-purple-600"}`}
             ></div>
           </div>
-        ) : slots.length === 0 ? (
+        ) : (viewMode === "all" ? allSlots : slots).length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <p className="text-5xl mb-4">📅</p>
-            <p className="text-xl text-gray-600">この日の予約枠はありません</p>
+            <p className="text-xl text-gray-600">
+              {viewMode === "all" ? "予約枠がありません" : "この日の予約枠はありません"}
+            </p>
             <button
               onClick={() => setShowModal(true)}
               className={`mt-4 px-6 py-2 rounded-lg text-white ${
@@ -311,7 +373,7 @@ export default function HostSchedulePage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {slots.map((slot) => (
+            {(viewMode === "all" ? allSlots : slots).map((slot) => (
               <div
                 key={slot.id}
                 className={`bg-white rounded-xl shadow-lg overflow-hidden border-l-4 ${
@@ -325,6 +387,11 @@ export default function HostSchedulePage() {
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div>
+                      {viewMode === "all" && (
+                        <p className="text-sm text-gray-500 mb-1">
+                          {formatDate(slot.startTime)}
+                        </p>
+                      )}
                       <p className="font-bold text-2xl text-gray-900">
                         {formatTime(slot.startTime)}
                       </p>

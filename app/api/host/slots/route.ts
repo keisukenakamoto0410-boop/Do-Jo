@@ -21,13 +21,22 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
+    const showAll = searchParams.get("all") === "true";
 
     const where: Record<string, unknown> = {
       hostId: session.user.id,
     };
 
-    // Filter by date using JST (UTC+9) since hosts are in Japan
-    if (date) {
+    // If showAll is true, return all future slots without date filter
+    if (showAll) {
+      // Show all future slots (from today onwards)
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      where.startTime = {
+        gte: now,
+      };
+    } else if (date) {
+      // Filter by date using JST (UTC+9) since hosts are in Japan
       const [year, month, day] = date.split("-").map(Number);
 
       // Create start of day in JST (JST = UTC+9, so subtract 9 hours to get UTC)

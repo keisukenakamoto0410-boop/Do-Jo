@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
@@ -25,6 +25,10 @@ export default function SeniorSessionPage() {
   const params = useParams();
   const reservationId = params.reservationId as string;
   const { data: session } = useSession();
+
+  // Video refs - 一つだけ使用
+  const remoteVideoRef = useRef<HTMLDivElement>(null);
+  const localVideoRef = useRef<HTMLDivElement>(null);
 
   const [client, setClient] = useState<IAgoraRTCClient | null>(null);
   const [localTracks, setLocalTracks] = useState<{
@@ -52,7 +56,6 @@ export default function SeniorSessionPage() {
   const {
     partnerJoined,
     sessionStarted,
-    sessionStartedAt,
     isLoading: joinLoading,
   } = useSessionJoin({
     reservationId,
@@ -122,34 +125,6 @@ export default function SeniorSessionPage() {
     return () => clearInterval(interval);
   }, [timerStarted]);
 
-  // remoteUsersまたはレイアウト変更時にビデオを再生
-  useEffect(() => {
-    if (remoteUsers.length === 0) return;
-
-    const playRemoteVideo = () => {
-      const remoteVideoDiv = document.getElementById("remote-video");
-      if (!remoteVideoDiv) {
-        console.log("[Agora] remote-video div not found in useEffect");
-        return;
-      }
-
-      for (const user of remoteUsers) {
-        if (user.videoTrack) {
-          try {
-            console.log("[Agora] Playing video from useEffect for user:", user.uid);
-            user.videoTrack.play("remote-video");
-          } catch (err) {
-            console.error("[Agora] Error playing video in useEffect:", err);
-          }
-        }
-      }
-    };
-
-    // DOMが更新されるのを待つ
-    const timeoutId = setTimeout(playRemoteVideo, 300);
-    return () => clearTimeout(timeoutId);
-  }, [remoteUsers, showSlides, isMobile, isLandscape]);
-
   const fetchReservation = async () => {
     try {
       const response = await fetch(`/api/reservations/${reservationId}`);
@@ -216,45 +191,31 @@ export default function SeniorSessionPage() {
         try {
           console.log(`[Agora] user-published: uid=${user.uid}, mediaType=${mediaType}`);
           await agoraClient.subscribe(user, mediaType);
-          console.log(`[Agora] subscribed to ${mediaType}, hasVideoTrack=${!!user.videoTrack}, hasAudioTrack=${!!user.audioTrack}`);
-
-          // First update React state to prepare DOM
-          setRemoteUsers((prev: any[]) => {
-            if (prev.find((u) => u.uid === user.uid)) return prev;
-            return [...prev, user];
-          });
-
-          // 相手が入室したらタイマー開始
-          setTimerStarted(true);
+          console.log(`[Agora] subscribed to ${mediaType}`);
 
           if (mediaType === "video") {
-            // ビデオトラックの再生（リトライ機能付き）
-            let retryCount = 0;
-            const maxRetries = 10;
+            setRemoteUsers((prev: any[]) => {
+              const existing = prev.find((u) => u.uid === user.uid);
+              if (existing) {
+                return prev.map((u) => u.uid === user.uid ? user : u);
+              }
+              return [...prev, user];
+            });
 
-            const playVideo = () => {
-              const remoteVideoDiv = document.getElementById("remote-video");
-              const track = user.videoTrack;
+            // 相手が入室したらタイマー開始
+            setTimerStarted(true);
 
-              console.log(`[Agora] playVideo attempt ${retryCount + 1}: div=${!!remoteVideoDiv}, track=${!!track}`);
-
-              if (remoteVideoDiv && track) {
+            // Play video using ref
+            setTimeout(() => {
+              if (remoteVideoRef.current && user.videoTrack) {
                 try {
-                  track.play("remote-video");
-                  console.log("[Agora] Remote video playing successfully");
+                  user.videoTrack.play(remoteVideoRef.current);
+                  console.log("[Agora] Remote video playing via ref");
                 } catch (playErr) {
                   console.error("[Agora] Video play error:", playErr);
                 }
-              } else if (retryCount < maxRetries) {
-                retryCount++;
-                setTimeout(playVideo, 500);
-              } else {
-                console.error("[Agora] Failed to play video after max retries");
               }
-            };
-
-            // 少し待ってから再生開始
-            setTimeout(playVideo, 500);
+            }, 100);
           }
 
           if (mediaType === "audio") {
@@ -269,8 +230,10 @@ export default function SeniorSessionPage() {
         }
       });
 
-      agoraClient.on("user-unpublished", (user: any) => {
-        setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
+      agoraClient.on("user-unpublished", (user: any, mediaType: "audio" | "video") => {
+        if (mediaType === "video") {
+          setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
+        }
       });
 
       agoraClient.on("user-left", (user: any) => {
@@ -295,11 +258,10 @@ export default function SeniorSessionPage() {
 
       setLocalTracks({ audioTrack, videoTrack });
 
-      const localVideoDiv = document.getElementById("local-video");
-      if (!localVideoDiv) {
-        throw new Error("ビデオ画面が見つかりません");
+      // Play local video using ref
+      if (localVideoRef.current) {
+        videoTrack.play(localVideoRef.current);
       }
-      videoTrack.play("local-video");
 
       await agoraClient.publish([audioTrack, videoTrack]);
 
@@ -356,134 +318,40 @@ export default function SeniorSessionPage() {
     ? TOPICS.find((t) => t.id === slideTopic)
     : null;
 
-  // レイアウト描画
-  const renderLayout = () => {
+  // レイアウトに応じたビデオコンテナのスタイル
+  const getVideoContainerStyle = () => {
     if (!showSlides || !slideTopic) {
-      // スライドなし：相手の顔を大きく、自分は右下に小さく
-      return (
-        <div className="flex-1 relative p-4">
-          <div className="w-full h-full bg-gray-800 rounded-2xl overflow-hidden">
-            <div
-              id="remote-video"
-              className="w-full h-full"
-              style={{ minHeight: "400px" }}
-            ></div>
-            {remoteUsers.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50 m-4 rounded-2xl">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">👋</div>
-                  <p className="text-2xl font-bold">相手を待っています...</p>
-                  {!partnerJoined && (
-                    <p className="text-gray-400 mt-2">学習者がまだ入室していません</p>
-                  )}
-                </div>
-              </div>
-            )}
-            {/* セッション開始通知 */}
-            {sessionStarted && !timerStarted && (
-              <div className="absolute inset-0 flex items-center justify-center bg-green-500/90 m-4 rounded-2xl z-10">
-                <div className="text-center text-white">
-                  <div className="text-6xl mb-4">🎉</div>
-                  <p className="text-2xl font-bold">会話スタート！</p>
-                  <p className="mt-2">楽しい会話をしましょう！</p>
-                </div>
-              </div>
-            )}
-            {remoteUsers.length > 0 && reservation?.learner && (
-              <div className="absolute bottom-6 left-6 bg-black/70 px-4 py-2 rounded-lg text-white font-bold text-lg">
-                {reservation.learner.name}さん
-              </div>
-            )}
-          </div>
-
-          {/* Local Video (Small, bottom-right corner) */}
-          <div className="absolute bottom-8 right-8 w-48 h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700">
-            <div id="local-video" className="w-full h-full"></div>
-            <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-white text-sm">
-              あなた
-            </div>
-          </div>
-        </div>
-      );
+      // スライド非表示：フルスクリーン
+      return {
+        remote: "absolute inset-4 rounded-2xl overflow-hidden bg-gray-800",
+        local: "absolute bottom-8 right-8 w-48 h-36 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700 bg-gray-800 z-20",
+      };
     }
 
-    // スマホ縦向き：スライドメイン、顔は小さく
     if (isMobile && !isLandscape) {
-      return (
-        <div className="flex-1 relative">
-          <div className="w-full h-full">
-            <SlideViewer
-              topic={slideTopic}
-              isHost={true}
-              reservationId={reservationId}
-              currentSlide={currentSlide}
-            />
-          </div>
-          <div className="absolute top-4 right-4 w-24 h-20 bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-600">
-            <div id="remote-video" className="w-full h-full"></div>
-          </div>
-          <div className="absolute top-28 right-4 w-20 h-16 bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-600">
-            <div id="local-video" className="w-full h-full"></div>
-          </div>
-        </div>
-      );
+      // スマホ縦向き
+      return {
+        remote: "absolute top-4 right-4 w-24 h-20 rounded-lg overflow-hidden shadow-xl border border-gray-600 bg-gray-800 z-20",
+        local: "absolute top-28 right-4 w-20 h-16 rounded-lg overflow-hidden shadow-xl border border-gray-600 bg-gray-800 z-20",
+      };
     }
 
-    // スマホ横向き：顔20% / スライド80%
     if (isMobile && isLandscape) {
-      return (
-        <div className="flex-1 flex">
-          <div className="w-1/5 flex flex-col gap-2 p-2">
-            <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden">
-              <div id="remote-video" className="w-full h-full"></div>
-            </div>
-            <div className="h-20 bg-gray-800 rounded-lg overflow-hidden">
-              <div id="local-video" className="w-full h-full"></div>
-            </div>
-          </div>
-          <div className="w-4/5 p-2">
-            <SlideViewer
-              topic={slideTopic}
-              isHost={true}
-              reservationId={reservationId}
-              currentSlide={currentSlide}
-            />
-          </div>
-        </div>
-      );
+      // スマホ横向き
+      return {
+        remote: "absolute left-2 top-2 w-[18%] h-[calc(100%-100px)] rounded-lg overflow-hidden bg-gray-800 z-20",
+        local: "absolute left-2 bottom-2 w-[18%] h-20 rounded-lg overflow-hidden bg-gray-800 z-20",
+      };
     }
 
-    // PC：スライドメイン、顔は右上にPIP
-    return (
-      <div className="flex-1 relative p-4">
-        <div className="w-full h-full">
-          <SlideViewer
-            topic={slideTopic}
-            isHost={true}
-            reservationId={reservationId}
-            currentSlide={currentSlide}
-          />
-        </div>
-        {/* 顔は右上にPIP */}
-        <div className="absolute top-6 right-6 w-48 flex flex-col gap-2">
-          <div className="h-36 bg-gray-800 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-600">
-            <div id="remote-video" className="w-full h-full"></div>
-            {remoteUsers.length > 0 && (
-              <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
-                {reservation?.learner?.name}
-              </div>
-            )}
-          </div>
-          <div className="h-28 bg-gray-800 rounded-xl overflow-hidden shadow-xl border border-gray-600">
-            <div id="local-video" className="w-full h-full"></div>
-            <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">
-              あなた
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    // PC
+    return {
+      remote: "absolute top-6 right-6 w-48 h-36 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-600 bg-gray-800 z-20",
+      local: "absolute top-48 right-6 w-48 h-28 rounded-xl overflow-hidden shadow-xl border border-gray-600 bg-gray-800 z-20",
+    };
   };
+
+  const videoStyles = getVideoContainerStyle();
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
@@ -533,7 +401,7 @@ export default function SeniorSessionPage() {
       )}
 
       {/* Header */}
-      <div className="bg-sky-600 px-6 py-4 flex items-center justify-between">
+      <div className="bg-sky-600 px-6 py-4 flex items-center justify-between z-30">
         <div className="text-white">
           <h2 className="text-xl font-bold">ビデオ通話中</h2>
           <p className="text-sky-100">
@@ -585,8 +453,53 @@ export default function SeniorSessionPage() {
         </div>
       </div>
 
-      {/* Main Content - Video/Slide Area */}
-      {renderLayout()}
+      {/* Main Content Area */}
+      <div className="flex-1 relative">
+        {/* Slide Viewer (背景) */}
+        {showSlides && slideTopic && (
+          <div className="absolute inset-0 p-4">
+            <SlideViewer
+              topic={slideTopic}
+              isHost={true}
+              reservationId={reservationId}
+              currentSlide={currentSlide}
+            />
+          </div>
+        )}
+
+        {/* Remote Video - 常に同じ要素、スタイルだけ変更 */}
+        <div className={videoStyles.remote}>
+          <div
+            ref={remoteVideoRef}
+            className="w-full h-full"
+            style={{ minHeight: !showSlides ? "400px" : undefined }}
+          />
+          {remoteUsers.length === 0 && !showSlides && (
+            <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50">
+              <div className="text-center">
+                <div className="text-6xl mb-4">👋</div>
+                <p className="text-2xl font-bold">相手を待っています...</p>
+                {!partnerJoined && (
+                  <p className="text-gray-400 mt-2">学習者がまだ入室していません</p>
+                )}
+              </div>
+            </div>
+          )}
+          {remoteUsers.length > 0 && !showSlides && reservation?.learner && (
+            <div className="absolute bottom-6 left-6 bg-black/70 px-4 py-2 rounded-lg text-white font-bold text-lg">
+              {reservation.learner.name}さん
+            </div>
+          )}
+        </div>
+
+        {/* Local Video - 常に同じ要素、スタイルだけ変更 */}
+        <div className={videoStyles.local}>
+          <div ref={localVideoRef} className="w-full h-full" />
+          <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-white text-sm">
+            あなた
+          </div>
+        </div>
+      </div>
 
       {/* Support Hints for Target Words */}
       {reservation?.targetWords && reservation.targetWords.length > 0 && (

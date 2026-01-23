@@ -13,6 +13,15 @@ interface StudyLog {
   uploadedAt: string;
 }
 
+interface ThankYouMessage {
+  id: string;
+  learnerName: string;
+  message: string;
+  emoji: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 interface Reservation {
   id: string;
   status: string;
@@ -90,6 +99,9 @@ export default function SeniorDashboard() {
   // Available now button
   const [creatingNow, setCreatingNow] = useState(false);
 
+  // Thank you messages
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
 
   // Comment input
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -100,8 +112,21 @@ export default function SeniorDashboard() {
       fetchNextReservation();
       fetchMySlots();
       fetchPosts();
+      fetchUnreadMessages();
     }
   }, [session]);
+
+  const fetchUnreadMessages = async () => {
+    try {
+      const response = await fetch("/api/thank-you-messages?unread=true");
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadMessages(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch unread messages:", error);
+    }
+  };
 
   const fetchNextReservation = async () => {
     try {
@@ -369,12 +394,25 @@ export default function SeniorDashboard() {
               今日も外国人の方との会話を楽しみましょう
             </p>
           </div>
-          <Link
-            href="/senior/profile"
-            className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white text-lg font-bold rounded-xl transition-colors"
-          >
-            プロフィール編集
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/senior/messages"
+              className="relative px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold rounded-xl transition-colors"
+            >
+              🙏 お礼メッセージ
+              {unreadMessages > 0 && (
+                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-sm font-bold rounded-full flex items-center justify-center">
+                  {unreadMessages}
+                </span>
+              )}
+            </Link>
+            <Link
+              href="/senior/profile"
+              className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white text-lg font-bold rounded-xl transition-colors"
+            >
+              プロフィール編集
+            </Link>
+          </div>
         </div>
       </div>
 

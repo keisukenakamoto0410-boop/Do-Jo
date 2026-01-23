@@ -170,6 +170,24 @@ export default function LearnerFeedbackPage() {
               <br />
               Please check back later!
             </p>
+
+            {/* Thank You CTA */}
+            <div className="bg-gradient-to-r from-orange-400 to-pink-500 rounded-2xl p-6 text-white mb-6">
+              <span className="text-3xl mb-2 block">🙏</span>
+              <h3 className="text-lg font-bold mb-2">
+                While you wait, send a Thank You!
+              </h3>
+              <p className="opacity-90 text-sm mb-4">
+                Show your appreciation to your conversation partner
+              </p>
+              <Link
+                href={`/learner/session/${reservationId}/thank-you`}
+                className="inline-block px-6 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-colors"
+              >
+                Send Thank You Message
+              </Link>
+            </div>
+
             <Link
               href="/learner/dashboard"
               className="inline-block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
@@ -347,8 +365,27 @@ export default function LearnerFeedbackPage() {
               </div>
             )}
 
+            {/* Thank You CTA */}
+            <div className="bg-gradient-to-r from-orange-400 to-pink-500 rounded-2xl shadow-xl p-6 text-white">
+              <div className="text-center">
+                <span className="text-4xl mb-3 block">🙏</span>
+                <h3 className="text-xl font-bold mb-2">
+                  Say Thank You to {reservation?.hostName || "Your Host"}!
+                </h3>
+                <p className="opacity-90 mb-4 text-sm">
+                  Send a thank you message to show your appreciation
+                </p>
+                <Link
+                  href={`/learner/session/${reservationId}/thank-you`}
+                  className="inline-block px-6 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-colors"
+                >
+                  Send Thank You Message
+                </Link>
+              </div>
+            </div>
+
             {/* Encouragement */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-xl p-6 text-white text-center">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-xl p-6 text-white text-center mt-6">
               <p className="text-lg font-medium mb-2">
                 Keep up the great work!
               </p>

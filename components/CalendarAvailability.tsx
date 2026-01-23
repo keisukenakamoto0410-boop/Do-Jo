@@ -312,14 +312,7 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
                     {date.getDate()}
                   </span>
                   {slotCount > 0 && (
-                    <div className="flex flex-wrap gap-0.5 justify-center sm:justify-start">
-                      {Array.from({ length: Math.min(slotCount, 3) }).map((_, i) => (
-                        <span key={i} className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                      ))}
-                      {slotCount > 3 && (
-                        <span className="text-xs text-orange-600 font-medium">+{slotCount - 3}</span>
-                      )}
-                    </div>
+                    <span className="text-xs text-sky-600 font-medium">{slotCount}件</span>
                   )}
                 </div>
               </div>

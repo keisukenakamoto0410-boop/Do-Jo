@@ -123,20 +123,21 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
 
       // Create new slots
       for (const time of selectedTimes) {
+        // Check if this time already exists
+        const existingTime = getExistingTimesForDate(selectedDate);
+        if (existingTime.includes(time)) continue;
+
         const [hours, minutes] = time.split(":").map(Number);
         const startTime = new Date(selectedDate);
         startTime.setHours(hours, minutes, 0, 0);
 
-        const endTime = new Date(startTime);
-        endTime.setMinutes(endTime.getMinutes() + 25);
-
-        await fetch("/api/host/slots", {
+        // Use /api/slots for creating slots (POST endpoint)
+        await fetch("/api/slots", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             startTime: startTime.toISOString(),
-            endTime: endTime.toISOString(),
-            sessionType,
+            sessionType: sessionType === "both" ? "casual" : sessionType,
           }),
         });
       }

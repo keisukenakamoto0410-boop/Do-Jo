@@ -5,43 +5,43 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// 日本語フレーズデータ
+// 日本語フレーズデータ（全て3文字以内）
 const phrases = [
   // 日常フレーズ
-  { ja: "やばい", en: "amazing / crazy" },
-  { ja: "かわいい", en: "cute" },
-  { ja: "なるほど", en: "I see" },
-  { ja: "すごい", en: "awesome" },
-  { ja: "マジで", en: "seriously" },
-  { ja: "ちょっと", en: "a little / excuse me" },
-  // オノマトペ
-  { ja: "ドキドキ", en: "heart beating" },
-  { ja: "わくわく", en: "excited" },
-  { ja: "もふもふ", en: "fluffy" },
-  { ja: "キラキラ", en: "sparkling" },
-  { ja: "ふわふわ", en: "soft / fluffy" },
-  { ja: "ぴかぴか", en: "shiny" },
-  // 若者言葉・スラング
-  { ja: "エモい", en: "emotional / aesthetic" },
+  { ja: "やば", en: "amazing" },
+  { ja: "かわ", en: "cute" },
+  { ja: "すご", en: "awesome" },
+  { ja: "マジ", en: "seriously" },
+  { ja: "えも", en: "emotional" },
   { ja: "草", en: "lol" },
-  { ja: "推し", en: "favorite / bias" },
-  { ja: "神", en: "god-tier / amazing" },
+  // オノマトペ
+  { ja: "ドキ", en: "heart beat" },
+  { ja: "わく", en: "excited" },
+  { ja: "もふ", en: "fluffy" },
+  { ja: "キラ", en: "sparkling" },
+  { ja: "ふわ", en: "soft" },
+  { ja: "ぴか", en: "shiny" },
+  // 若者言葉・スラング
+  { ja: "推し", en: "favorite" },
+  { ja: "神", en: "god-tier" },
   { ja: "尊い", en: "precious" },
-  { ja: "沼", en: "obsessed with" },
-  // 文化的表現
-  { ja: "空気を読む", en: "read the room" },
-  { ja: "侘び寂び", en: "wabi-sabi beauty" },
-  { ja: "一期一会", en: "once in a lifetime" },
-  { ja: "木漏れ日", en: "sunlight through leaves" },
-  { ja: "懐かしい", en: "nostalgic" },
-  { ja: "切ない", en: "bittersweet" },
+  { ja: "沼", en: "obsessed" },
+  { ja: "映え", en: "photogenic" },
+  { ja: "ガチ", en: "for real" },
+  // 文化・感情
+  { ja: "粋", en: "stylish" },
+  { ja: "縁", en: "fate" },
+  { ja: "和", en: "harmony" },
+  { ja: "侘び", en: "wabi" },
+  { ja: "寂び", en: "sabi" },
+  { ja: "癒し", en: "healing" },
   // 挨拶・礼儀
-  { ja: "頑張って", en: "good luck / do your best" },
-  { ja: "お邪魔します", en: "excuse me for intruding" },
-  { ja: "いただきます", en: "thank you for the food" },
-  { ja: "お疲れ様", en: "good work" },
-  { ja: "よろしく", en: "nice to meet you" },
-  { ja: "ただいま", en: "I'm home" },
+  { ja: "乙", en: "good work" },
+  { ja: "よろ", en: "nice 2 meet" },
+  { ja: "あざ", en: "thanks" },
+  { ja: "了解", en: "roger" },
+  { ja: "無理", en: "impossible" },
+  { ja: "最高", en: "the best" },
 ];
 
 // フレーズを3つのグループに分割
@@ -110,32 +110,65 @@ export default function LoginPage() {
     signIn("google", { callbackUrl: "/learner/dashboard" });
   };
 
-  // フレーズ行をレンダリング
+  // アイコンカラーのバリエーション
+  const iconColors = [
+    { bg: "rgba(0, 168, 204, 0.15)", border: "rgba(0, 168, 204, 0.3)", text: "#006B7D" },
+    { bg: "rgba(255, 107, 53, 0.15)", border: "rgba(255, 107, 53, 0.3)", text: "#E64A19" },
+    { bg: "rgba(255, 167, 38, 0.15)", border: "rgba(255, 167, 38, 0.3)", text: "#F57C00" },
+    { bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.3)", text: "#059669" },
+    { bg: "rgba(139, 92, 246, 0.15)", border: "rgba(139, 92, 246, 0.3)", text: "#7C3AED" },
+  ];
+
+  // フレーズ行をレンダリング（円形アイコンスタイル）
   const renderPhraseRow = (phraseList: typeof phrases, direction: "left" | "right", opacity: number) => {
     const tripled = [...phraseList, ...phraseList, ...phraseList];
     return (
       <div
-        className="flex whitespace-nowrap"
+        className="flex whitespace-nowrap items-center"
         style={{
-          animation: `scroll-${direction} ${direction === "left" ? "40s" : "45s"} linear infinite`,
+          animation: `scroll-${direction} ${direction === "left" ? "50s" : "55s"} linear infinite`,
           opacity,
         }}
       >
-        {tripled.map((phrase, i) => (
-          <span
-            key={i}
-            className="inline-flex items-center gap-2 mx-4 text-sm md:text-base"
-            style={{ fontFamily: "'Noto Sans JP', sans-serif" }}
-          >
-            <span className="font-bold text-[#1A2332]">{phrase.ja}</span>
-            <span
-              className="text-[#566573] text-xs"
-              style={{ fontFamily: "'Space Mono', monospace" }}
+        {tripled.map((phrase, i) => {
+          const color = iconColors[i % iconColors.length];
+          return (
+            <div
+              key={i}
+              className="flex flex-col items-center mx-4 md:mx-6"
             >
-              {phrase.en}
-            </span>
-          </span>
-        ))}
+              {/* 円形アイコン */}
+              <div
+                className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mb-2 border-2 shadow-lg"
+                style={{
+                  background: color.bg,
+                  borderColor: color.border,
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <span
+                  className="text-lg md:text-2xl font-bold"
+                  style={{
+                    fontFamily: "'Noto Sans JP', sans-serif",
+                    color: color.text,
+                  }}
+                >
+                  {phrase.ja.slice(0, 3)}
+                </span>
+              </div>
+              {/* 英語の意味 */}
+              <span
+                className="text-[10px] md:text-xs text-center max-w-[80px] md:max-w-[100px] truncate"
+                style={{
+                  fontFamily: "'Space Mono', monospace",
+                  color: "#566573",
+                }}
+              >
+                {phrase.en}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -208,19 +241,20 @@ export default function LoginPage() {
           }}
         />
 
+
         {/* スクロールフレーズ - 上部 */}
-        <div className="absolute top-[8%] left-0 right-0 overflow-hidden pointer-events-none">
-          {renderPhraseRow(row1Phrases, "left", 0.7)}
+        <div className="absolute top-[3%] md:top-[5%] left-0 right-0 overflow-hidden pointer-events-none">
+          {renderPhraseRow(row1Phrases, "left", 0.8)}
         </div>
 
-        {/* スクロールフレーズ - 中部 */}
-        <div className="absolute top-[20%] left-0 right-0 overflow-hidden pointer-events-none">
-          {renderPhraseRow(row2Phrases, "right", 0.5)}
+        {/* スクロールフレーズ - 中上部 */}
+        <div className="absolute top-[18%] md:top-[22%] left-0 right-0 overflow-hidden pointer-events-none">
+          {renderPhraseRow(row2Phrases, "right", 0.6)}
         </div>
 
         {/* スクロールフレーズ - 下部 */}
-        <div className="absolute bottom-[8%] left-0 right-0 overflow-hidden pointer-events-none">
-          {renderPhraseRow(row3Phrases, "left", 0.6)}
+        <div className="absolute bottom-[3%] md:bottom-[5%] left-0 right-0 overflow-hidden pointer-events-none">
+          {renderPhraseRow(row3Phrases, "left", 0.7)}
         </div>
 
         {/* メインコンテンツ */}

@@ -1,5 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
@@ -36,6 +37,11 @@ export const authOptions: NextAuthOptions = {
   // Note: PrismaAdapter is removed because it's not compatible with CredentialsProvider
   // CredentialsProvider requires JWT strategy which doesn't use the adapter for sessions
   providers: [
+    // Google OAuth Provider
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -106,7 +112,52 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async signIn({ user, account }) {
+      // Googleログインの場合、ユーザーをDBに作成/更新
+      if (account?.provider === "google" && user.email) {
+        try {
+          const existingUser = await db.user.findUnique({
+            where: { email: user.email },
+          });
+
+          if (!existingUser) {
+            // 新規ユーザー作成（デフォルトはlearner）
+            await db.user.create({
+              data: {
+                email: user.email,
+                name: user.name || "User",
+                role: "learner",
+                lastLoginAt: new Date(),
+              },
+            });
+            console.log("[AUTH] Created new Google user:", user.email);
+          } else {
+            // 既存ユーザーの最終ログイン更新
+            await db.user.update({
+              where: { email: user.email },
+              data: { lastLoginAt: new Date() },
+            });
+            console.log("[AUTH] Updated existing Google user:", user.email);
+          }
+        } catch (error) {
+          console.error("[AUTH] Error in signIn callback:", error);
+          return false;
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account, trigger, session }) {
+      // Googleログインの場合、DBからユーザー情報を取得
+      if (account?.provider === "google" && token.email) {
+        const dbUser = await db.user.findUnique({
+          where: { email: token.email as string },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role as UserRole;
+        }
+      }
+
       if (user) {
         token.id = user.id;
         token.role = user.role;

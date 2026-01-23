@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Admin emails for access control
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
+
 // DELETE cancel a reservation
 export async function DELETE(
   req: NextRequest,
@@ -130,11 +133,12 @@ export async function GET(
       );
     }
 
-    // Check if user is part of this reservation
+    // Check if user is part of this reservation or admin
     const isLearner = reservation.learnerId === session.user.id;
     const isHost = reservation.hostId === session.user.id;
+    const isAdmin = session.user.role === "admin" || ADMIN_EMAILS.includes(session.user.email || "");
 
-    if (!isLearner && !isHost && session.user.role !== "admin") {
+    if (!isLearner && !isHost && !isAdmin) {
       return NextResponse.json(
         { error: "Not authorized to view this reservation" },
         { status: 403 }

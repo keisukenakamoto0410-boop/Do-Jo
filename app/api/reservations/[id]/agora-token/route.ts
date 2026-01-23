@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { RtcTokenBuilder, RtcRole } from "agora-access-token";
 
+// Admin emails for access control
+const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,6 +18,9 @@ export async function GET(
     }
 
     const { id: reservationId } = await params;
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get("role");
+    const isAdmin = role === "admin" && ADMIN_EMAILS.includes(session.user.email || "");
 
     // 予約確認
     const reservation = await prisma.reservation.findUnique({
@@ -28,10 +34,11 @@ export async function GET(
       );
     }
 
-    // ユーザーが参加者か確認
+    // ユーザーが参加者または管理者か確認
     if (
       reservation.learnerId !== session.user.id &&
-      reservation.hostId !== session.user.id
+      reservation.hostId !== session.user.id &&
+      !isAdmin
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -48,8 +55,9 @@ export async function GET(
     }
 
     const channelName = `session-${reservationId}`;
-    const uid = 0; // 0 = auto assign
-    const role = RtcRole.PUBLISHER;
+    // 管理者は異なるUID範囲を使用（衝突を避けるため）
+    const uid = isAdmin ? 9000 + Math.floor(Math.random() * 1000) : 0;
+    const rtcRole = RtcRole.PUBLISHER;
     const expirationTimeInSeconds = 3600; // 1 hour
     const currentTimestamp = Math.floor(Date.now() / 1000);
     const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
@@ -60,7 +68,7 @@ export async function GET(
       appCertificate,
       channelName,
       uid,
-      role,
+      rtcRole,
       privilegeExpiredTs
     );
 

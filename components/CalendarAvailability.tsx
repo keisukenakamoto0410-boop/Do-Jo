@@ -22,6 +22,7 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
   const [saving, setSaving] = useState(false);
   const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
   const [sessionType, setSessionType] = useState("both");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Time slots from 9:00 to 21:00 in 30-minute increments
   const timeSlots = [];
@@ -145,11 +146,58 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
       await fetchSlots();
       onSlotsChange?.();
       setSelectedDate(null);
+
+      // Show success message
+      const count = selectedTimes.length - getExistingTimesForDate(selectedDate).length;
+      if (count > 0) {
+        setSuccessMessage(`${count}件の予約枠を作成しました！`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
     } catch (error) {
       console.error("Failed to save slots:", error);
     } finally {
       setSaving(false);
     }
+  };
+
+  // Delete a single slot
+  const deleteSlot = async (slotId: string) => {
+    if (!confirm("この予約枠を削除しますか？")) return;
+
+    try {
+      const res = await fetch(`/api/host/slots/${slotId}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchSlots();
+        onSlotsChange?.();
+        setSuccessMessage("予約枠を削除しました");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        const data = await res.json();
+        alert(data.error || "削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("Failed to delete slot:", error);
+      alert("削除に失敗しました");
+    }
+  };
+
+  // Get all future slots sorted by date
+  const getFutureSlots = (): Slot[] => {
+    const now = new Date();
+    return slots
+      .filter(slot => new Date(slot.startTime) >= now)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  };
+
+  const formatSlotDateTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("ja-JP", {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   };
 
   const prevMonth = () => {
@@ -277,6 +325,60 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="p-4 bg-green-50 border-t border-green-200">
+          <div className="flex items-center gap-2 text-green-700">
+            <span className="text-xl">✓</span>
+            <span className="font-medium">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* My Slots List */}
+      {getFutureSlots().length > 0 && (
+        <div className="p-4 border-t border-gray-200">
+          <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <span>📋</span> 私の予約枠 ({getFutureSlots().length}件)
+          </h3>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {getFutureSlots().map((slot) => (
+              <div
+                key={slot.id}
+                className={`flex items-center justify-between p-3 rounded-lg ${
+                  slot.status === "booked"
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-gray-50 border border-gray-200"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`text-lg ${slot.status === "booked" ? "text-green-600" : "text-sky-600"}`}>
+                    {slot.status === "booked" ? "👤" : "🕐"}
+                  </span>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {formatSlotDateTime(slot.startTime)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {slot.sessionType === "business" ? "ビジネス" : "カジュアル"}
+                      {slot.status === "booked" && " • 予約済み"}
+                    </p>
+                  </div>
+                </div>
+                {slot.status === "available" && (
+                  <button
+                    onClick={() => deleteSlot(slot.id)}
+                    className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    削除
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

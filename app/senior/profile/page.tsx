@@ -212,12 +212,13 @@ export default function SeniorProfilePage() {
 
           {/* Name */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">お名前</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">表示名</h2>
+            <p className="text-sm text-gray-500 mb-4">ニックネームでもOK</p>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="お名前を入力"
+              placeholder="例：たろうさん"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-lg"
               required
             />

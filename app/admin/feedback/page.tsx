@@ -223,7 +223,27 @@ export default function AdminFeedbackPage() {
                 Admin
               </span>
             </div>
-            <span className="text-gray-600">{session.user.email}</span>
+            <nav className="flex items-center gap-4">
+              <Link
+                href="/admin/reservations"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                予約管理
+              </Link>
+              <Link
+                href="/admin/users"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                ユーザー一覧
+              </Link>
+              <Link
+                href="/admin/feedback"
+                className="text-gray-900 font-medium"
+              >
+                スコア一覧
+              </Link>
+              <span className="text-gray-600">{session.user.email}</span>
+            </nav>
           </div>
         </div>
       </header>

@@ -24,9 +24,9 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
   const [sessionType, setSessionType] = useState("both");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Time slots from 9:00 to 21:00 in 30-minute increments
+  // Time slots from 10:00 to 21:00 in 30-minute increments
   const timeSlots = [];
-  for (let hour = 9; hour < 21; hour++) {
+  for (let hour = 10; hour < 21; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, "0")}:00`);
     timeSlots.push(`${hour.toString().padStart(2, "0")}:30`);
   }

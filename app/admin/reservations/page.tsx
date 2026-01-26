@@ -231,6 +231,12 @@ export default function AdminReservationsPage() {
                 予約管理
               </Link>
               <Link
+                href="/admin/users"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                ユーザー一覧
+              </Link>
+              <Link
                 href="/admin/feedback"
                 className="text-gray-600 hover:text-gray-900"
               >

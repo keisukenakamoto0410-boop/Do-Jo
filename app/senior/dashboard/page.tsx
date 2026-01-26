@@ -49,36 +49,12 @@ interface Slot {
   status: string;
 }
 
-interface Comment {
-  id: string;
-  content: string;
-  createdAt: string;
-  user: {
-    id: string;
-    name: string;
-    avatar: string | null;
-  };
-  isOwn: boolean;
+interface HostStats {
+  totalSessions: number;
+  thisMonthSessions: number;
+  totalThankYou: number;
+  unreadThankYou: number;
 }
-
-interface StudyPost {
-  id: string;
-  imageUrl: string;
-  caption: string | null;
-  createdAt: string;
-  user: {
-    id: string;
-    name: string;
-    avatar: string | null;
-    country: string | null;
-    jlptLevel: string | null;
-  };
-  likeCount: number;
-  commentCount: number;
-  isLiked: boolean;
-  comments: Comment[];
-}
-
 
 export default function SeniorDashboard() {
   const { data: session } = useSession();
@@ -87,10 +63,18 @@ export default function SeniorDashboard() {
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
 
-  // Study posts feed
-  const [posts, setPosts] = useState<StudyPost[]>([]);
-  const [loadingPosts, setLoadingPosts] = useState(true);
-  const [activeTab, setActiveTab] = useState<"schedule" | "feed">("feed");
+  // Stats
+  const [stats, setStats] = useState<HostStats>({
+    totalSessions: 0,
+    thisMonthSessions: 0,
+    totalThankYou: 0,
+    unreadThankYou: 0,
+  });
+
+  // Thank you messages feed
+  const [thankYouMessages, setThankYouMessages] = useState<ThankYouMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [activeTab, setActiveTab] = useState<"schedule" | "thanks">("thanks");
 
   // Slot management state
   const [mySlots, setMySlots] = useState<Slot[]>([]);
@@ -99,32 +83,56 @@ export default function SeniorDashboard() {
   // Available now button
   const [creatingNow, setCreatingNow] = useState(false);
 
-  // Thank you messages
-  const [unreadMessages, setUnreadMessages] = useState(0);
-
-
-  // Comment input
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [submittingComment, setSubmittingComment] = useState<string | null>(null);
-
   useEffect(() => {
     if (session?.user) {
       fetchNextReservation();
       fetchMySlots();
-      fetchPosts();
-      fetchUnreadMessages();
+      fetchThankYouMessages();
+      fetchStats();
     }
   }, [session]);
 
-  const fetchUnreadMessages = async () => {
+  const fetchStats = async () => {
     try {
-      const response = await fetch("/api/thank-you-messages?unread=true");
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadMessages(data.unreadCount || 0);
+      // Fetch user stats
+      const statsResponse = await fetch("/api/user/stats");
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(prev => ({
+          ...prev,
+          totalSessions: statsData.totalSessions || 0,
+          thisMonthSessions: statsData.thisMonthSessions || 0,
+        }));
+      }
+
+      // Fetch thank you messages count
+      const messagesResponse = await fetch("/api/thank-you-messages");
+      if (messagesResponse.ok) {
+        const messagesData = await messagesResponse.json();
+        const messages = messagesData.messages || [];
+        setStats(prev => ({
+          ...prev,
+          totalThankYou: messages.length,
+          unreadThankYou: messages.filter((m: ThankYouMessage) => !m.isRead).length,
+        }));
       }
     } catch (error) {
-      console.error("Failed to fetch unread messages:", error);
+      console.error("Failed to fetch stats:", error);
+    }
+  };
+
+  const fetchThankYouMessages = async () => {
+    setLoadingMessages(true);
+    try {
+      const response = await fetch("/api/thank-you-messages");
+      if (response.ok) {
+        const data = await response.json();
+        setThankYouMessages(data.messages || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch thank you messages:", error);
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
@@ -160,102 +168,23 @@ export default function SeniorDashboard() {
     }
   };
 
-  const fetchPosts = async () => {
-    setLoadingPosts(true);
+  // Mark message as read
+  const handleMarkAsRead = async (messageId: string) => {
     try {
-      const response = await fetch("/api/study-posts/feed");
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data.posts || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch posts:", error);
-    } finally {
-      setLoadingPosts(false);
-    }
-  };
-
-  // Handle like
-  const handleLikePost = async (postId: string) => {
-    try {
-      const response = await fetch(`/api/study-posts/${postId}/like`, {
+      const response = await fetch(`/api/thank-you-messages/${messageId}/read`, {
         method: "POST",
       });
-
       if (response.ok) {
-        setPosts(prev => prev.map(post => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              isLiked: !post.isLiked,
-              likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
-            };
-          }
-          return post;
+        setThankYouMessages(prev =>
+          prev.map(m => m.id === messageId ? { ...m, isRead: true } : m)
+        );
+        setStats(prev => ({
+          ...prev,
+          unreadThankYou: Math.max(0, prev.unreadThankYou - 1),
         }));
       }
     } catch (error) {
-      console.error("Like error:", error);
-    }
-  };
-
-  // Handle comment submit
-  const handleCommentSubmit = async (postId: string) => {
-    const content = commentInputs[postId]?.trim();
-    if (!content) return;
-
-    setSubmittingComment(postId);
-    try {
-      const response = await fetch(`/api/study-posts/${postId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(prev => prev.map(post => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              comments: [data.comment, ...post.comments],
-              commentCount: post.commentCount + 1,
-            };
-          }
-          return post;
-        }));
-        setCommentInputs(prev => ({ ...prev, [postId]: "" }));
-      }
-    } catch (error) {
-      console.error("Comment error:", error);
-    } finally {
-      setSubmittingComment(null);
-    }
-  };
-
-  // Handle comment delete
-  const handleDeleteComment = async (postId: string, commentId: string) => {
-    if (!confirm("このコメントを削除しますか？")) return;
-
-    try {
-      const response = await fetch(`/api/comments/${commentId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setPosts(prev => prev.map(post => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              comments: post.comments.filter(c => c.id !== commentId),
-              commentCount: post.commentCount - 1,
-            };
-          }
-          return post;
-        }));
-      }
-    } catch (error) {
-      console.error("Delete comment error:", error);
+      console.error("Failed to mark as read:", error);
     }
   };
 
@@ -284,7 +213,6 @@ export default function SeniorDashboard() {
     }
   };
 
-
   const handleDeleteSlot = async (slotId: string) => {
     if (!confirm("この時間を削除しますか？")) return;
 
@@ -301,7 +229,6 @@ export default function SeniorDashboard() {
       setSlotMessage({ type: "error", text: "削除に失敗しました" });
     }
   };
-
 
   const handleLike = async (studyLogId: string) => {
     if (liking) return;
@@ -394,25 +321,28 @@ export default function SeniorDashboard() {
               今日も外国人の方との会話を楽しみましょう
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/senior/messages"
-              className="relative px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold rounded-xl transition-colors"
-            >
-              🙏 お礼メッセージ
-              {unreadMessages > 0 && (
-                <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-sm font-bold rounded-full flex items-center justify-center">
-                  {unreadMessages}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/senior/profile"
-              className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white text-lg font-bold rounded-xl transition-colors"
-            >
-              プロフィール編集
-            </Link>
-          </div>
+          <Link
+            href="/senior/profile"
+            className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white text-lg font-bold rounded-xl transition-colors"
+          >
+            プロフィール編集
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center">
+          <div className="text-4xl font-bold text-sky-600 mb-2">{stats.totalSessions}</div>
+          <div className="text-gray-600 font-medium">累計セッション</div>
+        </div>
+        <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center">
+          <div className="text-4xl font-bold text-green-600 mb-2">{stats.thisMonthSessions}</div>
+          <div className="text-gray-600 font-medium">今月のセッション</div>
+        </div>
+        <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center">
+          <div className="text-4xl font-bold text-orange-500 mb-2">{stats.totalThankYou}</div>
+          <div className="text-gray-600 font-medium">もらった感謝</div>
         </div>
       </div>
 
@@ -479,14 +409,19 @@ export default function SeniorDashboard() {
       {/* Tab Navigation */}
       <div className="flex gap-2 mb-6">
         <button
-          onClick={() => setActiveTab("feed")}
+          onClick={() => setActiveTab("thanks")}
           className={`flex-1 py-4 text-xl font-bold rounded-xl transition-colors ${
-            activeTab === "feed"
+            activeTab === "thanks"
               ? "bg-orange-500 text-white"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
-          📚 学習者の投稿
+          🙏 お礼メッセージ
+          {stats.unreadThankYou > 0 && (
+            <span className="ml-2 px-2 py-0.5 bg-white text-orange-500 rounded-full text-sm">
+              {stats.unreadThankYou}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab("schedule")}
@@ -500,141 +435,58 @@ export default function SeniorDashboard() {
         </button>
       </div>
 
-      {/* Feed Tab */}
-      {activeTab === "feed" && (
-        <div className="space-y-6">
-          {loadingPosts ? (
+      {/* Thank You Messages Tab */}
+      {activeTab === "thanks" && (
+        <div className="space-y-4">
+          {loadingMessages ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
-              <p className="text-gray-600">投稿を読み込み中...</p>
+              <p className="text-gray-600">メッセージを読み込み中...</p>
             </div>
-          ) : posts.length === 0 ? (
+          ) : thankYouMessages.length === 0 ? (
             <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-12 text-center">
-              <div className="text-6xl mb-4">📭</div>
+              <div className="text-6xl mb-4">🙏</div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                まだ投稿がありません
+                まだお礼メッセージがありません
               </h2>
               <p className="text-xl text-gray-600">
-                学習者が投稿するとここに表示されます
+                セッション後に学習者からメッセージが届きます
               </p>
             </div>
           ) : (
-            posts.map((post) => (
-              <div key={post.id} className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden">
-                {/* Post Header */}
-                <div className="flex items-center gap-4 p-6 border-b border-gray-100">
-                  <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-2xl">
-                    {post.user.avatar ? (
-                      <img
-                        src={post.user.avatar}
-                        alt={post.user.name}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      "🌏"
-                    )}
+            thankYouMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`bg-white border-2 rounded-2xl p-6 transition-colors ${
+                  message.isRead
+                    ? "border-gray-200"
+                    : "border-orange-300 bg-orange-50"
+                }`}
+                onClick={() => !message.isRead && handleMarkAsRead(message.id)}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">
+                    {message.emoji || "🙏"}
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{post.user.name}</h3>
-                    <div className="flex items-center gap-2 text-gray-500">
-                      {post.user.country && <span>{post.user.country}</span>}
-                      {post.user.jlptLevel && (
-                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-sm">
-                          {post.user.jlptLevel}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {message.learnerName} さんより
+                      </h3>
+                      <span className="text-gray-500 text-sm">
+                        {formatRelativeTime(message.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-lg text-gray-700 whitespace-pre-wrap">
+                      {message.message}
+                    </p>
+                    {!message.isRead && (
+                      <div className="mt-3">
+                        <span className="px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded-full">
+                          NEW
                         </span>
-                      )}
-                      <span>・{formatRelativeTime(post.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Post Image */}
-                <img
-                  src={post.imageUrl}
-                  alt="学習記録"
-                  className="w-full max-h-[500px] object-contain bg-gray-50"
-                />
-
-                {/* Post Actions */}
-                <div className="p-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <button
-                      onClick={() => handleLikePost(post.id)}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-bold transition-colors ${
-                        post.isLiked
-                          ? "bg-pink-100 text-pink-600"
-                          : "bg-gray-100 text-gray-600 hover:bg-pink-50"
-                      }`}
-                    >
-                      {post.isLiked ? "❤️" : "🤍"} {post.likeCount}
-                    </button>
-                    <span className="text-gray-500 text-lg">
-                      💬 {post.commentCount} コメント
-                    </span>
-                  </div>
-
-                  {post.caption && (
-                    <p className="text-gray-700 text-lg mb-4">{post.caption}</p>
-                  )}
-
-                  {/* Comments */}
-                  {post.comments.length > 0 && (
-                    <div className="space-y-3 mb-4">
-                      {post.comments.map((comment) => (
-                        <div key={comment.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg flex-shrink-0">
-                            {comment.user.avatar ? (
-                              <img
-                                src={comment.user.avatar}
-                                alt={comment.user.name}
-                                className="w-full h-full rounded-full object-cover"
-                              />
-                            ) : (
-                              "👤"
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900">{comment.user.name}</span>
-                              <span className="text-gray-400 text-sm">{formatRelativeTime(comment.createdAt)}</span>
-                            </div>
-                            <p className="text-gray-700">{comment.content}</p>
-                          </div>
-                          {comment.isOwn && (
-                            <button
-                              onClick={() => handleDeleteComment(post.id, comment.id)}
-                              className="text-gray-400 hover:text-red-500 text-sm"
-                            >
-                              削除
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Comment Input */}
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={commentInputs[post.id] || ""}
-                      onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                      placeholder="コメントを入力..."
-                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none text-lg"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleCommentSubmit(post.id);
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => handleCommentSubmit(post.id)}
-                      disabled={!commentInputs[post.id]?.trim() || submittingComment === post.id}
-                      className="px-6 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 disabled:bg-gray-300 transition-colors"
-                    >
-                      {submittingComment === post.id ? "..." : "送信"}
-                    </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

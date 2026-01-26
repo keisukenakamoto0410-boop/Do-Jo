@@ -306,9 +306,12 @@ function RegisterContent() {
                   </h3>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {role === "learner" ? "Display Name" : "表示名"} <span className="text-red-500">*</span>
                     </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      {role === "learner" ? "Nickname is OK" : "ニックネームでもOK"}
+                    </p>
                     <input
                       type="text"
                       name="name"
@@ -316,7 +319,7 @@ function RegisterContent() {
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 bg-white/50 border-2 border-[#E4E7EB] rounded-xl text-gray-900 placeholder-[#9AA5B1] focus:outline-none focus:ring-2 focus:ring-[#00A8CC] focus:border-transparent transition-all"
-                      placeholder={role === "learner" ? "Your Name" : "山田 太郎"}
+                      placeholder={role === "learner" ? "Your Name or Nickname" : "例：たろうさん"}
                     />
                   </div>
 

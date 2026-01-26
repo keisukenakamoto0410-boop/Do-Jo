@@ -4,7 +4,6 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import StudyPostTimeline from "@/components/learner/StudyPostTimeline";
 import ArticleFeed from "@/components/learner/ArticleFeed";
 import MobileNav from "@/components/MobileNav";
 import ConversationStats from "@/components/ConversationStats";
@@ -15,14 +14,6 @@ interface UserStats {
   totalMinutes: number;
   averageRating: number | null;
   thisMonthSessions: number;
-}
-
-interface RankingUser {
-  id: string;
-  name: string;
-  avatar: string | null;
-  country: string | null;
-  postCount: number;
 }
 
 interface Reservation {
@@ -51,11 +42,6 @@ export default function LearnerDashboard() {
     averageRating: null,
     thisMonthSessions: 0,
   });
-  const [rankingPeriod, setRankingPeriod] = useState<"week" | "month" | "all">("week");
-  const [rankings, setRankings] = useState<RankingUser[]>([]);
-  const [myRank, setMyRank] = useState<number | null>(null);
-  const [myPostCount, setMyPostCount] = useState(0);
-  const [rankingLoading, setRankingLoading] = useState(true);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [medals, setMedals] = useState<string[]>([]);
@@ -113,30 +99,6 @@ export default function LearnerDashboard() {
       fetchReservations();
     }
   }, [session?.user?.id]);
-
-  // Fetch rankings
-  useEffect(() => {
-    if (session?.user) {
-      fetchRankings();
-    }
-  }, [rankingPeriod, session?.user]);
-
-  const fetchRankings = async () => {
-    try {
-      setRankingLoading(true);
-      const response = await fetch(`/api/rankings?period=${rankingPeriod}`);
-      if (response.ok) {
-        const data = await response.json();
-        setRankings(data.rankings);
-        setMyRank(data.myRank);
-        setMyPostCount(data.myPostCount);
-      }
-    } catch (error) {
-      console.error("Failed to fetch rankings:", error);
-    } finally {
-      setRankingLoading(false);
-    }
-  };
 
   // Check if session is joinable (15 minutes before to session end)
   const isJoinable = (startTime: string, endTime: string) => {
@@ -291,11 +253,6 @@ export default function LearnerDashboard() {
               <p className="text-neutral-600">
                 Practice Japanese with native speakers through 25-minute video sessions
               </p>
-            </div>
-            <div className="hidden md:block">
-              <Link href="/learner/post" className="btn-accent">
-                Post Study Log
-              </Link>
             </div>
           </div>
 
@@ -487,152 +444,6 @@ export default function LearnerDashboard() {
           )}
         </div>
 
-        {/* Ranking Section */}
-        <div className="card mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
-              <span className="text-2xl">🏆</span>
-              Study Log Ranking
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setRankingPeriod("week")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  rankingPeriod === "week"
-                    ? "bg-primary text-white"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Weekly
-              </button>
-              <button
-                onClick={() => setRankingPeriod("month")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  rankingPeriod === "month"
-                    ? "bg-primary text-white"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setRankingPeriod("all")}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  rankingPeriod === "all"
-                    ? "bg-primary text-white"
-                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                }`}
-              >
-                All Time
-              </button>
-            </div>
-          </div>
-
-          {rankingLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-4 p-3 bg-neutral-50 rounded-lg animate-pulse">
-                  <div className="w-8 h-8 bg-neutral-200 rounded-full"></div>
-                  <div className="w-10 h-10 bg-neutral-200 rounded-full"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-neutral-200 rounded w-1/3 mb-1"></div>
-                    <div className="h-3 bg-neutral-200 rounded w-1/4"></div>
-                  </div>
-                  <div className="h-6 bg-neutral-200 rounded w-12"></div>
-                </div>
-              ))}
-            </div>
-          ) : rankings.length > 0 ? (
-            <div className="space-y-3">
-              {rankings.map((rankUser, index) => (
-                <div
-                  key={rankUser.id}
-                  className={`flex items-center gap-4 p-3 rounded-lg transition-colors ${
-                    rankUser.id === session?.user?.id
-                      ? "bg-primary/10 border-2 border-primary"
-                      : "bg-neutral-50 hover:bg-neutral-100"
-                  }`}
-                >
-                  {/* Rank */}
-                  <div className="w-8 text-center font-bold text-lg">
-                    {index === 0 && "🥇"}
-                    {index === 1 && "🥈"}
-                    {index === 2 && "🥉"}
-                    {index > 2 && <span className="text-neutral-500">{index + 1}</span>}
-                  </div>
-
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center overflow-hidden">
-                    {rankUser.avatar ? (
-                      <img src={rankUser.avatar} alt={rankUser.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-white font-bold">
-                        {rankUser.name?.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Name & Country */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-neutral-900 truncate">
-                      {rankUser.name}
-                      {rankUser.id === session?.user?.id && (
-                        <span className="ml-2 text-xs text-primary font-normal">(You)</span>
-                      )}
-                    </p>
-                    {rankUser.country && (
-                      <p className="text-xs text-neutral-500">{rankUser.country}</p>
-                    )}
-                  </div>
-
-                  {/* Post Count */}
-                  <div className="text-right">
-                    <p className="font-bold text-primary text-lg">{rankUser.postCount}</p>
-                    <p className="text-xs text-neutral-500">posts</p>
-                  </div>
-                </div>
-              ))}
-
-              {/* My Rank (if not in top 10) */}
-              {myRank && myRank > 10 && (
-                <div className="mt-4 pt-4 border-t border-neutral-200">
-                  <p className="text-xs text-neutral-500 mb-2">Your Ranking</p>
-                  <div className="flex items-center gap-4 p-3 rounded-lg bg-primary/10 border-2 border-primary">
-                    <div className="w-8 text-center font-bold text-neutral-500">{myRank}</div>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
-                      <span className="text-white font-bold">
-                        {session?.user?.name?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-neutral-900">
-                        {session?.user?.name} <span className="text-xs text-primary">(You)</span>
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-primary text-lg">{myPostCount}</p>
-                      <p className="text-xs text-neutral-500">posts</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-5xl mb-4">📭</div>
-              <p className="text-neutral-600 mb-2">No rankings yet</p>
-              <p className="text-sm text-neutral-500">Be the first to post a study log!</p>
-              <Link href="/learner/post" className="btn-primary mt-4 inline-block">
-                Post Study Log
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Study Post Timeline */}
-        <div className="mb-8">
-          <StudyPostTimeline userId={user.id} />
-        </div>
       </main>
 
       {/* Footer */}

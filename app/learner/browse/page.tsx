@@ -32,6 +32,11 @@ interface Slot {
   host: Host;
 }
 
+interface GroupedHost {
+  host: Host;
+  slots: Slot[];
+}
+
 function BrowseContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -43,12 +48,18 @@ function BrowseContent() {
   const [selectedType, setSelectedType] = useState(initialType);
   const [selectedDate, setSelectedDate] = useState("");
   const [bookingSlotId, setBookingSlotId] = useState<string | null>(null);
+
+  // ホスト詳細モーダル用
+  const [selectedHost, setSelectedHost] = useState<GroupedHost | null>(null);
+  const [showHostModal, setShowHostModal] = useState(false);
+
+  // スライドトピック選択モーダル用
   const [showSlideModal, setShowSlideModal] = useState(false);
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<string | null>(null);
   const [selectedSlideTopic, setSelectedSlideTopic] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "loading") return; // Wait for session to load
+    if (status === "loading") return;
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user?.role !== "learner") {
@@ -86,11 +97,34 @@ function BrowseContent() {
     }
   };
 
+  // ホストごとにスロットをグループ化
+  const groupedHosts: GroupedHost[] = (() => {
+    const hostMap = new Map<string, GroupedHost>();
+    slots.forEach(slot => {
+      const hostId = slot.host.id;
+      if (!hostMap.has(hostId)) {
+        hostMap.set(hostId, {
+          host: slot.host,
+          slots: []
+        });
+      }
+      hostMap.get(hostId)!.slots.push(slot);
+    });
+    return Array.from(hostMap.values());
+  })();
+
+  // ホスト詳細モーダルを開く
+  const handleOpenHostModal = (groupedHost: GroupedHost) => {
+    setSelectedHost(groupedHost);
+    setShowHostModal(true);
+  };
+
   // スライド選択モーダルを開く
   const handleOpenSlideModal = (slotId: string) => {
     setSelectedSlotForBooking(slotId);
     setSelectedSlideTopic(null);
     setShowSlideModal(true);
+    setShowHostModal(false);
   };
 
   // 予約を確定
@@ -143,18 +177,18 @@ function BrowseContent() {
     });
   };
 
-  // Group slots by date
-  const groupedSlots = slots.reduce(
-    (acc, slot) => {
+  // スロットを日付でグループ化（モーダル内用）
+  const groupSlotsByDate = (slots: Slot[]) => {
+    const grouped: Record<string, Slot[]> = {};
+    slots.forEach(slot => {
       const date = new Date(slot.startTime).toDateString();
-      if (!acc[date]) {
-        acc[date] = [];
+      if (!grouped[date]) {
+        grouped[date] = [];
       }
-      acc[date].push(slot);
-      return acc;
-    },
-    {} as Record<string, Slot[]>
-  );
+      grouped[date].push(slot);
+    });
+    return grouped;
+  };
 
   if (status === "loading") {
     return (
@@ -252,111 +286,285 @@ function BrowseContent() {
           </div>
         </div>
 
-        {/* Results */}
+        {/* Results - Host Cards */}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
           </div>
-        ) : slots.length === 0 ? (
+        ) : groupedHosts.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
             <p className="text-5xl mb-4">📭</p>
             <p className="text-xl text-gray-600">
-              No available slots found
+              No available hosts found
             </p>
             <p className="text-gray-500 mt-2">
               Try changing filters or check back later
             </p>
           </div>
         ) : (
-          <div className="space-y-8">
-            {Object.entries(groupedSlots).map(([date, dateSlots]) => (
-              <div key={date}>
-                <h2 className="text-xl font-bold text-gray-800 mb-4">
-                  {formatDate(dateSlots[0].startTime)}
-                </h2>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {dateSlots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className={`bg-white rounded-xl shadow-lg overflow-hidden border-l-4 ${
-                        slot.sessionType === "business"
-                          ? "border-amber-500"
-                          : "border-purple-500"
-                      }`}
-                    >
-                      {/* Host Info */}
-                      <div className="p-4">
-                        <div className="flex items-start gap-3 mb-3">
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
-                              slot.host.role === "senior"
-                                ? "bg-amber-100"
-                                : "bg-purple-100"
-                            }`}
-                          >
-                            {slot.host.role === "senior" ? "🏯" : "🎓"}
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-bold text-gray-900">
-                              {slot.host.name}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              {slot.host.role === "senior"
-                                ? "Senior Professional"
-                                : "University Student"}
-                              {slot.host.university &&
-                                ` • ${slot.host.university}`}
-                            </p>
-                            {slot.host.averageRating > 0 && (
-                              <p className="text-sm text-yellow-600">
-                                ⭐ {slot.host.averageRating.toFixed(1)} (
-                                {slot.host.totalSessions} sessions)
-                              </p>
-                            )}
-                          </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {groupedHosts.map(({ host, slots }) => (
+              <div
+                key={host.id}
+                onClick={() => handleOpenHostModal({ host, slots })}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow border border-gray-100"
+              >
+                <div className="p-6">
+                  <div className="flex gap-4">
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                      {host.avatar ? (
+                        <img
+                          src={host.avatar}
+                          alt={host.name}
+                          className="w-20 h-20 rounded-full object-cover border-2 border-gray-100"
+                        />
+                      ) : (
+                        <div
+                          className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl ${
+                            host.role === "senior"
+                              ? "bg-amber-100"
+                              : "bg-purple-100"
+                          }`}
+                        >
+                          {host.role === "senior" ? "🏯" : "🎓"}
                         </div>
+                      )}
+                    </div>
 
-                        {slot.host.bio && (
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                            {slot.host.bio}
+                    {/* Host Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-bold text-lg text-gray-900">
+                            {host.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {host.role === "senior"
+                              ? "Senior Professional"
+                              : "University Student"}
+                            {host.university && ` • ${host.university}`}
                           </p>
-                        )}
-
-                        {slot.host.interests.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {slot.host.interests.slice(0, 3).map((interest) => (
-                              <span
-                                key={interest}
-                                className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
-                              >
-                                {interest}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Time and Book Button */}
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                          <div>
-                            <p className="font-bold text-lg text-gray-900">
-                              {formatTime(slot.startTime)}
+                        </div>
+                        <div className="text-right">
+                          {host.averageRating > 0 && (
+                            <p className="text-sm font-medium text-yellow-600">
+                              ⭐ {host.averageRating.toFixed(1)}
                             </p>
-                            <p className="text-xs text-gray-500">25 min</p>
-                          </div>
-                          <button
-                            onClick={() => handleOpenSlideModal(slot.id)}
-                            disabled={bookingSlotId === slot.id}
-                            className="px-4 py-2 rounded-lg font-medium transition-colors bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {bookingSlotId === slot.id ? "Booking..." : "Book Now"}
-                          </button>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            {host.totalSessions} sessions
+                          </p>
                         </div>
                       </div>
+
+                      {host.bio && (
+                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                          {host.bio}
+                        </p>
+                      )}
+
+                      {host.interests.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-3">
+                          {host.interests.slice(0, 5).map((interest) => (
+                            <span
+                              key={interest}
+                              className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded-full"
+                            >
+                              {interest}
+                            </span>
+                          ))}
+                          {host.interests.length > 5 && (
+                            <span className="px-2 py-0.5 text-gray-500 text-xs">
+                              +{host.interests.length - 5}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Available slots summary */}
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span className="text-green-500">●</span>
+                      {slots.length} slot{slots.length !== 1 && "s"} available
+                    </div>
+                    <button className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 transition-colors">
+                      View Details
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Host Detail Modal */}
+        {showHostModal && selectedHost && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Host Profile</h2>
+                <button
+                  onClick={() => {
+                    setShowHostModal(false);
+                    setSelectedHost(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <span className="text-xl">✕</span>
+                </button>
+              </div>
+
+              <div className="p-6">
+                {/* Host Profile Section */}
+                <div className="flex gap-6 mb-6">
+                  {/* Large Avatar */}
+                  <div className="flex-shrink-0">
+                    {selectedHost.host.avatar ? (
+                      <img
+                        src={selectedHost.host.avatar}
+                        alt={selectedHost.host.name}
+                        className="w-28 h-28 rounded-full object-cover border-4 border-gray-100"
+                      />
+                    ) : (
+                      <div
+                        className={`w-28 h-28 rounded-full flex items-center justify-center text-5xl ${
+                          selectedHost.host.role === "senior"
+                            ? "bg-amber-100"
+                            : "bg-purple-100"
+                        }`}
+                      >
+                        {selectedHost.host.role === "senior" ? "🏯" : "🎓"}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Host Details */}
+                  <div className="flex-1">
+                    <h3 className="font-bold text-2xl text-gray-900">
+                      {selectedHost.host.name}
+                    </h3>
+                    <p className="text-gray-500 mt-1">
+                      {selectedHost.host.role === "senior"
+                        ? "Senior Professional"
+                        : "University Student"}
+                      {selectedHost.host.university &&
+                        ` • ${selectedHost.host.university}`}
+                      {selectedHost.host.major &&
+                        ` (${selectedHost.host.major})`}
+                    </p>
+
+                    <div className="flex items-center gap-4 mt-3">
+                      {selectedHost.host.averageRating > 0 && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-yellow-500 text-lg">⭐</span>
+                          <span className="font-bold text-gray-900">
+                            {selectedHost.host.averageRating.toFixed(1)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-gray-500">
+                        {selectedHost.host.totalSessions} sessions completed
+                      </div>
+                    </div>
+
+                    {selectedHost.host.languages.length > 0 && (
+                      <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                        <span>🗣️</span>
+                        {selectedHost.host.languages.join(", ")}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bio */}
+                {selectedHost.host.bio && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-2">About</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">
+                      {selectedHost.host.bio}
+                    </p>
+                  </div>
+                )}
+
+                {/* Career History (Senior only) */}
+                {selectedHost.host.careerHistory && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-2">Career History</h4>
+                    <p className="text-gray-600 whitespace-pre-wrap">
+                      {selectedHost.host.careerHistory}
+                    </p>
+                  </div>
+                )}
+
+                {/* Expertise */}
+                {selectedHost.host.expertise.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-2">Expertise</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedHost.host.expertise.map((exp) => (
+                        <span
+                          key={exp}
+                          className="px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm"
+                        >
+                          {exp}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interests */}
+                {selectedHost.host.interests.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-900 mb-2">Interests</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedHost.host.interests.map((interest) => (
+                        <span
+                          key={interest}
+                          className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm"
+                        >
+                          {interest}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Available Slots */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">
+                    Available Time Slots
+                  </h4>
+                  <div className="space-y-4">
+                    {Object.entries(groupSlotsByDate(selectedHost.slots)).map(
+                      ([date, dateSlots]) => (
+                        <div key={date}>
+                          <p className="text-sm font-medium text-gray-500 mb-2">
+                            {formatDate(dateSlots[0].startTime)}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {dateSlots.map((slot) => (
+                              <button
+                                key={slot.id}
+                                onClick={() => handleOpenSlideModal(slot.id)}
+                                disabled={bookingSlotId === slot.id}
+                                className="px-4 py-2 bg-white border-2 border-green-500 text-green-700 rounded-lg font-medium hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {formatTime(slot.startTime)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

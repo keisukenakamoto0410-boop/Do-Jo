@@ -228,3 +228,12 @@ html {
 ::selection {
   background-color: rgba(0, 168, 204, 0.2);
 }
+
+/* Video display mode */
+.video-cover video {
+  object-fit: cover !important;
+}
+.video-contain video {
+  object-fit: contain !important;
+  background-color: #000;
+}

@@ -196,13 +196,14 @@ export default function ProfilePage() {
 
           {/* Name */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Name</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Display Name</h2>
+            <p className="text-sm text-gray-500 mb-4">Nickname is OK</p>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-lg"
-              placeholder="Your Name"
+              placeholder="Your Name or Nickname"
               required
             />
           </div>

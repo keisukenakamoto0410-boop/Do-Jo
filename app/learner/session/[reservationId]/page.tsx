@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import SlideToggleButton from "@/components/video/SlideToggleButton";
 import TargetWordsBar from "@/components/video/TargetWordsBar";
+import SessionChat from "@/components/video/SessionChat";
 import { useSlideSync } from "@/hooks/useSlideSync";
 import { useSessionJoin } from "@/hooks/useSessionJoin";
 import { TOPICS } from "@/components/video/TopicSelector";
@@ -20,6 +21,13 @@ const SlideViewer = dynamic(() => import("@/components/video/SlideViewer"), {
 type IAgoraRTCClient = any;
 type ICameraVideoTrack = any;
 type IMicrophoneAudioTrack = any;
+
+// 残り時間を計算する関数
+const calculateRemainingTime = (sessionStartedAt: Date | null) => {
+  if (!sessionStartedAt) return 25 * 60;
+  const elapsed = Math.floor((Date.now() - new Date(sessionStartedAt).getTime()) / 1000);
+  return Math.max(0, 25 * 60 - elapsed);
+};
 
 export default function SessionPage() {
   const router = useRouter();
@@ -57,10 +65,14 @@ export default function SessionPage() {
   // タイマー開始フラグ
   const [timerStarted, setTimerStarted] = useState(false);
 
+  // ビデオ表示モード（cover: アップ表示, contain: 全体表示）
+  const [videoFit, setVideoFit] = useState<"cover" | "contain">("cover");
+
   // セッション入室管理フック
   const {
     partnerJoined,
     sessionStarted,
+    sessionStartedAt,
     isLoading: joinLoading,
   } = useSessionJoin({
     reservationId,
@@ -108,27 +120,37 @@ export default function SessionPage() {
     };
   }, [client]);
 
-  // Timer - 両者入室後に開始
+  // sessionStartedAt が取得できたら残り時間を計算
+  useEffect(() => {
+    if (sessionStartedAt) {
+      const remaining = calculateRemainingTime(sessionStartedAt);
+      setTimeLeft(remaining);
+      setTimerStarted(true);
+    }
+  }, [sessionStartedAt]);
+
+  // Timer - 両者入室後に開始（sessionStartedAt基準で計算）
   useEffect(() => {
     if (!timerStarted) return;
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) {
+      if (sessionStartedAt) {
+        const remaining = calculateRemainingTime(sessionStartedAt);
+        setTimeLeft(remaining);
+
+        if (remaining <= 0) {
+          clearInterval(interval);
           handleSessionEnd();
-          return 0;
         }
 
-        if (prev === 5 * 60) {
+        if (remaining === 5 * 60) {
           alert("5 minutes remaining!");
         }
-
-        return prev - 1;
-      });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timerStarted]);
+  }, [timerStarted, sessionStartedAt]);
 
   const fetchReservation = async () => {
     try {
@@ -493,7 +515,7 @@ export default function SessionPage() {
         <div className={videoStyles.remote}>
           <div
             ref={remoteVideoRef}
-            className="w-full h-full"
+            className={`w-full h-full ${videoFit === "contain" ? "video-contain" : "video-cover"}`}
             style={{ minHeight: !showSlides ? "400px" : undefined }}
           />
           {remoteUsers.length === 0 && !showSlides && (
@@ -508,9 +530,18 @@ export default function SessionPage() {
             </div>
           )}
           {remoteUsers.length > 0 && !showSlides && (
-            <div className="absolute bottom-4 left-4 bg-black/70 px-4 py-2 rounded-lg text-white font-medium">
-              {reservation?.host?.name || "Host"}
-            </div>
+            <>
+              <div className="absolute bottom-4 left-4 bg-black/70 px-4 py-2 rounded-lg text-white font-medium">
+                {reservation?.host?.name || "Host"}
+              </div>
+              {/* ビデオ表示切り替えボタン */}
+              <button
+                onClick={() => setVideoFit(prev => prev === "cover" ? "contain" : "cover")}
+                className="absolute top-4 left-4 bg-gray-800/70 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+              >
+                {videoFit === "cover" ? "📹 Full View" : "📹 Close-up"}
+              </button>
+            </>
           )}
         </div>
 
@@ -528,6 +559,15 @@ export default function SessionPage() {
         <TargetWordsBar
           targetWords={reservation.targetWords}
           conversationGoal={reservation.conversationGoal}
+          language="en"
+        />
+      )}
+
+      {/* Session Chat */}
+      {session?.user?.id && (
+        <SessionChat
+          reservationId={reservationId}
+          currentUserId={session.user.id}
           language="en"
         />
       )}

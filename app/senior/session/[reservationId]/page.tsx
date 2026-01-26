@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import SlideToggleButton from "@/components/video/SlideToggleButton";
 import SupportHints from "@/components/video/SupportHints";
+import SessionChat from "@/components/video/SessionChat";
 import { useSlideSync } from "@/hooks/useSlideSync";
 import { useSessionJoin } from "@/hooks/useSessionJoin";
 import { TOPICS } from "@/components/video/TopicSelector";
@@ -19,6 +20,13 @@ const SlideViewer = dynamic(() => import("@/components/video/SlideViewer"), {
 type IAgoraRTCClient = any;
 type ICameraVideoTrack = any;
 type IMicrophoneAudioTrack = any;
+
+// 残り時間を計算する関数
+const calculateRemainingTime = (sessionStartedAt: Date | null) => {
+  if (!sessionStartedAt) return 25 * 60;
+  const elapsed = Math.floor((Date.now() - new Date(sessionStartedAt).getTime()) / 1000);
+  return Math.max(0, 25 * 60 - elapsed);
+};
 
 export default function SeniorSessionPage() {
   const router = useRouter();
@@ -52,10 +60,14 @@ export default function SeniorSessionPage() {
   // タイマー開始フラグ
   const [timerStarted, setTimerStarted] = useState(false);
 
+  // ビデオ表示モード（cover: アップ表示, contain: 全体表示）
+  const [videoFit, setVideoFit] = useState<"cover" | "contain">("cover");
+
   // セッション入室管理フック
   const {
     partnerJoined,
     sessionStarted,
+    sessionStartedAt,
     isLoading: joinLoading,
   } = useSessionJoin({
     reservationId,
@@ -103,27 +115,37 @@ export default function SeniorSessionPage() {
     };
   }, [client]);
 
-  // Timer - 両者入室後に開始
+  // sessionStartedAt が取得できたら残り時間を計算
+  useEffect(() => {
+    if (sessionStartedAt) {
+      const remaining = calculateRemainingTime(sessionStartedAt);
+      setTimeLeft(remaining);
+      setTimerStarted(true);
+    }
+  }, [sessionStartedAt]);
+
+  // Timer - 両者入室後に開始（sessionStartedAt基準で計算）
   useEffect(() => {
     if (!timerStarted) return;
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) {
+      if (sessionStartedAt) {
+        const remaining = calculateRemainingTime(sessionStartedAt);
+        setTimeLeft(remaining);
+
+        if (remaining <= 0) {
+          clearInterval(interval);
           handleSessionEnd();
-          return 0;
         }
 
-        if (prev === 5 * 60) {
+        if (remaining === 5 * 60) {
           alert("あと5分です！");
         }
-
-        return prev - 1;
-      });
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timerStarted]);
+  }, [timerStarted, sessionStartedAt]);
 
   const fetchReservation = async () => {
     try {
@@ -471,7 +493,7 @@ export default function SeniorSessionPage() {
         <div className={videoStyles.remote}>
           <div
             ref={remoteVideoRef}
-            className="w-full h-full"
+            className={`w-full h-full ${videoFit === "contain" ? "video-contain" : "video-cover"}`}
             style={{ minHeight: !showSlides ? "400px" : undefined }}
           />
           {remoteUsers.length === 0 && !showSlides && (
@@ -486,9 +508,18 @@ export default function SeniorSessionPage() {
             </div>
           )}
           {remoteUsers.length > 0 && !showSlides && reservation?.learner && (
-            <div className="absolute bottom-6 left-6 bg-black/70 px-4 py-2 rounded-lg text-white font-bold text-lg">
-              {reservation.learner.name}さん
-            </div>
+            <>
+              <div className="absolute bottom-6 left-6 bg-black/70 px-4 py-2 rounded-lg text-white font-bold text-lg">
+                {reservation.learner.name}さん
+              </div>
+              {/* ビデオ表示切り替えボタン */}
+              <button
+                onClick={() => setVideoFit(prev => prev === "cover" ? "contain" : "cover")}
+                className="absolute top-4 left-4 bg-gray-800/70 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+              >
+                {videoFit === "cover" ? "📹 全体表示" : "📹 アップ表示"}
+              </button>
+            </>
           )}
         </div>
 
@@ -506,6 +537,15 @@ export default function SeniorSessionPage() {
         <SupportHints
           targetWords={reservation.targetWords}
           learnerName={reservation.learner?.name}
+        />
+      )}
+
+      {/* Session Chat */}
+      {session?.user?.id && (
+        <SessionChat
+          reservationId={reservationId}
+          currentUserId={session.user.id}
+          language="ja"
         />
       )}
     </div>

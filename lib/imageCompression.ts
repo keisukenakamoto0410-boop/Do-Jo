@@ -9,8 +9,8 @@ export interface CompressionOptions {
 }
 
 const defaultOptions: CompressionOptions = {
-  maxWidthOrHeight: 400,
-  maxSizeMB: 0.1, // 100KB
+  maxWidthOrHeight: 800,
+  maxSizeMB: 0.2, // 200KB
   useWebWorker: true,
   fileType: 'image/webp',
   initialQuality: 0.8,
@@ -18,8 +18,8 @@ const defaultOptions: CompressionOptions = {
 
 /**
  * Compress an image file for avatar upload
- * - Max width: 400px
- * - Max file size: 100KB
+ * - Max width: 800px
+ * - Max file size: 200KB
  * - Format: WebP (with JPEG fallback)
  * - Quality: 80%
  */

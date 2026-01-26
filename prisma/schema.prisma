@@ -87,6 +87,7 @@ model User {
   comments                Comment[]
   conversationHistories   ConversationHistory[]
   medals                  UserMedal[]
+  sessionMessages         SessionMessage[]
 
   @@index([email])
   @@index([role])
@@ -179,6 +180,7 @@ model Reservation {
   studyLogs   StudyLog[]
   sessionFeedback SessionFeedback?
   detailedFeedback DetailedFeedback?
+  messages    SessionMessage[]
 
   @@index([learnerId])
   @@index([hostId])
@@ -528,4 +530,19 @@ model ThankYouMessage {
   @@index([hostId, isRead])
   @@index([learnerId])
   @@map("thank_you_messages")
+}
+
+// セッション中のチャットメッセージ
+model SessionMessage {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  senderId      String
+  sender        User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content       String
+  createdAt     DateTime    @default(now())
+
+  @@index([reservationId])
+  @@index([senderId])
+  @@map("session_messages")
 }

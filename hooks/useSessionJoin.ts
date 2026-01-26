@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface UseSessionJoinProps {
   reservationId: string;
@@ -17,7 +17,7 @@ interface JoinState {
   error: string | null;
 }
 
-// 初回のjoin通知のみ行う（ポーリングなし）
+// sessionStartedAtが取得できるまでポーリング
 export function useSessionJoin({
   reservationId,
   isHost,
@@ -32,43 +32,63 @@ export function useSessionJoin({
     error: null,
   });
 
-  const calledRef = useRef(false);
+  const onBothJoinedRef = useRef(onBothJoined);
+  onBothJoinedRef.current = onBothJoined;
 
   useEffect(() => {
-    // 1回だけ実行
-    if (calledRef.current) return;
-    calledRef.current = true;
+    let isMounted = true;
+    let intervalId: NodeJS.Timeout | null = null;
 
-    const joinOnce = async () => {
+    const joinAndCheck = async () => {
       try {
         const res = await fetch(`/api/reservations/${reservationId}/join`, {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isHost }),
         });
 
         if (res.ok) {
           const data = await res.json();
-          setState({
-            learnerJoined: data.learnerJoined,
-            hostJoined: data.hostJoined,
-            sessionStarted: data.sessionStarted,
-            sessionStartedAt: data.sessionStartedAt ? new Date(data.sessionStartedAt) : null,
-            isLoading: false,
-            error: null,
-          });
+          if (isMounted) {
+            setState({
+              learnerJoined: data.learnerJoined,
+              hostJoined: data.hostJoined,
+              sessionStarted: data.sessionStarted,
+              sessionStartedAt: data.sessionStartedAt ? new Date(data.sessionStartedAt) : null,
+              isLoading: false,
+              error: null,
+            });
 
-          if (data.sessionStarted || data.bothJoined) {
-            onBothJoined?.();
+            // 両者入室したらポーリング停止
+            if (data.sessionStarted && data.sessionStartedAt) {
+              if (intervalId) clearInterval(intervalId);
+              onBothJoinedRef.current?.();
+            }
           }
         } else {
+          if (isMounted) {
+            setState(prev => ({ ...prev, isLoading: false }));
+          }
+        }
+      } catch (error) {
+        console.error("Join error:", error);
+        if (isMounted) {
           setState(prev => ({ ...prev, isLoading: false }));
         }
-      } catch {
-        setState(prev => ({ ...prev, isLoading: false }));
       }
     };
 
-    joinOnce();
-  }, []); // 空の依存配列 - マウント時に1回だけ
+    // 初回実行
+    joinAndCheck();
+
+    // sessionStartedAtが取得できるまで3秒ごとにチェック
+    intervalId = setInterval(joinAndCheck, 3000);
+
+    return () => {
+      isMounted = false;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [reservationId, isHost]);
 
   return {
     ...state,

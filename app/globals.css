@@ -232,6 +232,7 @@ html {
 /* Video display mode */
 .video-cover video {
   object-fit: cover !important;
+  object-position: center top !important; /* 顔（上部）を優先表示 */
 }
 .video-contain video {
   object-fit: contain !important;

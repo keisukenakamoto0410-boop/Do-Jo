@@ -56,7 +56,7 @@ export default function SessionChat({
   // 初回取得とポーリング
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000); // 3秒ごとに更新
+    const interval = setInterval(fetchMessages, 2000); // 2秒ごとに更新
     return () => clearInterval(interval);
   }, [reservationId]);
 
@@ -75,24 +75,33 @@ export default function SessionChat({
     }
   }, [messages, expanded]);
 
-  // メッセージ送信
+  // メッセージ送信（楽観的更新）
   const handleSend = async () => {
     if (!newMessage.trim() || sending) return;
 
+    const tempMessage: Message = {
+      id: `temp-${Date.now()}`,
+      content: newMessage.trim(),
+      createdAt: new Date().toISOString(),
+      sender: { id: currentUserId, name: "You", avatar: null },
+    };
+
+    // 即時表示（楽観的更新）
+    setMessages(prev => [...prev, tempMessage]);
+    setNewMessage("");
+
     setSending(true);
     try {
-      const res = await fetch(`/api/reservations/${reservationId}/messages`, {
+      await fetch(`/api/reservations/${reservationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newMessage.trim() }),
+        body: JSON.stringify({ content: tempMessage.content }),
       });
-
-      if (res.ok) {
-        setNewMessage("");
-        fetchMessages();
-      }
+      // 次のポーリングで正式なメッセージに置き換わる
     } catch (error) {
       console.error("Failed to send message:", error);
+      // エラー時は一時メッセージを削除
+      setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
     } finally {
       setSending(false);
     }

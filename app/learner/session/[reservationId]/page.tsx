@@ -3,19 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import dynamic from "next/dynamic";
-import SlideToggleButton from "@/components/video/SlideToggleButton";
 import TargetWordsBar from "@/components/video/TargetWordsBar";
 import SessionChat from "@/components/video/SessionChat";
-import { useSlideSync } from "@/hooks/useSlideSync";
 import { useSessionJoin } from "@/hooks/useSessionJoin";
-import { TOPICS } from "@/components/video/TopicSelector";
 import { NewMedalsModal } from "@/components/MedalDisplay";
-
-// SlideViewerを動的インポート（SSR無効）
-const SlideViewer = dynamic(() => import("@/components/video/SlideViewer"), {
-  ssr: false,
-});
 
 // Agora type definitions (for dynamic import)
 type IAgoraRTCClient = any;
@@ -35,7 +26,7 @@ export default function SessionPage() {
   const reservationId = params.reservationId as string;
   const { data: session } = useSession();
 
-  // Video refs - 一つだけ使用
+  // Video refs
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLDivElement>(null);
 
@@ -52,11 +43,6 @@ export default function SessionPage() {
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [reservation, setReservation] = useState<any>(null);
   const [agoraInitialized, setAgoraInitialized] = useState(false);
-
-  // スライド関連の状態
-  const [showSlides, setShowSlides] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(false);
 
   // メダル関連の状態
   const [earnedMedals, setEarnedMedals] = useState<string[]>([]);
@@ -81,25 +67,6 @@ export default function SessionPage() {
       setTimerStarted(true);
     },
   });
-
-  // スライド同期フック
-  const { currentSlide, slideTopic, changeSlide } = useSlideSync({
-    reservationId,
-    isHost: false,
-    initialTopic: reservation?.slideTopic,
-  });
-
-  // 画面サイズ検出
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth <= 768);
-      setIsLandscape(window.innerWidth > window.innerHeight);
-    };
-
-    checkScreenSize();
-    window.addEventListener("resize", checkScreenSize);
-    return () => window.removeEventListener("resize", checkScreenSize);
-  }, []);
 
   useEffect(() => {
     fetchReservation();
@@ -228,7 +195,6 @@ export default function SessionPage() {
             setRemoteUsers((prev: any[]) => {
               const existing = prev.find((u) => u.uid === user.uid);
               if (existing) {
-                // Update existing user with new video track
                 return prev.map((u) => u.uid === user.uid ? user : u);
               }
               return [...prev, user];
@@ -359,45 +325,11 @@ export default function SessionPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // トピック情報を取得
-  const topicInfo = slideTopic
-    ? TOPICS.find((t) => t.id === slideTopic)
-    : null;
-
-  // レイアウトに応じたビデオコンテナのスタイル
-  const getVideoContainerStyle = () => {
-    if (!showSlides || !slideTopic) {
-      // スライド非表示：フルスクリーン
-      return {
-        remote: "absolute inset-4 rounded-xl overflow-hidden bg-gray-800",
-        local: "absolute bottom-8 right-8 w-48 h-36 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700 bg-gray-800 z-20",
-      };
-    }
-
-    if (isMobile && !isLandscape) {
-      // スマホ縦向き
-      return {
-        remote: "absolute top-4 right-4 w-24 h-20 rounded-lg overflow-hidden shadow-xl border border-gray-600 bg-gray-800 z-20",
-        local: "absolute top-28 right-4 w-20 h-16 rounded-lg overflow-hidden shadow-xl border border-gray-600 bg-gray-800 z-20",
-      };
-    }
-
-    if (isMobile && isLandscape) {
-      // スマホ横向き
-      return {
-        remote: "absolute left-2 top-2 w-[18%] h-[calc(100%-100px)] rounded-lg overflow-hidden bg-gray-800 z-20",
-        local: "absolute left-2 bottom-2 w-[18%] h-20 rounded-lg overflow-hidden bg-gray-800 z-20",
-      };
-    }
-
-    // PC
-    return {
-      remote: "absolute top-6 right-6 w-48 h-36 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-600 bg-gray-800 z-20",
-      local: "absolute top-48 right-6 w-48 h-28 rounded-xl overflow-hidden shadow-xl border border-gray-600 bg-gray-800 z-20",
-    };
+  // ビデオコンテナのスタイル（シンプル化）
+  const videoStyles = {
+    remote: "absolute inset-4 rounded-xl overflow-hidden bg-gray-800",
+    local: "absolute bottom-8 right-8 w-48 h-36 rounded-xl overflow-hidden shadow-2xl border-2 border-gray-700 bg-gray-800 z-20",
   };
-
-  const videoStyles = getVideoContainerStyle();
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col relative">
@@ -454,23 +386,6 @@ export default function SessionPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* スライドトグルボタン */}
-          {slideTopic && (
-            <SlideToggleButton
-              isOpen={showSlides}
-              onToggle={() => setShowSlides(!showSlides)}
-              language="en"
-            />
-          )}
-
-          {/* トピック表示 */}
-          {topicInfo && (
-            <div className="hidden md:flex items-center gap-2 bg-gray-700 px-3 py-2 rounded-lg">
-              <span>{topicInfo.emoji}</span>
-              <span className="text-white text-sm">{topicInfo.nameEn}</span>
-            </div>
-          )}
-
           {/* Timer / Waiting Status */}
           {timerStarted ? (
             <div
@@ -498,27 +413,14 @@ export default function SessionPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 relative">
-        {/* Slide Viewer (背景) */}
-        {showSlides && slideTopic && (
-          <div className="absolute inset-0 p-4">
-            <SlideViewer
-              topic={slideTopic}
-              isHost={false}
-              reservationId={reservationId}
-              currentSlide={currentSlide}
-              onSlideChange={changeSlide}
-            />
-          </div>
-        )}
-
-        {/* Remote Video - 常に同じ要素、スタイルだけ変更 */}
+        {/* Remote Video */}
         <div className={videoStyles.remote}>
           <div
             ref={remoteVideoRef}
             className={`w-full h-full ${videoFit === "contain" ? "video-contain" : "video-cover"}`}
-            style={{ minHeight: !showSlides ? "400px" : undefined }}
+            style={{ minHeight: "400px" }}
           />
-          {remoteUsers.length === 0 && !showSlides && (
+          {remoteUsers.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center text-white bg-gray-900/50">
               <div className="text-center">
                 <div className="text-6xl mb-4">👋</div>
@@ -529,7 +431,7 @@ export default function SessionPage() {
               </div>
             </div>
           )}
-          {remoteUsers.length > 0 && !showSlides && (
+          {remoteUsers.length > 0 && (
             <>
               <div className="absolute bottom-4 left-4 bg-black/70 px-4 py-2 rounded-lg text-white font-medium">
                 {reservation?.host?.name || "Host"}
@@ -545,7 +447,7 @@ export default function SessionPage() {
           )}
         </div>
 
-        {/* Local Video - 常に同じ要素、スタイルだけ変更 */}
+        {/* Local Video */}
         <div className={videoStyles.local}>
           <div ref={localVideoRef} className="w-full h-full" />
           <div className="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-white text-xs">

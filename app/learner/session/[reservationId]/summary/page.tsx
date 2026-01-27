@@ -14,7 +14,10 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  Send,
+  History,
 } from "lucide-react";
+import Link from "next/link";
 
 interface DetailedFeedback {
   id: string;
@@ -67,6 +70,7 @@ export default function SessionSummaryPage() {
   const [feedback, setFeedback] = useState<DetailedFeedback | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [thankYouSent, setThankYouSent] = useState(false);
 
   useEffect(() => {
     if (authStatus === "unauthenticated") {
@@ -99,6 +103,15 @@ export default function SessionSummaryPage() {
           const feedbackData = await feedbackRes.json();
           setFeedback(feedbackData.detailedFeedback);
         }
+      }
+
+      // Check if thank you message has been sent
+      const thankYouRes = await fetch(
+        `/api/reservations/${reservationId}/thank-you`
+      );
+      if (thankYouRes.ok) {
+        const thankYouData = await thankYouRes.json();
+        setThankYouSent(!!thankYouData.thankYouMessage);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -393,10 +406,68 @@ export default function SessionSummaryPage() {
           </div>
         </div>
 
+        {/* Thank You Section */}
+        <div className={`rounded-2xl p-6 shadow-lg ${
+          thankYouSent
+            ? "bg-green-50 border-2 border-green-200"
+            : "bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200"
+        }`}>
+          {thankYouSent ? (
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <h2 className="text-lg font-bold text-green-700">
+                  Thank You Sent!
+                </h2>
+              </div>
+              <p className="text-green-600 text-sm">
+                Your thank you message has been delivered to {reservation?.host.name}-san
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <Send className="w-5 h-5 text-orange-500" />
+                <h2 className="text-lg font-bold text-gray-800">
+                  Send a Thank You!
+                </h2>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                Show your appreciation to {reservation?.host.name}-san for their time and feedback.
+                A simple thank you goes a long way!
+              </p>
+              <Link
+                href={`/learner/session/${reservationId}/thank-you`}
+                className="block w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white py-4 rounded-xl font-bold text-center hover:from-orange-600 hover:to-amber-600 transition shadow-lg"
+              >
+                Write a Thank You Message
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Your Progress Link */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <History className="w-5 h-5 text-sky-500" />
+            <h2 className="text-lg font-bold text-gray-800">Your Progress</h2>
+          </div>
+          <p className="text-gray-600 text-sm mb-4">
+            View all your past sessions and track your Japanese learning journey.
+          </p>
+          <Link
+            href="/learner/dashboard#sessions"
+            className="flex items-center justify-between p-4 bg-sky-50 rounded-xl hover:bg-sky-100 transition"
+          >
+            <span className="font-medium text-sky-700">View Past Sessions</span>
+            <ArrowRight className="w-5 h-5 text-sky-500" />
+          </Link>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex flex-col gap-3">
           <button
-            onClick={() => router.push("/learner/find")}
+            onClick={() => router.push("/learner/browse")}
             className="w-full bg-sky-500 text-white py-4 rounded-xl font-bold hover:bg-sky-600 transition shadow-lg"
           >
             Book Another Session

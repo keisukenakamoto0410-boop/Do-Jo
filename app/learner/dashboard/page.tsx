@@ -527,7 +527,7 @@ export default function LearnerDashboard() {
         </div>
 
         {/* Your Progress / Feedback History */}
-        <div className="card mb-8">
+        <div id="sessions" className="card mb-8">
           <h2 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
             <span className="text-2xl">📊</span>
             Your Progress
@@ -545,10 +545,10 @@ export default function LearnerDashboard() {
                 {completedReservations.length !== 1 ? "s" : ""}!
               </p>
               <div className="space-y-3 mb-4">
-                {completedReservations.slice(0, 3).map((reservation) => (
+                {completedReservations.slice(0, 5).map((reservation) => (
                   <div
                     key={reservation.id}
-                    className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl"
+                    className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl hover:bg-neutral-100 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold text-sm">
@@ -563,27 +563,23 @@ export default function LearnerDashboard() {
                         </p>
                       </div>
                     </div>
-                    {reservation.sessionFeedback ? (
+                    <div className="flex items-center gap-2">
                       <Link
-                        href={`/learner/feedback/${reservation.id}`}
-                        className="px-3 py-1.5 bg-green-100 text-green-700 text-sm font-medium rounded-lg hover:bg-green-200 transition-colors"
+                        href={`/learner/session/${reservation.id}/summary`}
+                        className="px-3 py-1.5 bg-sky-100 text-sky-700 text-sm font-medium rounded-lg hover:bg-sky-200 transition-colors"
                       >
-                        View Feedback
+                        View Summary
                       </Link>
-                    ) : (
-                      <span className="px-3 py-1.5 bg-gray-100 text-gray-500 text-sm rounded-lg">
-                        Awaiting feedback
-                      </span>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
-              {completedReservations.length > 3 && (
+              {completedReservations.length > 5 && (
                 <Link
                   href="/learner/reservations"
-                  className="text-primary hover:text-primary-dark font-medium text-sm"
+                  className="block text-center py-3 text-primary hover:text-primary-dark font-medium text-sm"
                 >
-                  View all completed sessions →
+                  View all {completedReservations.length} completed sessions →
                 </Link>
               )}
             </div>

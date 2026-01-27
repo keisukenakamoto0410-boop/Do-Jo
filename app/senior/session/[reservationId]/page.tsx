@@ -47,7 +47,7 @@ export default function SeniorSessionPage() {
   const [timerStarted, setTimerStarted] = useState(false);
 
   // ビデオ表示モード（cover: アップ表示, contain: 全体表示）
-  const [videoFit, setVideoFit] = useState<"cover" | "contain">("cover");
+  const [videoFit, setVideoFit] = useState<"cover" | "contain">("contain");
 
   // セッション入室管理フック
   const {
@@ -236,11 +236,11 @@ export default function SeniorSessionPage() {
           { encoderConfig: "music_standard" },
           {
             encoderConfig: {
-              width: 640,
+              width: 480,
               height: 480,
               frameRate: 15,
-              bitrateMin: 600,
-              bitrateMax: 1000,
+              bitrateMin: 400,
+              bitrateMax: 800,
             },
           }
         );

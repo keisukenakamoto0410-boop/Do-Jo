@@ -35,6 +35,12 @@ model User {
   textbook        String?   // 使用教科書 "minna_no_nihongo" | "genki" | etc.
   currentLesson   Int?      // 現在の課
 
+  // 地元自慢（Learner用）
+  hometownFood      String?   // 地元の自慢料理名
+  hometownFoodDesc  String?   // 料理の説明（日本語）
+  hometownPlace     String?   // おすすめ観光地名
+  hometownPlaceDesc String?   // 観光地の説明（日本語）
+
   // 日本人シニア用フィールド
   careerHistory   String?   @db.Text  // これまでの経歴
   expertise       String[]  // 得意分野 ["営業", "人事", "製造"]
@@ -545,4 +551,20 @@ model SessionMessage {
   @@index([reservationId])
   @@index([senderId])
   @@map("session_messages")
+}
+
+// 商品マッピング（地元料理→Amazon商品）
+model ProductMapping {
+  id          String   @id @default(cuid())
+  keyword     String   @unique  // 検索キーワード（例: "pho", "tacos"）
+  amazonUrl   String             // Amazon商品URL
+  productName String             // 商品名
+  category    String   @default("food")  // カテゴリ
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([keyword])
+  @@index([isActive])
+  @@map("product_mappings")
 }

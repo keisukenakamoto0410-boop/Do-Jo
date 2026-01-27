@@ -5,6 +5,25 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
+interface ProductMapping {
+  id: string;
+  keyword: string;
+  amazonUrl: string;
+  productName: string;
+  category: string;
+}
+
+interface Learner {
+  id: string;
+  name: string;
+  avatar: string | null;
+  country: string | null;
+  hometownFood: string | null;
+  hometownFoodDesc: string | null;
+  hometownPlace: string | null;
+  hometownPlaceDesc: string | null;
+}
+
 interface ThankYouMessage {
   id: string;
   reservationId: string;
@@ -14,6 +33,8 @@ interface ThankYouMessage {
   emoji: string | null;
   isRead: boolean;
   createdAt: string;
+  learner?: Learner | null;
+  matchedProduct?: ProductMapping | null;
 }
 
 export default function MessagesPage() {
@@ -210,6 +231,50 @@ export default function MessagesPage() {
                 {selectedMessage.message}
               </p>
             </div>
+
+            {/* 学習者の地元自慢セクション */}
+            {selectedMessage.learner?.hometownFood && (
+              <div className="bg-orange-50 rounded-xl p-4 mb-4">
+                <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
+                  <span>🍜</span>
+                  {selectedMessage.learnerName}さんの地元の味
+                </h3>
+                <p className="text-orange-700 font-medium">
+                  {selectedMessage.learner.hometownFood}
+                </p>
+                {selectedMessage.learner.hometownFoodDesc && (
+                  <p className="text-orange-600 text-sm mt-1">
+                    {selectedMessage.learner.hometownFoodDesc}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 商品バナー */}
+            {selectedMessage.matchedProduct && (
+              <a
+                href={selectedMessage.matchedProduct.amazonUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-orange-200 rounded-xl p-4 mb-4 hover:border-orange-400 transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">🛒</div>
+                  <div className="flex-1">
+                    <p className="text-xs text-orange-600 font-medium mb-1">
+                      {selectedMessage.learnerName}さんの地元の味を日本でも!
+                    </p>
+                    <p className="font-bold text-orange-900 group-hover:text-orange-700 transition">
+                      {selectedMessage.matchedProduct.productName}
+                    </p>
+                    <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                      <span>Amazonで見る</span>
+                      <span className="group-hover:translate-x-1 transition-transform">→</span>
+                    </p>
+                  </div>
+                </div>
+              </a>
+            )}
 
             <button
               onClick={() => setSelectedMessage(null)}

@@ -13,13 +13,26 @@ interface StudyLog {
   uploadedAt: string;
 }
 
+interface LearnerProfile {
+  id: string;
+  name: string;
+  avatar: string | null;
+  country: string | null;
+  hometownFood: string | null;
+  hometownFoodDesc: string | null;
+  hometownPlace: string | null;
+  hometownPlaceDesc: string | null;
+}
+
 interface ThankYouMessage {
   id: string;
+  learnerId: string;
   learnerName: string;
   message: string;
   emoji: string | null;
   isRead: boolean;
   createdAt: string;
+  learner?: LearnerProfile;
 }
 
 interface Reservation {
@@ -75,6 +88,7 @@ export default function SeniorDashboard() {
   const [thankYouMessages, setThankYouMessages] = useState<ThankYouMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [activeTab, setActiveTab] = useState<"schedule" | "thanks">("thanks");
+  const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
 
   // Slot management state
   const [mySlots, setMySlots] = useState<Slot[]>([]);
@@ -454,43 +468,131 @@ export default function SeniorDashboard() {
               </p>
             </div>
           ) : (
-            thankYouMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`bg-white border-2 rounded-2xl p-6 transition-colors ${
-                  message.isRead
-                    ? "border-gray-200"
-                    : "border-orange-300 bg-orange-50"
-                }`}
-                onClick={() => !message.isRead && handleMarkAsRead(message.id)}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="text-4xl">
-                    {message.emoji || "🙏"}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xl font-bold text-gray-900">
-                        {message.learnerName} さんより
-                      </h3>
-                      <span className="text-gray-500 text-sm">
-                        {formatRelativeTime(message.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-lg text-gray-700 whitespace-pre-wrap">
-                      {message.message}
-                    </p>
-                    {!message.isRead && (
-                      <div className="mt-3">
-                        <span className="px-3 py-1 bg-orange-500 text-white text-sm font-medium rounded-full">
-                          NEW
-                        </span>
+            thankYouMessages.map((message) => {
+              const isExpanded = expandedMessageId === message.id;
+              return (
+                <div
+                  key={message.id}
+                  className={`bg-white border-2 rounded-2xl overflow-hidden transition-all ${
+                    message.isRead
+                      ? "border-gray-200"
+                      : "border-orange-300 bg-orange-50"
+                  }`}
+                >
+                  {/* Collapsed Header - Always Visible */}
+                  <div
+                    className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => {
+                      if (!message.isRead) handleMarkAsRead(message.id);
+                      setExpandedMessageId(isExpanded ? null : message.id);
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Avatar */}
+                      <div className="w-14 h-14 rounded-full bg-sky-100 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+                        {message.learner?.avatar ? (
+                          <img
+                            src={message.learner.avatar}
+                            alt={message.learnerName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          message.emoji || "🙏"
+                        )}
                       </div>
-                    )}
+
+                      {/* Name and Date */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-gray-900 truncate">
+                            {message.learnerName} さん
+                          </h3>
+                          {!message.isRead && (
+                            <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-medium rounded-full flex-shrink-0">
+                              NEW
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {formatRelativeTime(message.createdAt)}
+                        </p>
+                      </div>
+
+                      {/* Toggle Button */}
+                      <button className="text-gray-400 hover:text-gray-600 transition-colors p-2">
+                        <span className={`text-xl transform transition-transform ${isExpanded ? "rotate-180" : ""}`}>
+                          ▼
+                        </span>
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-200 p-6 bg-white">
+                      {/* Message Content */}
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-gray-500 mb-2">💬 メッセージ</h4>
+                        <p className="text-lg text-gray-700 whitespace-pre-wrap bg-gray-50 p-4 rounded-xl">
+                          {message.message}
+                        </p>
+                      </div>
+
+                      {/* Hometown Pride Section */}
+                      {(message.learner?.hometownFood || message.learner?.hometownPlace) && (
+                        <div className="border-t border-gray-200 pt-6">
+                          <h4 className="text-sm font-medium text-gray-500 mb-4">
+                            🌍 {message.learnerName}さんの地元の自慢
+                          </h4>
+
+                          {message.learner?.hometownFood && (
+                            <div className="mb-4 bg-orange-50 p-4 rounded-xl">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xl">🍛</span>
+                                <span className="font-bold text-gray-900">{message.learner.hometownFood}</span>
+                              </div>
+                              {message.learner.hometownFoodDesc && (
+                                <p className="text-gray-600 ml-7">{message.learner.hometownFoodDesc}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {message.learner?.hometownPlace && (
+                            <div className="bg-sky-50 p-4 rounded-xl">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xl">🏛️</span>
+                                <span className="font-bold text-gray-900">{message.learner.hometownPlace}</span>
+                              </div>
+                              {message.learner.hometownPlaceDesc && (
+                                <p className="text-gray-600 ml-7">{message.learner.hometownPlaceDesc}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Hint */}
+                          <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <p className="text-sm text-yellow-800">
+                              💝 {message.learnerName}さんの故郷について、次の会話で聞いてみましょう！
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Country info if no hometown but has country */}
+                      {message.learner?.country && !message.learner?.hometownFood && !message.learner?.hometownPlace && (
+                        <div className="border-t border-gray-200 pt-6">
+                          <div className="bg-gray-50 p-4 rounded-xl">
+                            <p className="text-gray-600">
+                              🌍 出身: <span className="font-medium">{message.learner.country}</span>
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

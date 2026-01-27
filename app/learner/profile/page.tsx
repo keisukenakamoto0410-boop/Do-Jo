@@ -39,6 +39,12 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [bioWarning, setBioWarning] = useState(false);
 
+  // 地元自慢
+  const [hometownFood, setHometownFood] = useState("");
+  const [hometownFoodDesc, setHometownFoodDesc] = useState("");
+  const [hometownPlace, setHometownPlace] = useState("");
+  const [hometownPlaceDesc, setHometownPlaceDesc] = useState("");
+
   useEffect(() => {
     if (session?.user) {
       fetchProfile();
@@ -69,6 +75,10 @@ export default function ProfilePage() {
       setCountry(data.country || "");
       setJlptLevel(data.jlptLevel || "");
       setLearningGoal(data.learningGoal || "");
+      setHometownFood(data.hometownFood || "");
+      setHometownFoodDesc(data.hometownFoodDesc || "");
+      setHometownPlace(data.hometownPlace || "");
+      setHometownPlaceDesc(data.hometownPlaceDesc || "");
     } catch (error) {
       console.error("Failed to fetch profile:", error);
     } finally {
@@ -106,6 +116,10 @@ export default function ProfilePage() {
       formData.append("country", country);
       formData.append("jlptLevel", jlptLevel);
       formData.append("learningGoal", learningGoal);
+      formData.append("hometownFood", hometownFood);
+      formData.append("hometownFoodDesc", hometownFoodDesc);
+      formData.append("hometownPlace", hometownPlace);
+      formData.append("hometownPlaceDesc", hometownPlaceDesc);
       if (avatar) {
         formData.append("avatar", avatar);
       }
@@ -312,6 +326,73 @@ ITエンジニアとして働いています。
             <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
               <p className="text-sm text-amber-800">
                 💡 日本語で書くと、日本人の方があなたのことを理解しやすくなります。
+              </p>
+            </div>
+          </div>
+
+          {/* Hometown Pride Section */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">
+              🌍 Share Your Hometown
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Tell Japanese seniors about your hometown! This helps them learn about your culture.
+            </p>
+
+            {/* Famous Food */}
+            <div className="mb-6">
+              <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                <span className="text-xl">🍛</span>
+                My Hometown&apos;s Famous Food
+              </h3>
+              <input
+                type="text"
+                value={hometownFood}
+                onChange={(e) => setHometownFood(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-2"
+                placeholder="e.g., ビリヤニ, パエリア, フォー..."
+              />
+              <label className="block text-sm text-gray-600 mb-1">
+                Describe it in Japanese:
+              </label>
+              <input
+                type="text"
+                value={hometownFoodDesc}
+                onChange={(e) => setHometownFoodDesc(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                placeholder="e.g., スパイスたっぷりの炊き込みご飯です"
+              />
+            </div>
+
+            {/* Must-Visit Place */}
+            <div className="mb-4">
+              <h3 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                <span className="text-xl">🏛️</span>
+                Must-Visit Place in My Hometown
+              </h3>
+              <input
+                type="text"
+                value={hometownPlace}
+                onChange={(e) => setHometownPlace(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent mb-2"
+                placeholder="e.g., バックウォーター, アンコールワット..."
+              />
+              <label className="block text-sm text-gray-600 mb-1">
+                Describe it in Japanese:
+              </label>
+              <input
+                type="text"
+                value={hometownPlaceDesc}
+                onChange={(e) => setHometownPlaceDesc(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                placeholder="e.g., 美しい水郷地帯です"
+              />
+            </div>
+
+            {/* Hint */}
+            <div className="p-3 bg-sky-50 rounded-lg border border-sky-200">
+              <p className="text-sm text-sky-800">
+                💡 This helps Japanese seniors learn about your culture and gives you topics to talk about!
               </p>
             </div>
           </div>

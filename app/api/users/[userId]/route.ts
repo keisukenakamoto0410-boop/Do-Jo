@@ -43,6 +43,11 @@ export async function GET(
         careerHistory: true,
         expertise: true,
         expertiseTopics: true,
+        // 地元自慢
+        hometownFood: true,
+        hometownFoodDesc: true,
+        hometownPlace: true,
+        hometownPlaceDesc: true,
       },
     });
 
@@ -87,6 +92,11 @@ export async function PATCH(
     const jlptLevel = formData.get("jlptLevel") as string | null;
     const learningGoal = formData.get("learningGoal") as string | null;
     const nameKatakana = formData.get("nameKatakana") as string | null;
+    // 地元自慢フィールド
+    const hometownFood = formData.get("hometownFood") as string | null;
+    const hometownFoodDesc = formData.get("hometownFoodDesc") as string | null;
+    const hometownPlace = formData.get("hometownPlace") as string | null;
+    const hometownPlaceDesc = formData.get("hometownPlaceDesc") as string | null;
 
     let avatarUrl: string | undefined = undefined;
 
@@ -182,6 +192,11 @@ export async function PATCH(
         ...(country !== null && { country: country || null }),
         ...(jlptLevel !== null && { jlptLevel: jlptLevel || null }),
         ...(learningGoal !== null && { learningGoal: learningGoal || null }),
+        // 地元自慢フィールド
+        ...(hometownFood !== null && { hometownFood: hometownFood || null }),
+        ...(hometownFoodDesc !== null && { hometownFoodDesc: hometownFoodDesc || null }),
+        ...(hometownPlace !== null && { hometownPlace: hometownPlace || null }),
+        ...(hometownPlaceDesc !== null && { hometownPlaceDesc: hometownPlaceDesc || null }),
       },
     });
 

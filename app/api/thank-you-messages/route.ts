@@ -14,8 +14,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const unreadOnly = searchParams.get("unread") === "true";
 
-    // ホスト宛のお礼メッセージを取得
-    const messages = await prisma.thankYouMessage.findMany({
+    // ホスト宛のお礼メッセージを取得（learnerの地元自慢情報も含む）
+    const rawMessages = await prisma.thankYouMessage.findMany({
       where: {
         hostId: session.user.id,
         ...(unreadOnly ? { isRead: false } : {}),
@@ -24,6 +24,49 @@ export async function GET(req: NextRequest) {
         createdAt: "desc",
       },
       take: 50,
+    });
+
+    // 学習者の情報を取得
+    const learnerIds = [...new Set(rawMessages.map(m => m.learnerId))];
+    const learners = await prisma.user.findMany({
+      where: { id: { in: learnerIds } },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        country: true,
+        hometownFood: true,
+        hometownFoodDesc: true,
+        hometownPlace: true,
+        hometownPlaceDesc: true,
+      },
+    });
+
+    const learnerMap = new Map(learners.map(l => [l.id, l]));
+
+    // 有効な商品マッピングを取得
+    const productMappings = await prisma.productMapping.findMany({
+      where: { isActive: true },
+    });
+
+    // メッセージにlearner情報と商品マッピングを追加
+    const messages = rawMessages.map(m => {
+      const learner = learnerMap.get(m.learnerId);
+      let matchedProduct = null;
+
+      // 学習者のhometownFoodでマッチングを検索
+      if (learner?.hometownFood) {
+        const foodKeyword = learner.hometownFood.toLowerCase();
+        matchedProduct = productMappings.find(p =>
+          foodKeyword.includes(p.keyword) || p.keyword.includes(foodKeyword)
+        ) || null;
+      }
+
+      return {
+        ...m,
+        learner: learner || null,
+        matchedProduct,
+      };
     });
 
     // 未読数を取得

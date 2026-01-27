@@ -170,6 +170,12 @@ export default function AdminUsersPage() {
               >
                 スコア一覧
               </Link>
+              <Link
+                href="/admin/products"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                商品管理
+              </Link>
               <span className="text-gray-600">{session.user.email}</span>
             </nav>
           </div>

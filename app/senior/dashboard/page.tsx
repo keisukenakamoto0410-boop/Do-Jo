@@ -70,6 +70,13 @@ interface HostStats {
   unreadThankYou: number;
 }
 
+interface RankingData {
+  myRank: number | null;
+  totalHosts: number;
+  mySessions: number;
+  message: string;
+}
+
 export default function SeniorDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -101,14 +108,30 @@ export default function SeniorDashboard() {
   // Cancel modal state
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
+  // Ranking data
+  const [rankingData, setRankingData] = useState<RankingData | null>(null);
+
   useEffect(() => {
     if (session?.user) {
       fetchNextReservation();
       fetchMySlots();
       fetchThankYouMessages();
       fetchStats();
+      fetchRanking();
     }
   }, [session]);
+
+  const fetchRanking = async () => {
+    try {
+      const response = await fetch("/api/host/ranking");
+      if (response.ok) {
+        const data = await response.json();
+        setRankingData(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch ranking:", error);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -378,6 +401,32 @@ export default function SeniorDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Ranking Card */}
+      {rankingData && rankingData.myRank && (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-white text-3xl font-bold">
+                {rankingData.myRank <= 3 ? ["🥇", "🥈", "🥉"][rankingData.myRank - 1] : `${rankingData.myRank}位`}
+              </span>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-3xl font-bold text-amber-700">
+                  全体{rankingData.totalHosts}人中 {rankingData.myRank}位
+                </span>
+              </div>
+              <p className="text-lg text-amber-800 font-medium">
+                {rankingData.message}
+              </p>
+              <p className="text-sm text-amber-600 mt-1">
+                累計{rankingData.mySessions}回のセッションを行いました
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Section */}
       <div className="grid grid-cols-3 gap-4 mb-8">

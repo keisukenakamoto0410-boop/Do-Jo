@@ -116,7 +116,8 @@ function RegisterContent() {
       }
 
       if (role === "learner") {
-        router.push("/learner/dashboard");
+        // Redirect new learners to profile page to complete their profile
+        router.push("/learner/profile");
       } else if (role === "senior") {
         router.push("/senior/dashboard");
       } else {

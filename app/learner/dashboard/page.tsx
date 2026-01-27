@@ -16,6 +16,14 @@ interface UserStats {
   thisMonthSessions: number;
 }
 
+interface UserProfile {
+  name: string | null;
+  bio: string | null;
+  avatar: string | null;
+  hometownFood: string | null;
+  country: string | null;
+}
+
 interface Reservation {
   id: string;
   status: string;
@@ -45,6 +53,8 @@ export default function LearnerDashboard() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [reservationsLoading, setReservationsLoading] = useState(true);
   const [medals, setMedals] = useState<string[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return; // Wait for session to load
@@ -76,6 +86,35 @@ export default function LearnerDashboard() {
 
     if (session?.user?.id) {
       fetchMedals();
+    }
+  }, [session?.user?.id]);
+
+  // Fetch user profile to check completeness
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const res = await fetch(`/api/users/${session?.user?.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const profile: UserProfile = {
+            name: data.user?.name || null,
+            bio: data.user?.bio || null,
+            avatar: data.user?.avatar || null,
+            hometownFood: data.user?.hometownFood || null,
+            country: data.user?.country || null,
+          };
+          setUserProfile(profile);
+          // Check if profile is incomplete
+          const incomplete = !profile.bio || !profile.avatar || !profile.hometownFood;
+          setIsProfileIncomplete(incomplete);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchUserProfile();
     }
   }, [session?.user?.id]);
 
@@ -243,6 +282,29 @@ export default function LearnerDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8 pb-20 lg:pb-8">
+        {/* Profile Incomplete Banner */}
+        {isProfileIncomplete && (
+          <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">👤</span>
+                <div>
+                  <h3 className="font-bold text-amber-800">Complete Your Profile!</h3>
+                  <p className="text-sm text-amber-700">
+                    Add your bio, photo, and hometown food to connect better with hosts
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/learner/profile"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-sm transition-colors whitespace-nowrap"
+              >
+                Complete Profile
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div className="card mb-8">
           <div className="flex items-center justify-between">
@@ -254,6 +316,13 @@ export default function LearnerDashboard() {
                 Practice Japanese with native speakers through 25-minute video sessions
               </p>
             </div>
+            <Link
+              href="/learner/profile"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg transition-colors"
+            >
+              <span>👤</span>
+              <span className="font-medium">Edit Profile</span>
+            </Link>
           </div>
 
           {/* Medals Section */}
@@ -280,7 +349,7 @@ export default function LearnerDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8">
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Casual Conversation */}
           <Link
             href="/learner/browse"
@@ -293,6 +362,24 @@ export default function LearnerDashboard() {
             </p>
             <span className="inline-flex items-center px-4 py-2 bg-white/20 rounded-lg text-sm font-medium group-hover:bg-white/30 transition-colors">
               Find Available Slots
+              <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </Link>
+
+          {/* Edit Profile Card */}
+          <Link
+            href="/learner/profile"
+            className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl shadow-lg p-8 text-white hover:shadow-xl transition-all transform hover:scale-[1.02] block"
+          >
+            <div className="text-5xl mb-4">👤</div>
+            <h2 className="text-2xl font-bold mb-2">Edit Profile</h2>
+            <p className="opacity-90 mb-4">
+              Update your profile, add your hometown food, and share about yourself
+            </p>
+            <span className="inline-flex items-center px-4 py-2 bg-white/20 rounded-lg text-sm font-medium group-hover:bg-white/30 transition-colors">
+              Edit My Profile
               <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>

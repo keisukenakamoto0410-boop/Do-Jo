@@ -127,8 +127,8 @@ export default function PrivacyPolicy() {
           </h2>
           <p className="text-[#566573] leading-relaxed mb-4">
             If you have questions about this Privacy Policy, please contact us at:{" "}
-            <a href="mailto:privacy@dojo.com" className="text-[#00A8CC] hover:underline">
-              privacy@dojo.com
+            <a href="mailto:keisuke.mjugaad91@gmail.com" className="text-[#00A8CC] hover:underline">
+              keisuke.mjugaad91@gmail.com
             </a>
           </p>
 

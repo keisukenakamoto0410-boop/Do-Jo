@@ -119,7 +119,7 @@ export default function TermsOfService() {
             11. Contact
           </h2>
           <p className="text-[#566573] leading-relaxed mb-4">
-            For questions, contact us at: <a href="mailto:support@dojo.com" className="text-[#00A8CC] hover:underline">support@dojo.com</a>
+            For questions, contact us at: <a href="mailto:keisuke.mjugaad91@gmail.com" className="text-[#00A8CC] hover:underline">keisuke.mjugaad91@gmail.com</a>
           </p>
 
         </div>

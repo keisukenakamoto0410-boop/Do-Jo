@@ -149,7 +149,7 @@ export default function ContactPage() {
           <div className="space-y-3 text-gray-600">
             <p className="flex items-center gap-3">
               <span>📧</span>
-              <span>support@dojo-app.com</span>
+              <span>keisuke.mjugaad91@gmail.com</span>
             </p>
             <p className="flex items-center gap-3">
               <span>🌐</span>

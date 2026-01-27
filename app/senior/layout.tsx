@@ -92,7 +92,7 @@ export default function SeniorLayout({
       <footer className="bg-gray-100 border-t border-gray-200 mt-12">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <p className="text-center text-lg text-gray-600">
-            お困りの際は: support@do-jo.jp
+            お困りの際は: keisuke.mjugaad91@gmail.com
           </p>
         </div>
       </footer>

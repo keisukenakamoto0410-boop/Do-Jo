@@ -67,7 +67,7 @@ export default function Error({ error, reset }: ErrorProps) {
         <p className="text-sm text-gray-500 mt-6">
           問題が解決しない場合は、
           <a
-            href="mailto:support@dojo-platform.com"
+            href="mailto:keisuke.mjugaad91@gmail.com"
             className="text-blue-600 hover:underline ml-1"
           >
             サポートにお問い合わせください

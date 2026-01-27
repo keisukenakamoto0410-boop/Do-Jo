@@ -54,6 +54,27 @@ export default function SessionPage() {
   // ビデオ表示モード（cover: アップ表示, contain: 全体表示）
   const [videoFit, setVideoFit] = useState<"cover" | "contain">("contain");
 
+  // モバイル横画面警告
+  const [showOrientationWarning, setShowOrientationWarning] = useState(false);
+
+  // 画面の向きを検出
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isLandscape = window.innerWidth > window.innerHeight;
+      setShowOrientationWarning(isMobile && isLandscape);
+    };
+
+    checkOrientation();
+    window.addEventListener("resize", checkOrientation);
+    window.addEventListener("orientationchange", checkOrientation);
+
+    return () => {
+      window.removeEventListener("resize", checkOrientation);
+      window.removeEventListener("orientationchange", checkOrientation);
+    };
+  }, []);
+
   // セッション入室管理フック
   const {
     partnerJoined,
@@ -333,6 +354,27 @@ export default function SessionPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col relative">
+      {/* Mobile Orientation Warning */}
+      {showOrientationWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90">
+          <div className="text-center p-8">
+            <div className="text-6xl mb-6 animate-bounce">📱</div>
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Please rotate your phone
+            </h2>
+            <p className="text-gray-300 text-lg mb-4">
+              For the best video call experience,<br />
+              please use <span className="text-blue-400 font-bold">portrait mode</span> (vertical).
+            </p>
+            <div className="flex items-center justify-center gap-4 text-4xl">
+              <span className="transform rotate-90">📱</span>
+              <span className="text-white">→</span>
+              <span>📱</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Loading Overlay */}
       {loading && !error && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/50">

@@ -8,6 +8,7 @@ import ArticleFeed from "@/components/learner/ArticleFeed";
 import MobileNav from "@/components/MobileNav";
 import ConversationStats from "@/components/ConversationStats";
 import MedalDisplay from "@/components/MedalDisplay";
+import CancelReservationModal from "@/components/CancelReservationModal";
 
 interface UserStats {
   totalSessions: number;
@@ -55,6 +56,8 @@ export default function LearnerDashboard() {
   const [medals, setMedals] = useState<string[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancellingReservation, setCancellingReservation] = useState<Reservation | null>(null);
 
   useEffect(() => {
     if (status === "loading") return; // Wait for session to load
@@ -193,6 +196,33 @@ export default function LearnerDashboard() {
     });
   };
 
+  // Handle cancel reservation
+  const handleCancelReservation = async (reason: string) => {
+    if (!cancellingReservation) return;
+
+    const response = await fetch(`/api/reservations/${cancellingReservation.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to cancel reservation");
+    }
+
+    // Remove from local state
+    setReservations((prev) =>
+      prev.filter((r) => r.id !== cancellingReservation.id)
+    );
+    setCancellingReservation(null);
+  };
+
+  // Open cancel modal
+  const openCancelModal = (reservation: Reservation) => {
+    setCancellingReservation(reservation);
+    setCancelModalOpen(true);
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 via-white to-neutral-50">
@@ -236,6 +266,25 @@ export default function LearnerDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 via-white to-neutral-50">
+      {/* Cancel Reservation Modal */}
+      <CancelReservationModal
+        isOpen={cancelModalOpen}
+        onClose={() => {
+          setCancelModalOpen(false);
+          setCancellingReservation(null);
+        }}
+        onConfirm={handleCancelReservation}
+        partnerName={cancellingReservation?.host.name || ""}
+        sessionDate={
+          cancellingReservation
+            ? formatDate(cancellingReservation.slot.startTime) +
+              " " +
+              formatTime(cancellingReservation.slot.startTime)
+            : ""
+        }
+        isJapanese={false}
+      />
+
       {/* Mobile Navigation */}
       <MobileNav isLearner={true} />
 
@@ -440,19 +489,29 @@ export default function LearnerDashboard() {
                       </p>
                     </div>
                   </div>
-                  {isJoinable(reservation.slot.startTime, reservation.slot.endTime) ? (
-                    <Link
-                      href={`/learner/session/${reservation.id}`}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm transition-colors inline-flex items-center gap-1"
-                    >
-                      <span>🎥</span>
-                      Join
-                    </Link>
-                  ) : (
-                    <span className="text-sm text-neutral-500">
-                      {getRelativeTime(reservation.slot.startTime)}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isJoinable(reservation.slot.startTime, reservation.slot.endTime) ? (
+                      <Link
+                        href={`/learner/session/${reservation.id}`}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm transition-colors inline-flex items-center gap-1"
+                      >
+                        <span>🎥</span>
+                        Join
+                      </Link>
+                    ) : (
+                      <>
+                        <span className="text-sm text-neutral-500">
+                          {getRelativeTime(reservation.slot.startTime)}
+                        </span>
+                        <button
+                          onClick={() => openCancelModal(reservation)}
+                          className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-sm font-medium rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
               {futureReservations.length > 5 && (

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendCancellationEmail } from "@/lib/email";
 
 // Admin emails for access control
 const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
 
-// DELETE cancel a reservation
+// DELETE cancel a reservation (with optional reason)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,9 +20,26 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // Get cancellation reason from request body if provided
+    let reason = "";
+    try {
+      const body = await req.json();
+      reason = body.reason || "";
+    } catch {
+      // No body provided, that's okay
+    }
+
     const reservation = await prisma.reservation.findUnique({
       where: { id },
-      include: { slot: true },
+      include: {
+        slot: true,
+        learner: {
+          select: { id: true, name: true, email: true }
+        },
+        host: {
+          select: { id: true, name: true, email: true }
+        }
+      },
     });
 
     if (!reservation) {
@@ -54,7 +72,10 @@ export async function DELETE(
     await prisma.$transaction(async (tx) => {
       await tx.reservation.update({
         where: { id },
-        data: { status: "cancelled" },
+        data: {
+          status: "cancelled",
+          cancelledAt: new Date(),
+        },
       });
 
       await tx.slot.update({
@@ -62,6 +83,26 @@ export async function DELETE(
         data: { status: "available" },
       });
     });
+
+    // Send cancellation notification email to the other party
+    const cancelledBy = isLearner ? "learner" : "host";
+    const cancellerName = isLearner ? reservation.learner.name : reservation.host.name;
+    const recipientEmail = isLearner ? reservation.host.email : reservation.learner.email;
+    const recipientName = isLearner ? reservation.host.name : reservation.learner.name;
+
+    try {
+      await sendCancellationEmail({
+        recipientEmail,
+        recipientName,
+        cancellerName,
+        cancelledBy,
+        sessionDate: new Date(reservation.slot.startTime),
+        reason,
+      });
+    } catch (emailError) {
+      console.error("Failed to send cancellation email:", emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

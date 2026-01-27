@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import CalendarAvailability from "@/components/CalendarAvailability";
+import CancelReservationModal from "@/components/CancelReservationModal";
 
 interface StudyLog {
   id: string;
@@ -96,6 +97,9 @@ export default function SeniorDashboard() {
 
   // Available now button
   const [creatingNow, setCreatingNow] = useState(false);
+
+  // Cancel modal state
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
   useEffect(() => {
     if (session?.user) {
@@ -311,6 +315,25 @@ export default function SeniorDashboard() {
 
   const canJoinSession = nextReservation && isSessionTime(nextReservation.slot.startTime);
 
+  // Handle cancel reservation
+  const handleCancelReservation = async (reason: string) => {
+    if (!nextReservation) return;
+
+    const response = await fetch(`/api/reservations/${nextReservation.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+
+    if (!response.ok) {
+      throw new Error("キャンセルに失敗しました");
+    }
+
+    // Clear the reservation and refresh
+    setNextReservation(null);
+    fetchNextReservation();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -324,6 +347,18 @@ export default function SeniorDashboard() {
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
+      {/* Cancel Reservation Modal */}
+      {nextReservation && (
+        <CancelReservationModal
+          isOpen={cancelModalOpen}
+          onClose={() => setCancelModalOpen(false)}
+          onConfirm={handleCancelReservation}
+          partnerName={nextReservation.learner.name}
+          sessionDate={`${formatDate(nextReservation.slot.startTime)} ${formatTime(nextReservation.slot.startTime)}`}
+          isJapanese={true}
+        />
+      )}
+
       {/* Welcome Message */}
       <div className="bg-sky-50 border-2 border-sky-200 rounded-2xl p-8 mb-8">
         <div className="flex items-center justify-between">
@@ -412,8 +447,16 @@ export default function SeniorDashboard() {
                 会話を始める
               </Link>
             ) : (
-              <div className="w-full py-6 bg-gray-200 text-gray-500 text-2xl font-bold rounded-xl text-center">
-                時間になったらボタンが押せます
+              <div className="space-y-3">
+                <div className="w-full py-6 bg-gray-200 text-gray-500 text-2xl font-bold rounded-xl text-center">
+                  時間になったらボタンが押せます
+                </div>
+                <button
+                  onClick={() => setCancelModalOpen(true)}
+                  className="w-full py-3 bg-red-100 hover:bg-red-200 text-red-700 text-lg font-bold rounded-xl text-center transition-colors"
+                >
+                  この予約をキャンセル
+                </button>
               </div>
             )}
           </div>

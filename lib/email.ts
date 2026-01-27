@@ -411,3 +411,122 @@ export async function sendPasswordResetEmail({
     };
   }
 }
+
+// Cancellation email params
+interface CancellationEmailParams {
+  recipientEmail: string;
+  recipientName: string;
+  cancellerName: string;
+  cancelledBy: "learner" | "host";
+  sessionDate: Date;
+  reason?: string;
+}
+
+// Send cancellation notification email
+export async function sendCancellationEmail({
+  recipientEmail,
+  recipientName,
+  cancellerName,
+  cancelledBy,
+  sessionDate,
+  reason,
+}: CancellationEmailParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+    const isHost = cancelledBy === "host";
+
+    // Different email based on who cancelled and who receives
+    if (isHost) {
+      // Host cancelled -> Send English email to learner
+      await transporter.sendMail({
+        from: `Do Jo <${FROM_EMAIL}>`,
+        to: recipientEmail,
+        subject: "【Do Jo】Session Cancelled / セッションがキャンセルされました",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 20px;">Session Cancelled</h1>
+
+            <p style="font-size: 16px; color: #333;">Hi ${recipientName},</p>
+
+            <p style="font-size: 16px; color: #333;">
+              Unfortunately, your scheduled session has been cancelled by your partner.
+            </p>
+
+            <div style="background: #fef2f2; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <p style="margin: 8px 0;"><strong>📅 Original Date:</strong> ${formatDateEn(sessionDate)}</p>
+              <p style="margin: 8px 0;"><strong>👤 Partner:</strong> ${cancellerName}-san</p>
+              ${reason ? `<p style="margin: 12px 0 0 0;"><strong>💬 Reason:</strong></p><p style="margin: 4px 0; color: #666; font-style: italic;">"${reason}"</p>` : ""}
+            </div>
+
+            <p style="font-size: 16px; color: #333;">
+              We're sorry for the inconvenience. Please book another session when you're ready.
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${BASE_URL}/learner/browse" style="display: inline-block; background: linear-gradient(to right, #0ea5e9, #2563eb); color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                Find Another Host →
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+            <p style="font-size: 12px; color: #999; text-align: center;">
+              Do Jo - Japanese Conversation Practice App<br />
+              <a href="${BASE_URL}" style="color: #0ea5e9;">${BASE_URL}</a>
+            </p>
+          </div>
+        `,
+      });
+    } else {
+      // Learner cancelled -> Send Japanese email to host
+      await transporter.sendMail({
+        from: `Do Jo <${FROM_EMAIL}>`,
+        to: recipientEmail,
+        subject: "【Do Jo】予約がキャンセルされました",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 20px;">予約がキャンセルされました</h1>
+
+            <p style="font-size: 16px; color: #333;">${recipientName}さん</p>
+
+            <p style="font-size: 16px; color: #333;">
+              予定されていた会話セッションが学習者によりキャンセルされました。
+            </p>
+
+            <div style="background: #fef2f2; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <p style="margin: 8px 0;"><strong>📅 予定日時:</strong> ${formatDateJa(sessionDate)}</p>
+              <p style="margin: 8px 0;"><strong>👤 学習者:</strong> ${cancellerName} さん</p>
+              ${reason ? `<p style="margin: 12px 0 0 0;"><strong>💬 キャンセル理由:</strong></p><p style="margin: 4px 0; color: #666; font-style: italic;">「${reason}」</p>` : ""}
+            </div>
+
+            <p style="font-size: 16px; color: #333;">
+              ご不便をおかけして申し訳ございません。<br />
+              この時間帯は再び予約可能になりました。
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${BASE_URL}/senior/dashboard" style="display: inline-block; background: linear-gradient(to right, #0ea5e9, #0284c7); color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                ダッシュボードを確認 →
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+            <p style="font-size: 12px; color: #999; text-align: center;">
+              Do Jo - 日本語会話練習アプリ<br />
+              <a href="${BASE_URL}" style="color: #0ea5e9;">${BASE_URL}</a>
+            </p>
+          </div>
+        `,
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send cancellation email:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

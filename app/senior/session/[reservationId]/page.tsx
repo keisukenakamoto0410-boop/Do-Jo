@@ -478,10 +478,12 @@ export default function SeniorSessionPage() {
         </div>
       </div>
 
-      {/* Support Hints for Target Words */}
-      {reservation?.targetWords && reservation.targetWords.length > 0 && (
+      {/* Support Hints for Topic, Goal, and Target Words */}
+      {reservation && (
         <SupportHints
           targetWords={reservation.targetWords}
+          selectedTopic={reservation.selectedTopic}
+          conversationGoal={reservation.conversationGoal}
           learnerName={reservation.learner?.name}
         />
       )}

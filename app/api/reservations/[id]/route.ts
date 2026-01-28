@@ -129,7 +129,36 @@ export async function GET(
 
     const reservation = await prisma.reservation.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        slotId: true,
+        learnerId: true,
+        hostId: true,
+        status: true,
+        sessionType: true,
+        channelName: true,
+        token: true,
+        readyToTalk: true,
+        studyLogCount: true,
+        // 学習者が事前に設定した会話準備情報
+        selectedTopic: true,
+        slideTopic: true,
+        grammarToStudy: true,
+        targetWords: true,
+        conversationGoal: true,
+        additionalNotes: true,
+        sharedMaterial: true,
+        generatedAgenda: true,
+        progressSinceLastSession: true,
+        // セッション管理
+        learnerJoinedAt: true,
+        hostJoinedAt: true,
+        sessionStartedAt: true,
+        startedAt: true,
+        completedAt: true,
+        cancelledAt: true,
+        createdAt: true,
+        reminderSent: true,
         slot: true,
         learner: {
           select: {
@@ -145,6 +174,10 @@ export async function GET(
             textbook: true,
             currentLesson: true,
             wantsToWorkInJapan: true,
+            hometownFood: true,
+            hometownFoodDesc: true,
+            hometownPlace: true,
+            hometownPlaceDesc: true,
           },
         },
         host: {

@@ -9,6 +9,7 @@ import MobileNav from "@/components/MobileNav";
 import ConversationStats from "@/components/ConversationStats";
 import MedalDisplay from "@/components/MedalDisplay";
 import CancelReservationModal from "@/components/CancelReservationModal";
+import GamificationProgress from "@/components/learner/GamificationProgress";
 
 interface UserStats {
   totalSessions: number;
@@ -194,6 +195,15 @@ export default function LearnerDashboard() {
       minute: "2-digit",
       hour12: false,
     });
+  };
+
+  // Get user's timezone abbreviation
+  const getTimezoneAbbr = () => {
+    const date = new Date();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Get timezone abbreviation (e.g., "JST", "PST", "EST")
+    const abbr = date.toLocaleTimeString("en-US", { timeZoneName: "short" }).split(" ").pop();
+    return abbr || timeZone;
   };
 
   // Handle cancel reservation
@@ -387,6 +397,11 @@ export default function LearnerDashboard() {
           )}
         </div>
 
+        {/* Gamification Progress */}
+        <div className="mb-8">
+          <GamificationProgress />
+        </div>
+
         {/* Article Feed */}
         <div className="mb-8">
           <ArticleFeed />
@@ -485,7 +500,7 @@ export default function LearnerDashboard() {
                       </p>
                       <p className="text-sm text-neutral-600">
                         {formatDate(reservation.slot.startTime)}{" "}
-                        {formatTime(reservation.slot.startTime)} (JST)
+                        {formatTime(reservation.slot.startTime)} ({getTimezoneAbbr()})
                       </p>
                     </div>
                   </div>

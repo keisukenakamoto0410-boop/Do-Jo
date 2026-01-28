@@ -194,27 +194,6 @@ export default function MessagesPage() {
             ))}
           </div>
         )}
-
-        {/* Amazon アフィリエイトセクション */}
-        <div className="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-          <h3 className="text-lg font-semibold text-orange-800 mb-2">
-            🇮🇳 インドのチャイはいかがですか？
-          </h3>
-          <p className="text-sm text-gray-600 mb-3">
-            生徒さんの故郷の味を体験してみませんか？
-          </p>
-          <a
-            href="https://www.amazon.co.jp/dp/B0FBM1LN31?tag=dojojp-22"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-medium px-4 py-2 rounded-lg transition"
-          >
-            Amazonで見る →
-          </a>
-          <p className="text-xs text-gray-500 mt-3">
-            ※ このリンクからのご購入がDo Joの運営支援になります。ありがとうございます。
-          </p>
-        </div>
       </main>
 
       {/* Message Modal */}

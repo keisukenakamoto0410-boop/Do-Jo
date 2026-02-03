@@ -184,10 +184,17 @@ export default function SeniorDashboard() {
         const data = await response.json();
         if (data.reservations && data.reservations.length > 0) {
           setNextReservation(data.reservations[0]);
+        } else {
+          // 予約がない場合は明示的にnullに設定
+          setNextReservation(null);
         }
+      } else {
+        console.error("Failed to fetch reservation: HTTP", response.status);
+        // エラー時は既存の予約を保持（消さない）
       }
     } catch (error) {
       console.error("Failed to fetch reservation:", error);
+      // ネットワークエラー時も既存の予約を保持
     } finally {
       setLoading(false);
     }

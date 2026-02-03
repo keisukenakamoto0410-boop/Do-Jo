@@ -8,11 +8,13 @@ export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
+      console.log("[/api/host/reservations] No session found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Only hosts can view their reservations
     if (session.user.role === "learner") {
+      console.log("[/api/host/reservations] Learner tried to access host reservations");
       return NextResponse.json(
         { error: "Learners cannot access this resource" },
         { status: 403 }
@@ -43,6 +45,13 @@ export async function GET(req: NextRequest) {
       },
     };
 
+    console.log("[/api/host/reservations] Query params:", {
+      hostId: session.user.id,
+      status,
+      limit,
+      cutoffTime: cutoffTime.toISOString()
+    });
+
     const reservations = await prisma.reservation.findMany({
       where,
       include: {
@@ -72,9 +81,11 @@ export async function GET(req: NextRequest) {
       take: limit ? parseInt(limit, 10) : undefined,
     });
 
+    console.log("[/api/host/reservations] Found", reservations.length, "reservations");
+
     return NextResponse.json({ reservations });
   } catch (error) {
-    console.error("Error fetching host reservations:", error);
+    console.error("[/api/host/reservations] Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch reservations" },
       { status: 500 }

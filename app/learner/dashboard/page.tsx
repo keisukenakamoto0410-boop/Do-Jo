@@ -130,9 +130,13 @@ export default function LearnerDashboard() {
         if (res.ok) {
           const data = await res.json();
           setReservations(data.reservations || []);
+        } else {
+          console.error("Failed to fetch reservations: HTTP", res.status);
+          // エラー時は既存の予約を保持（消さない）
         }
       } catch (error) {
         console.error("Failed to fetch reservations:", error);
+        // ネットワークエラー時も既存の予約を保持
       } finally {
         setReservationsLoading(false);
       }

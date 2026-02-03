@@ -452,12 +452,35 @@ export default function SeniorDashboard() {
         </div>
       </div>
 
+      {/* Next Session Card - Super Prominent Join Button */}
+      {nextReservation && canJoinSession && (
+        <div className="mb-8 animate-pulse">
+          <Link
+            href={`/senior/session/${nextReservation.id}`}
+            className="block w-full py-8 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl text-center transition-all shadow-2xl border-4 border-green-400"
+          >
+            <div className="text-5xl mb-3">🎥</div>
+            <div className="text-3xl font-bold mb-2">
+              今すぐ会話を始める
+            </div>
+            <div className="text-xl opacity-90">
+              {nextReservation.learner.name} さんと会話
+            </div>
+            <div className="mt-3 text-lg opacity-75">
+              ▶ タップして参加
+            </div>
+          </Link>
+        </div>
+      )}
+
       {/* Next Session Card */}
       {nextReservation && (
-        <div className="bg-white border-2 border-gray-200 rounded-2xl shadow-lg overflow-hidden mb-8">
-          <div className="bg-sky-600 text-white px-8 py-6">
-            <h2 className="text-2xl font-bold mb-1">次の会話予定</h2>
-            <p className="text-sky-100 text-lg">
+        <div className={`bg-white border-2 rounded-2xl shadow-lg overflow-hidden mb-8 ${canJoinSession ? 'border-green-400' : 'border-gray-200'}`}>
+          <div className={`text-white px-8 py-6 ${canJoinSession ? 'bg-green-600' : 'bg-sky-600'}`}>
+            <h2 className="text-2xl font-bold mb-1">
+              {canJoinSession ? '🟢 セッション参加可能！' : '次の会話予定'}
+            </h2>
+            <p className={`text-lg ${canJoinSession ? 'text-green-100' : 'text-sky-100'}`}>
               {formatDate(nextReservation.slot.startTime)}
               {formatTime(nextReservation.slot.startTime)}〜
             </p>
@@ -499,9 +522,9 @@ export default function SeniorDashboard() {
             {canJoinSession ? (
               <Link
                 href={`/senior/session/${nextReservation.id}`}
-                className="block w-full py-6 bg-green-500 hover:bg-green-600 text-white text-2xl font-bold rounded-xl text-center transition-colors shadow-lg"
+                className="block w-full py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-2xl font-bold rounded-xl text-center transition-all shadow-lg"
               >
-                会話を始める
+                🎥 会話を始める（タップしてください）
               </Link>
             ) : (
               <div className="space-y-3">

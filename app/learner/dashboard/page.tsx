@@ -457,6 +457,32 @@ export default function LearnerDashboard() {
           </Link>
         </div>
 
+        {/* Super Prominent Join Button - Show when session is joinable */}
+        {futureReservations.some((r) => isJoinable(r.slot.startTime, r.slot.endTime)) && (
+          <div className="mb-8">
+            {futureReservations
+              .filter((r) => isJoinable(r.slot.startTime, r.slot.endTime))
+              .map((reservation) => (
+                <Link
+                  key={reservation.id}
+                  href={`/learner/session/${reservation.id}`}
+                  className="block w-full py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl text-center transition-all shadow-2xl border-4 border-green-400 animate-pulse mb-4"
+                >
+                  <div className="text-4xl mb-2">🎥</div>
+                  <div className="text-2xl font-bold mb-1">
+                    Join Session Now!
+                  </div>
+                  <div className="text-lg opacity-90">
+                    with {reservation.host.name}-san
+                  </div>
+                  <div className="mt-2 text-base opacity-75">
+                    ▶ Tap to join
+                  </div>
+                </Link>
+              ))}
+          </div>
+        )}
+
         {/* Upcoming Sessions */}
         <div className="card mb-8">
           <h2 className="text-xl font-bold text-neutral-900 mb-6 flex items-center gap-2">
@@ -484,12 +510,16 @@ export default function LearnerDashboard() {
                   key={reservation.id}
                   className={`flex items-center justify-between p-4 rounded-xl transition-colors ${
                     isJoinable(reservation.slot.startTime, reservation.slot.endTime)
-                      ? "bg-green-50 border-2 border-green-500"
+                      ? "bg-green-100 border-2 border-green-500 shadow-lg"
                       : "bg-neutral-50 hover:bg-neutral-100"
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold overflow-hidden">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold overflow-hidden ${
+                      isJoinable(reservation.slot.startTime, reservation.slot.endTime)
+                        ? "bg-green-500"
+                        : "bg-gradient-to-br from-primary to-primary-dark"
+                    }`}>
                       {reservation.host.avatar ? (
                         <img
                           src={reservation.host.avatar}
@@ -514,10 +544,10 @@ export default function LearnerDashboard() {
                     {isJoinable(reservation.slot.startTime, reservation.slot.endTime) ? (
                       <Link
                         href={`/learner/session/${reservation.id}`}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-sm transition-colors inline-flex items-center gap-1"
+                        className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-lg transition-all inline-flex items-center gap-2 shadow-lg"
                       >
-                        <span>🎥</span>
-                        Join
+                        <span className="text-xl">🎥</span>
+                        <span className="text-lg">JOIN</span>
                       </Link>
                     ) : (
                       <>

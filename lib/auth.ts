@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import LineProvider from "next-auth/providers/line";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
@@ -41,6 +42,11 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    }),
+    // LINE OAuth Provider
+    LineProvider({
+      clientId: process.env.LINE_CLIENT_ID || "",
+      clientSecret: process.env.LINE_CLIENT_SECRET || "",
     }),
     CredentialsProvider({
       name: "credentials",
@@ -144,6 +150,52 @@ export const authOptions: NextAuthOptions = {
           return false;
         }
       }
+
+      // LINEログインの場合、ユーザーをDBに作成/更新
+      if (account?.provider === "line" && user.email) {
+        try {
+          const lineUserId = account.providerAccountId;
+
+          // まずLINE IDで既存ユーザーを検索
+          let existingUser = await db.user.findUnique({
+            where: { lineId: lineUserId },
+          });
+
+          // LINE IDで見つからない場合はメールで検索
+          if (!existingUser && user.email) {
+            existingUser = await db.user.findUnique({
+              where: { email: user.email },
+            });
+          }
+
+          if (!existingUser) {
+            // 新規ユーザー作成（デフォルトはsenior - LINEは主にシニア向け）
+            await db.user.create({
+              data: {
+                email: user.email,
+                name: user.name || "User",
+                role: "senior",
+                lineId: lineUserId,
+                lastLoginAt: new Date(),
+              },
+            });
+            console.log("[AUTH] Created new LINE user:", user.email);
+          } else {
+            // 既存ユーザーの更新（LINE IDも保存）
+            await db.user.update({
+              where: { id: existingUser.id },
+              data: {
+                lastLoginAt: new Date(),
+                lineId: lineUserId,
+              },
+            });
+            console.log("[AUTH] Updated existing LINE user:", user.email);
+          }
+        } catch (error) {
+          console.error("[AUTH] Error in LINE signIn callback:", error);
+          return false;
+        }
+      }
       return true;
     },
     async jwt({ token, user, account, trigger, session }) {
@@ -152,6 +204,25 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await db.user.findUnique({
           where: { email: token.email as string },
         });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role as UserRole;
+        }
+      }
+
+      // LINEログインの場合、DBからユーザー情報を取得
+      if (account?.provider === "line") {
+        const lineUserId = account.providerAccountId;
+        // まずLINE IDで検索
+        let dbUser = await db.user.findUnique({
+          where: { lineId: lineUserId },
+        });
+        // 見つからない場合はメールで検索
+        if (!dbUser && token.email) {
+          dbUser = await db.user.findUnique({
+            where: { email: token.email as string },
+          });
+        }
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;

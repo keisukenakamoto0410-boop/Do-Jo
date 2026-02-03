@@ -20,6 +20,9 @@ model User {
   name            String
   role            String    @default("learner") // "learner" | "senior" | "student" | "admin"
 
+  // OAuth Provider IDs
+  lineId          String?   @unique  // LINE user ID for LINE notifications
+
   // プロフィール（共通）
   avatar          String?
   bio             String?   @db.Text  // 自己紹介

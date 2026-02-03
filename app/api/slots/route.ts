@@ -102,31 +102,93 @@ export async function GET(req: NextRequest) {
 // POST create a new slot (for hosts)
 export async function POST(req: NextRequest) {
   try {
+    console.log("[/api/slots POST] Starting slot creation...");
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
+      console.log("[/api/slots POST] No session found");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log("[/api/slots POST] User:", {
+      id: session.user.id,
+      email: session.user.email,
+      role: session.user.role,
+    });
+
     // Only hosts (senior/student) can create slots
     if (session.user.role === "learner") {
+      console.log("[/api/slots POST] Learner tried to create slot");
       return NextResponse.json(
         { error: "Learners cannot create slots" },
         { status: 403 }
       );
     }
 
-    const body = await req.json();
+    // Verify user exists in database
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, role: true, name: true },
+    });
+
+    if (!dbUser) {
+      console.error("[/api/slots POST] User not found in database:", session.user.id);
+      return NextResponse.json(
+        { error: "User not found in database" },
+        { status: 404 }
+      );
+    }
+
+    console.log("[/api/slots POST] DB User found:", dbUser);
+
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error("[/api/slots POST] Failed to parse request body:", parseError);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
     const { startTime, sessionType } = body;
+    console.log("[/api/slots POST] Request body:", { startTime, sessionType });
 
     if (!startTime || !sessionType) {
+      console.log("[/api/slots POST] Missing required fields:", { startTime, sessionType });
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
+    // Validate sessionType
+    if (!["business", "casual", "both"].includes(sessionType)) {
+      console.log("[/api/slots POST] Invalid sessionType:", sessionType);
+      return NextResponse.json(
+        { error: "Invalid sessionType. Must be 'business', 'casual', or 'both'" },
+        { status: 400 }
+      );
+    }
+
     const start = new Date(startTime);
+
+    // Validate date
+    if (isNaN(start.getTime())) {
+      console.log("[/api/slots POST] Invalid startTime format:", startTime);
+      return NextResponse.json(
+        { error: "Invalid startTime format" },
+        { status: 400 }
+      );
+    }
+
     const end = new Date(start.getTime() + 25 * 60 * 1000); // 25 minutes
+
+    console.log("[/api/slots POST] Parsed times:", {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
 
     // Check for overlapping slots
     const existingSlot = await prisma.slot.findFirst({
@@ -150,11 +212,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingSlot) {
+      console.log("[/api/slots POST] Overlapping slot found:", existingSlot.id);
       return NextResponse.json(
         { error: "Slot overlaps with existing slot" },
         { status: 409 }
       );
     }
+
+    console.log("[/api/slots POST] Creating slot in database...");
 
     const slot = await prisma.slot.create({
       data: {
@@ -166,11 +231,42 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log("[/api/slots POST] Slot created successfully:", slot.id);
+
     return NextResponse.json({ slot }, { status: 201 });
   } catch (error) {
-    console.error("Error creating slot:", error);
+    // Detailed error logging
+    console.error("[/api/slots POST] Error creating slot:");
+    console.error("  Error name:", error instanceof Error ? error.name : "Unknown");
+    console.error("  Error message:", error instanceof Error ? error.message : String(error));
+    console.error("  Error stack:", error instanceof Error ? error.stack : "No stack");
+
+    // Check for Prisma-specific errors
+    if (error && typeof error === "object" && "code" in error) {
+      const prismaError = error as { code: string; meta?: unknown };
+      console.error("  Prisma error code:", prismaError.code);
+      console.error("  Prisma error meta:", prismaError.meta);
+
+      // Return more specific error messages for known Prisma errors
+      if (prismaError.code === "P2002") {
+        return NextResponse.json(
+          { error: "Duplicate slot entry" },
+          { status: 409 }
+        );
+      }
+      if (prismaError.code === "P2003") {
+        return NextResponse.json(
+          { error: "Foreign key constraint failed - user may not exist" },
+          { status: 400 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: "Failed to create slot" },
+      {
+        error: "Failed to create slot",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }

@@ -188,6 +188,12 @@ export async function POST(req: NextRequest) {
     // Send booking confirmation emails (async, don't block response)
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
 
+    console.log("[Reservation] Sending confirmation emails...");
+    console.log("[Reservation] Host email:", reservation.host.email);
+    console.log("[Reservation] Learner email:", reservation.learner.email);
+    console.log("[Reservation] GMAIL_USER configured:", !!process.env.GMAIL_USER);
+    console.log("[Reservation] GMAIL_APP_PASSWORD configured:", !!process.env.GMAIL_APP_PASSWORD);
+
     // Email to host (Japanese)
     sendBookingConfirmationEmail({
       hostEmail: reservation.host.email!,
@@ -195,8 +201,14 @@ export async function POST(req: NextRequest) {
       learnerName: reservation.learner.name,
       sessionDate: reservation.slot.startTime,
       sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
+    }).then((result) => {
+      if (result.success) {
+        console.log("[Reservation] Host email sent successfully");
+      } else {
+        console.error("[Reservation] Host email failed:", result.error);
+      }
     }).catch((err) => {
-      console.error("Failed to send booking confirmation email to host:", err);
+      console.error("[Reservation] Failed to send booking confirmation email to host:", err);
     });
 
     // Email to learner (English)
@@ -207,8 +219,14 @@ export async function POST(req: NextRequest) {
       sessionDate: reservation.slot.startTime,
       sessionUrl: `${BASE_URL}/learner/session/${reservation.id}`,
       prepareUrl: `${BASE_URL}/learner/prepare/${reservation.id}`,
+    }).then((result) => {
+      if (result.success) {
+        console.log("[Reservation] Learner email sent successfully");
+      } else {
+        console.error("[Reservation] Learner email failed:", result.error);
+      }
     }).catch((err) => {
-      console.error("Failed to send booking confirmation email to learner:", err);
+      console.error("[Reservation] Failed to send booking confirmation email to learner:", err);
     });
 
     return NextResponse.json({ reservation }, { status: 201 });

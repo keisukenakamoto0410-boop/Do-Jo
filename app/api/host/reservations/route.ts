@@ -34,11 +34,12 @@ export async function GET(req: NextRequest) {
       where.status = status;
     }
 
-    // Only future reservations
+    // Include reservations up to 30 minutes after start time (25min session + 5min buffer)
+    const cutoffTime = new Date(Date.now() - 30 * 60 * 1000);
     where.slot = {
       ...where.slot as object,
       startTime: {
-        gte: new Date(),
+        gte: cutoffTime,
       },
     };
 

@@ -143,13 +143,13 @@ export default function LearnerDashboard() {
     }
   }, [session?.user?.id]);
 
-  // Check if session is joinable (15 minutes before to session end)
-  const isJoinable = (startTime: string, endTime: string) => {
+  // Check if session is joinable (15 minutes before to 30 minutes after start)
+  const isJoinable = (startTime: string, _endTime: string) => {
     const now = new Date();
     const start = new Date(startTime);
-    const end = new Date(endTime);
-    const joinableFrom = new Date(start.getTime() - 15 * 60000);
-    return now >= joinableFrom && now <= end;
+    const joinableFrom = new Date(start.getTime() - 15 * 60000); // 15分前から
+    const joinableUntil = new Date(start.getTime() + 30 * 60000); // 開始後30分まで
+    return now >= joinableFrom && now <= joinableUntil;
   };
 
   // Check if session is today
@@ -246,11 +246,13 @@ export default function LearnerDashboard() {
   const user = session.user;
 
   // Filter reservations
+  // セッション開始後30分まで表示（25分セッション+5分バッファ）
   const now = new Date();
   const futureReservations = reservations
     .filter(
       (r) =>
-        r.status === "confirmed" && new Date(r.slot.endTime) > now
+        r.status === "confirmed" &&
+        new Date(r.slot.startTime).getTime() + 30 * 60000 > now.getTime()
     )
     .sort(
       (a, b) =>

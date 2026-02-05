@@ -340,8 +340,8 @@ export default function SeniorDashboard() {
     const now = new Date();
     const start = new Date(startTime);
     const diffMinutes = (start.getTime() - now.getTime()) / (1000 * 60);
-    // 開始5分前〜開始後30分まで参加可能（25分セッション+5分バッファ）
-    return diffMinutes <= 5 && diffMinutes >= -30;
+    // 開始15分前〜開始後30分まで参加可能（25分セッション+5分バッファ）
+    return diffMinutes <= 15 && diffMinutes >= -30;
   };
 
   const canJoinSession = nextReservation && isSessionTime(nextReservation.slot.startTime);

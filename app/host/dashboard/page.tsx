@@ -86,12 +86,12 @@ export default function HostDashboard() {
   const isSenior = user.role === "senior";
   const isStudent = user.role === "student";
 
-  // Check if session is joinable (15 minutes before to session end)
+  // Check if session is joinable (15 minutes before to 30 minutes after start)
   const isJoinable = (startTime: string) => {
     const now = new Date();
     const start = new Date(startTime);
     const joinableFrom = new Date(start.getTime() - 15 * 60000); // 15 minutes before
-    const joinableUntil = new Date(start.getTime() + 25 * 60000); // Session duration
+    const joinableUntil = new Date(start.getTime() + 30 * 60000); // 30 minutes after start
     return now >= joinableFrom && now <= joinableUntil;
   };
 

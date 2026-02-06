@@ -21,7 +21,11 @@ export async function GET(req: NextRequest) {
       ? { learnerId: session.user.id }
       : { hostId: session.user.id };
 
-    if (status) {
+    // Filter by status - if "confirmed", also include "completed" sessions
+    // This allows rejoining a session if End Session was pressed accidentally
+    if (status === "confirmed") {
+      where.status = { in: ["confirmed", "completed"] };
+    } else if (status) {
       where.status = status;
     }
 
@@ -186,9 +190,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Send booking confirmation emails (async, don't block response)
-    const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+    const rawUrl = process.env.NEXTAUTH_URL;
+    const BASE_URL = (rawUrl || "https://do-jo.vercel.app").replace(/\\+$/, "").replace(/\/+$/, "");
 
     console.log("[Reservation] Sending confirmation emails...");
+    console.log("[Reservation] NEXTAUTH_URL raw value:", JSON.stringify(rawUrl));
+    console.log("[Reservation] BASE_URL used:", BASE_URL);
     console.log("[Reservation] Host email:", reservation.host.email);
     console.log("[Reservation] Learner email:", reservation.learner.email);
     console.log("[Reservation] GMAIL_USER configured:", !!process.env.GMAIL_USER);

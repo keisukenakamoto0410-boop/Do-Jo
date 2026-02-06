@@ -136,7 +136,7 @@ export default function DemoSessionPage() {
             playsInline
             muted
             className="w-full h-full object-cover"
-            style={{ minHeight: "400px", transform: "scaleX(-1)" }}
+            style={{ minHeight: "400px" }}
           />
           <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded text-white text-sm font-medium">
             You {joined && "(Connected)"}

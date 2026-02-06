@@ -106,9 +106,9 @@ export default function AgoraTestPage() {
       // Publish tracks
       await agoraClient.publish([audioTrack, videoTrack]);
 
-      // Play local video
+      // Play local video (mirror: false to disable horizontal flip)
       if (localVideoRef.current) {
-        videoTrack.play(localVideoRef.current);
+        videoTrack.play(localVideoRef.current, { mirror: false });
       }
 
       setClient(agoraClient);

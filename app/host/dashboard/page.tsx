@@ -44,24 +44,25 @@ export default function HostDashboard() {
   useEffect(() => {
     const fetchReservations = async () => {
       try {
-        const res = await fetch("/api/reservations?status=confirmed");
+        // Use /api/host/reservations which includes 30min buffer after start time
+        const res = await fetch("/api/host/reservations?status=confirmed");
         if (res.ok) {
           const data = await res.json();
-          // Filter only future reservations
-          const now = new Date();
-          const futureReservations = data.reservations
-            .filter(
-              (r: Reservation) => new Date(r.slot.startTime) > now
-            )
+          // Sort by start time (API already filters with 30min buffer)
+          const sortedReservations = (data.reservations || [])
             .sort(
               (a: Reservation, b: Reservation) =>
                 new Date(a.slot.startTime).getTime() -
                 new Date(b.slot.startTime).getTime()
             );
-          setReservations(futureReservations);
+          setReservations(sortedReservations);
+        } else {
+          console.error("Failed to fetch reservations: HTTP", res.status);
+          // Keep existing reservations on error
         }
       } catch (error) {
         console.error("Failed to fetch reservations:", error);
+        // Keep existing reservations on network error
       } finally {
         setLoading(false);
       }

@@ -25,25 +25,25 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const limit = searchParams.get("limit");
 
+    // Include reservations up to 30 minutes after start time (25min session + 5min buffer)
+    const cutoffTime = new Date(Date.now() - 30 * 60 * 1000);
+
     const where: Record<string, unknown> = {
       slot: {
         hostId: session.user.id,
+        startTime: {
+          gte: cutoffTime,
+        },
       },
     };
 
-    // Filter by status
-    if (status) {
+    // Filter by status - if "confirmed", also include "completed" sessions within time window
+    // This allows rejoining a session if End Session was pressed accidentally
+    if (status === "confirmed") {
+      where.status = { in: ["confirmed", "completed"] };
+    } else if (status) {
       where.status = status;
     }
-
-    // Include reservations up to 30 minutes after start time (25min session + 5min buffer)
-    const cutoffTime = new Date(Date.now() - 30 * 60 * 1000);
-    where.slot = {
-      ...where.slot as object,
-      startTime: {
-        gte: cutoffTime,
-      },
-    };
 
     console.log("[/api/host/reservations] Query params:", {
       hostId: session.user.id,

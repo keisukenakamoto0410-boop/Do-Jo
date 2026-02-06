@@ -39,7 +39,20 @@ export async function POST(
     const isLearner = reservation.learnerId === userId;
     const isHost = reservation.hostId === userId;
 
+    console.log("[Join] Auth check:", {
+      userId,
+      learnerId: reservation.learnerId,
+      hostId: reservation.hostId,
+      isLearner,
+      isHost,
+    });
+
     if (!isLearner && !isHost) {
+      console.log("[Join] 403 - User not authorized:", {
+        userId,
+        learnerId: reservation.learnerId,
+        hostId: reservation.hostId,
+      });
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 

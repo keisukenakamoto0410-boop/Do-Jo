@@ -229,8 +229,13 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      if (user) {
+      // Credentialsログインの場合のみuserからIDを取得
+      // (OAuth認証の場合はDBから取得済みなので上書きしない)
+      if (user && !account?.provider) {
         token.id = user.id;
+        token.role = user.role;
+      } else if (user && user.role && !token.role) {
+        // OAuthでもroleがない場合は設定
         token.role = user.role;
       }
 

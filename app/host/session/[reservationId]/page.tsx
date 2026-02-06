@@ -286,7 +286,7 @@ export default function HostSessionPage() {
       }
 
       console.log("Found local-video div");
-      videoTrack.play("local-video");
+      videoTrack.play("local-video", { mirror: false });
       console.log("Local video is now playing");
 
       // トラックを公開
@@ -339,6 +339,12 @@ export default function HostSessionPage() {
   };
 
   const handleSessionEnd = async () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to end this session?\n\nセッションを終了してもよろしいですか？"
+    );
+    if (!confirmed) return;
+
     await leaveChannel();
 
     try {

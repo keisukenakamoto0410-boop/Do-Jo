@@ -268,9 +268,9 @@ export default function SeniorSessionPage() {
 
       setLocalTracks({ audioTrack, videoTrack });
 
-      // Play local video using ref
+      // Play local video using ref (mirror: false to disable horizontal flip)
       if (localVideoRef.current) {
-        videoTrack.play(localVideoRef.current);
+        videoTrack.play(localVideoRef.current, { mirror: false });
       }
 
       await agoraClient.publish([audioTrack, videoTrack]);
@@ -304,6 +304,12 @@ export default function SeniorSessionPage() {
   };
 
   const handleSessionEnd = async () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      "通話を終了してもよろしいですか？\n\nAre you sure you want to end this session?"
+    );
+    if (!confirmed) return;
+
     await leaveChannel();
 
     try {

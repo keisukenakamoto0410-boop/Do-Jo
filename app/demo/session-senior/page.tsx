@@ -191,7 +191,7 @@ export default function DemoSeniorSessionPage() {
               playsInline
               muted
               className="w-full h-full object-cover"
-              style={{ minHeight: "300px", transform: "scaleX(-1)" }}
+              style={{ minHeight: "300px" }}
             />
             <div className="absolute bottom-4 left-4 bg-black/70 px-5 py-3 rounded-xl text-white text-xl font-bold">
               あなた

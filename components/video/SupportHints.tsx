@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { getWordsInfo } from "@/lib/wordDictionary";
 
 interface SupportHintsProps {
   targetWords?: string[];
@@ -8,6 +9,29 @@ interface SupportHintsProps {
   conversationGoal?: string;
   learnerName?: string;
 }
+
+// トピックの翻訳マッピング（日本人ホスト向けなので日本語のみ）
+const TOPIC_TRANSLATIONS: Record<string, string> = {
+  daily_conversation: "日常会話",
+  japanese_food: "日本の食文化",
+  travel: "日本旅行",
+  seasons: "日本の四季",
+  family_life: "家族と日常",
+  hobbies: "趣味・娯楽",
+  shopping: "買い物",
+  history: "日本の歴史",
+  work: "仕事・ビジネス",
+  health: "健康",
+};
+
+// 会話目標の翻訳マッピング（日本人ホスト向けなので日本語のみ）
+const GOAL_TRANSLATIONS: Record<string, string> = {
+  practice_grammar: "新しい文法を練習したい",
+  improve_listening: "リスニングを向上させたい",
+  natural_expressions: "自然な表現を学びたい",
+  build_confidence: "会話に自信をつけたい",
+  just_enjoy: "会話を楽しみたい",
+};
 
 export default function SupportHints({
   targetWords,
@@ -17,12 +41,28 @@ export default function SupportHints({
 }: SupportHintsProps) {
   const [expanded, setExpanded] = useState(true);
 
+  // 単語情報を取得（読み仮名と英語の意味付き）
+  const wordsWithInfo = useMemo(() => {
+    if (!targetWords || targetWords.length === 0) return [];
+    return getWordsInfo(targetWords);
+  }, [targetWords]);
+
   // 何も情報がなければ表示しない
   const hasTargetWords = targetWords && targetWords.length > 0;
   const hasTopic = selectedTopic && selectedTopic.trim() !== "";
   const hasGoal = conversationGoal && conversationGoal.trim() !== "";
 
   if (!hasTargetWords && !hasTopic && !hasGoal) return null;
+
+  // トピックを翻訳
+  const getTopicText = (topic: string) => {
+    return TOPIC_TRANSLATIONS[topic] || topic;
+  };
+
+  // 目標を翻訳
+  const getGoalText = (goal: string) => {
+    return GOAL_TRANSLATIONS[goal] || goal;
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30">
@@ -35,8 +75,8 @@ export default function SupportHints({
           <span className="text-lg">💡</span>
           <span className="font-medium">今日の会話サポート</span>
           {!expanded && hasTopic && (
-            <span className="text-sky-100 ml-2">
-              トピック: {selectedTopic}
+            <span className="text-sky-100 ml-2 text-sm">
+              {TOPIC_TRANSLATIONS[selectedTopic] || selectedTopic}
             </span>
           )}
         </div>
@@ -59,7 +99,7 @@ export default function SupportHints({
                   🎯 話したいトピック
                 </p>
                 <p className="text-purple-900 font-bold text-lg">
-                  {selectedTopic}
+                  {getTopicText(selectedTopic)}
                 </p>
               </div>
             )}
@@ -71,7 +111,7 @@ export default function SupportHints({
                   🎯 会話の目標
                 </p>
                 <p className="text-green-900">
-                  {conversationGoal}
+                  {getGoalText(conversationGoal)}
                 </p>
               </div>
             )}
@@ -79,28 +119,34 @@ export default function SupportHints({
             {/* ミッション単語 */}
             {hasTargetWords && (
               <div className="bg-sky-50 rounded-lg p-4 border border-sky-200">
-                <p className="text-sm text-sky-700 font-medium mb-2">
-                  📌 使いたい単語（ミッション）
+                <p className="text-sm text-sky-700 font-medium mb-3">
+                  📌 学習者が使いたい単語
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {targetWords.map((word, index) => (
-                    <span
+                  {wordsWithInfo.map((wordInfo, index) => (
+                    <div
                       key={index}
-                      className="bg-white px-3 py-1.5 rounded-full text-sky-700 font-bold border-2 border-sky-300 shadow-sm"
+                      className="bg-white px-4 py-2 rounded-full border-2 border-sky-300 shadow-sm"
                     >
-                      {word}
-                    </span>
+                      <span className="text-lg font-bold text-sky-800">
+                        {wordInfo.word}
+                      </span>
+                      {/* 読み仮名（漢字と異なる場合のみ表示） */}
+                      {wordInfo.reading !== wordInfo.word && (
+                        <span className="text-orange-600 text-sm ml-1">
+                          ({wordInfo.reading})
+                        </span>
+                      )}
+                    </div>
                   ))}
                 </div>
-                <p className="text-xs text-sky-600 mt-2">
-                  ※ 会話の中でこれらの単語を使えるよう導いてあげてください
+                <p className="text-xs text-sky-600 mt-3 bg-yellow-50 p-2 rounded border border-yellow-200">
+                  ※ 会話の中でこれらの単語を使えるよう導いてあげてください。
+                  <br />
+                  学習者が使えたら、たくさん褒めてあげましょう！ 😊
                 </p>
               </div>
             )}
-
-            <p className="text-xs text-gray-500 text-center pt-2 border-t border-gray-100">
-              学習者が目標を達成したら、たくさん褒めてあげてください！ 😊
-            </p>
           </div>
         </div>
       )}

@@ -45,8 +45,8 @@ export const authOptions: NextAuthOptions = {
     }),
     // LINE OAuth Provider
     LineProvider({
-      clientId: process.env.LINE_CLIENT_ID || "",
-      clientSecret: process.env.LINE_CLIENT_SECRET || "",
+      clientId: process.env.LINE_CHANNEL_ID || "",
+      clientSecret: process.env.LINE_CHANNEL_SECRET || "",
     }),
     CredentialsProvider({
       name: "credentials",

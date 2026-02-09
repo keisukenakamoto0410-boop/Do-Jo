@@ -254,17 +254,23 @@ export default function SeniorSessionPage() {
 
       const [audioTrack, videoTrack] =
         await AgoraRTC.createMicrophoneAndCameraTracks(
-          { encoderConfig: "music_standard" },
+          {
+            encoderConfig: "speech_standard",  // 会話向け（低ビットレート）
+          },
           {
             encoderConfig: {
-              width: 480,
-              height: 480,
+              width: 360,
+              height: 360,
               frameRate: 15,
-              bitrateMin: 400,
-              bitrateMax: 800,
+              bitrateMin: 200,
+              bitrateMax: 500,
             },
+            optimizationMode: "motion",  // 会話向け（動きを優先、低遅延）
           }
         );
+
+      // ネットワーク品質監視を有効化
+      agoraClient.enableDualStream();  // 低品質ストリームを自動切り替え
 
       setLocalTracks({ audioTrack, videoTrack });
 

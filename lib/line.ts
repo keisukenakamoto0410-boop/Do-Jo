@@ -124,13 +124,24 @@ export async function sendLineBookingNotification({
   learnerName,
   sessionDate,
   sessionUrl,
+  topic,
+  words,
 }: {
   lineUserId: string;
   hostName: string;
   learnerName: string;
   sessionDate: Date;
   sessionUrl: string;
+  topic?: string;
+  words?: string[];
 }): Promise<LinePushMessageResponse> {
+  // トピックと単語のテキストを生成
+  const topicText = topic ? `\n📝 今日のトピック: ${topic}` : "";
+  const wordsText =
+    words && words.length > 0
+      ? `\n\n💬 練習したい単語:\n${words.map((w) => `・${w}`).join("\n")}`
+      : "";
+
   const message = `【Do Jo】新しい予約が入りました
 
 ${hostName}さん、こんにちは！
@@ -138,7 +149,7 @@ ${hostName}さん、こんにちは！
 新しい会話セッションの予約が入りました。
 
 📅 日時: ${formatDateJa(sessionDate)}
-👤 相手: ${learnerName} さん
+👤 相手: ${learnerName} さん${topicText}${wordsText}
 
 当日は開始5分前にログインしてお待ちください。
 

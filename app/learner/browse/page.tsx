@@ -58,6 +58,11 @@ function BrowseContent() {
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<string | null>(null);
   const [selectedSlideTopic, setSelectedSlideTopic] = useState<string | null>(null);
 
+  // トピックと単語入力用
+  const [conversationTopic, setConversationTopic] = useState("");
+  const [practiceWords, setPracticeWords] = useState<string[]>([""]);
+  const [wordInput, setWordInput] = useState("");
+
   useEffect(() => {
     if (status === "loading") return;
     if (status === "unauthenticated") {
@@ -123,8 +128,25 @@ function BrowseContent() {
   const handleOpenSlideModal = (slotId: string) => {
     setSelectedSlotForBooking(slotId);
     setSelectedSlideTopic(null);
+    setConversationTopic("");
+    setPracticeWords([]);
+    setWordInput("");
     setShowSlideModal(true);
     setShowHostModal(false);
+  };
+
+  // 単語を追加
+  const handleAddWord = () => {
+    const trimmed = wordInput.trim();
+    if (trimmed && practiceWords.length < 5 && !practiceWords.includes(trimmed)) {
+      setPracticeWords([...practiceWords, trimmed]);
+      setWordInput("");
+    }
+  };
+
+  // 単語を削除
+  const handleRemoveWord = (index: number) => {
+    setPracticeWords(practiceWords.filter((_, i) => i !== index));
   };
 
   // 予約を確定
@@ -141,6 +163,8 @@ function BrowseContent() {
         body: JSON.stringify({
           slotId: selectedSlotForBooking,
           slideTopic: selectedSlideTopic,
+          selectedTopic: conversationTopic || null,
+          targetWords: practiceWords.filter(w => w.trim()),
         }),
       });
 
@@ -574,39 +598,108 @@ function BrowseContent() {
             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-2">
-                  Choose a Conversation Slide (Optional)
+                  Session Preparation
                 </h2>
                 <p className="text-gray-600 text-sm mb-6">
-                  Slides help guide your conversation. Both you and your host will see the same slides during the session.
+                  Let your host know what you want to practice today!
                 </p>
 
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  {SLIDE_TOPICS.map((topic) => (
+                {/* トピック入力 */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    📝 What topic do you want to talk about?
+                  </label>
+                  <input
+                    type="text"
+                    value={conversationTopic}
+                    onChange={(e) => setConversationTopic(e.target.value)}
+                    placeholder="e.g., Travel, My job, Japanese food..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    maxLength={100}
+                  />
+                </div>
+
+                {/* 単語入力 */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    💬 Words you want to practice (max 5)
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={wordInput}
+                      onChange={(e) => setWordInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddWord();
+                        }
+                      }}
+                      placeholder="Type a word and press Enter"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      maxLength={50}
+                      disabled={practiceWords.length >= 5}
+                    />
                     <button
-                      key={topic.id}
-                      onClick={() => setSelectedSlideTopic(
-                        selectedSlideTopic === topic.id ? null : topic.id
-                      )}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${
-                        selectedSlideTopic === topic.id
-                          ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
-                          : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
-                      }`}
+                      type="button"
+                      onClick={handleAddWord}
+                      disabled={!wordInput.trim() || practiceWords.length >= 5}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <div className="text-2xl mb-1">{topic.emoji}</div>
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {topic.nameEn}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {topic.nameJa}
-                      </div>
-                      {selectedSlideTopic === topic.id && (
-                        <div className="mt-1 text-blue-600 text-xs font-medium">
-                          ✓ Selected
-                        </div>
-                      )}
+                      Add
                     </button>
-                  ))}
+                  </div>
+                  {practiceWords.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {practiceWords.map((word, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+                        >
+                          {word}
+                          <button
+                            onClick={() => handleRemoveWord(index)}
+                            className="text-green-600 hover:text-green-800"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {practiceWords.length}/5 words added
+                  </p>
+                </div>
+
+                {/* スライド選択（オプション） */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    🖼️ Conversation Slides (Optional)
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Visual slides to guide your conversation
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SLIDE_TOPICS.map((topic) => (
+                      <button
+                        key={topic.id}
+                        onClick={() => setSelectedSlideTopic(
+                          selectedSlideTopic === topic.id ? null : topic.id
+                        )}
+                        className={`p-3 rounded-lg border-2 text-center transition-all ${
+                          selectedSlideTopic === topic.id
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-blue-300"
+                        }`}
+                      >
+                        <div className="text-xl mb-1">{topic.emoji}</div>
+                        <div className="text-xs font-medium text-gray-700">
+                          {topic.nameEn}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex gap-3">
@@ -615,6 +708,9 @@ function BrowseContent() {
                       setShowSlideModal(false);
                       setSelectedSlotForBooking(null);
                       setSelectedSlideTopic(null);
+                      setConversationTopic("");
+                      setPracticeWords([]);
+                      setWordInput("");
                     }}
                     className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50"
                   >
@@ -625,7 +721,7 @@ function BrowseContent() {
                     disabled={bookingSlotId !== null}
                     className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50"
                   >
-                    {selectedSlideTopic ? "Book with Slides" : "Book without Slides"}
+                    Book Session
                   </button>
                 </div>
               </div>

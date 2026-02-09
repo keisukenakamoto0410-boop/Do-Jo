@@ -19,6 +19,8 @@ interface BookingEmailParams {
   learnerName: string;
   sessionDate: Date;
   sessionUrl: string;
+  topic?: string;
+  words?: string[];
 }
 
 interface LearnerBookingEmailParams {
@@ -88,9 +90,29 @@ export async function sendBookingConfirmationEmail({
   learnerName,
   sessionDate,
   sessionUrl,
+  topic,
+  words,
 }: BookingEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+
+    // トピックと単語のHTMLを生成
+    const topicHtml = topic
+      ? `<p style="margin: 12px 0;"><strong>📝 今日のトピック:</strong> ${topic}</p>`
+      : "";
+
+    const wordsHtml =
+      words && words.length > 0
+        ? `
+          <div style="margin: 12px 0;">
+            <p style="margin: 0 0 8px 0;"><strong>💬 練習したい単語:</strong></p>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${words.map((word) => `<li style="margin: 4px 0;">${word}</li>`).join("")}
+            </ul>
+          </div>
+        `
+        : "";
+
     await transporter.sendMail({
       from: `Do Jo <${FROM_EMAIL}>`,
       to: hostEmail,
@@ -106,10 +128,15 @@ export async function sendBookingConfirmationEmail({
           <div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 20px 0;">
             <p style="margin: 8px 0;"><strong>📅 日時:</strong> ${formatDateJa(sessionDate)}</p>
             <p style="margin: 8px 0;"><strong>👤 相手:</strong> ${learnerName} さん</p>
-            <p style="margin: 8px 0;"><strong>🔗 セッションURL:</strong> <a href="${sessionUrl}" style="color: #d97706;">${sessionUrl}</a></p>
+            ${topicHtml}
+            ${wordsHtml}
           </div>
 
-          <p style="font-size: 14px; color: #666;">当日は開始5分前にログインしてお待ちください。</p>
+          <a href="${sessionUrl}" style="display: inline-block; background: #d97706; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
+            セッションに参加する →
+          </a>
+
+          <p style="font-size: 14px; color: #666; margin-top: 20px;">当日は開始5分前にログインしてお待ちください。</p>
 
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
 

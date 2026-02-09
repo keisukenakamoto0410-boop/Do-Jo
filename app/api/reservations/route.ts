@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { slotId, slideTopic } = body;
-    console.log("[Reservation] Request body:", { slotId, slideTopic });
+    const { slotId, slideTopic, selectedTopic, targetWords } = body;
+    console.log("[Reservation] Request body:", { slotId, slideTopic, selectedTopic, targetWords });
 
     if (!slotId) {
       return NextResponse.json(
@@ -176,6 +176,8 @@ export async function POST(req: NextRequest) {
           sessionType: slot.sessionType,
           status: "confirmed",
           slideTopic: slideTopic || null,
+          selectedTopic: selectedTopic || null,
+          targetWords: targetWords || [],
         },
         include: {
           slot: true,
@@ -212,13 +214,15 @@ export async function POST(req: NextRequest) {
     console.log("[Reservation] GMAIL_USER configured:", !!process.env.GMAIL_USER);
     console.log("[Reservation] GMAIL_APP_PASSWORD configured:", !!process.env.GMAIL_APP_PASSWORD);
 
-    // Email to host (Japanese)
+    // Email to host (Japanese) - include topic and words
     sendBookingConfirmationEmail({
       hostEmail: reservation.host.email!,
       hostName: reservation.host.name,
       learnerName: reservation.learner.name,
       sessionDate: reservation.slot.startTime,
       sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
+      topic: reservation.selectedTopic || undefined,
+      words: reservation.targetWords || [],
     }).then((result) => {
       if (result.success) {
         console.log("[Reservation] Host email sent successfully");
@@ -263,6 +267,8 @@ export async function POST(req: NextRequest) {
         learnerName: reservation.learner.name,
         sessionDate: reservation.slot.startTime,
         sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
+        topic: reservation.selectedTopic || undefined,
+        words: reservation.targetWords || [],
       }).then((result) => {
         if (result.success) {
           console.log("[Reservation] LINE notification sent successfully");

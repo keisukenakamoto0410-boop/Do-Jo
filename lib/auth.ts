@@ -43,10 +43,10 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
-    // LINE OAuth Provider
+    // LINE OAuth Provider (LINEログイン用 - Messaging APIとは別のチャネル)
     LineProvider({
-      clientId: process.env.LINE_CHANNEL_ID || "",
-      clientSecret: process.env.LINE_CHANNEL_SECRET || "",
+      clientId: process.env.LINE_CLIENT_ID || "",
+      clientSecret: process.env.LINE_CLIENT_SECRET || "",
     }),
     CredentialsProvider({
       name: "credentials",

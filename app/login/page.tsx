@@ -307,8 +307,7 @@ export default function LoginPage() {
 
               {/* ソーシャルログインボタン */}
               <div className="space-y-3 mb-6">
-                {/* LINEログイン - メールアドレス取得権限の審査通過後に有効化 */}
-                {/* TODO: LINE Developers Consoleでメールアドレス取得権限が承認されたら、このコメントを外す
+                {/* LINEログイン */}
                 <button
                   type="button"
                   onClick={() => signIn("line", { callbackUrl: "/senior/dashboard" })}
@@ -324,7 +323,6 @@ export default function LoginPage() {
                   </svg>
                   LINEでログイン
                 </button>
-                */}
 
                 {/* Googleログイン */}
                 <button

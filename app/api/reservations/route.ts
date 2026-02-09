@@ -248,9 +248,15 @@ export async function POST(req: NextRequest) {
     });
 
     // LINE notification to host (if LINE connected)
-    const hostLineId = (reservation.host as { lineId?: string | null }).lineId;
+    // Debug: Log the full host object to see what's available
+    console.log("[Reservation] Host object:", JSON.stringify(reservation.host, null, 2));
+    console.log("[Reservation] Host lineId from reservation:", reservation.host.lineId);
+
+    const hostLineId = reservation.host.lineId;
+    console.log("[Reservation] hostLineId value:", hostLineId, "type:", typeof hostLineId);
+
     if (hostLineId) {
-      console.log("[Reservation] Host has LINE connected, sending notification...");
+      console.log("[Reservation] Host has LINE connected, sending notification to:", hostLineId);
       sendLineBookingNotification({
         lineUserId: hostLineId,
         hostName: reservation.host.name,
@@ -267,7 +273,14 @@ export async function POST(req: NextRequest) {
         console.error("[Reservation] Failed to send LINE notification:", err);
       });
     } else {
-      console.log("[Reservation] Host does not have LINE connected, skipping LINE notification");
+      console.log("[Reservation] Host does not have LINE connected (lineId is null/undefined), skipping LINE notification");
+      // Also check if the host has lineId in DB but it wasn't included in the query
+      prisma.user.findUnique({
+        where: { id: reservation.host.id },
+        select: { lineId: true }
+      }).then(dbHost => {
+        console.log("[Reservation] Direct DB check - Host lineId:", dbHost?.lineId);
+      });
     }
 
     return NextResponse.json({ reservation }, { status: 201 });

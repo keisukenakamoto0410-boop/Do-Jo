@@ -239,6 +239,17 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
       }
 
+      // トークンにIDがない場合（既存セッション）、DBから取得
+      if (!token.id && token.email) {
+        const dbUser = await db.user.findUnique({
+          where: { email: token.email as string },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role as UserRole;
+        }
+      }
+
       if (trigger === "update" && session) {
         token.name = session.name;
         token.email = session.email;

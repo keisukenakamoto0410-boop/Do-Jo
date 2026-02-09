@@ -92,12 +92,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    console.log("[Reservation] Session:", session?.user ? { id: session.user.id, role: session.user.role, email: session.user.email } : null);
+
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Only learners can make reservations
     if (session.user.role !== "learner") {
+      console.log("[Reservation] Rejected: Not a learner, role is:", session.user.role);
       return NextResponse.json(
         { error: "Only learners can make reservations" },
         { status: 403 }
@@ -106,6 +109,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { slotId, slideTopic } = body;
+    console.log("[Reservation] Request body:", { slotId, slideTopic });
 
     if (!slotId) {
       return NextResponse.json(
@@ -119,12 +123,14 @@ export async function POST(req: NextRequest) {
       where: { id: slotId },
       include: { reservation: true },
     });
+    console.log("[Reservation] Slot found:", slot ? { id: slot.id, status: slot.status, hostId: slot.hostId, hasReservation: !!slot.reservation } : null);
 
     if (!slot) {
       return NextResponse.json({ error: "Slot not found" }, { status: 404 });
     }
 
     if (slot.status !== "available" || slot.reservation) {
+      console.log("[Reservation] Rejected: Slot not available, status:", slot.status);
       return NextResponse.json(
         { error: "Slot is no longer available" },
         { status: 409 }
@@ -143,18 +149,21 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingReservation) {
+      console.log("[Reservation] Rejected: Already has reservation at this time");
       return NextResponse.json(
         { error: "You already have a reservation at this time" },
         { status: 409 }
       );
     }
 
+    console.log("[Reservation] Creating reservation with learnerId:", session.user.id, "hostId:", slot.hostId);
+
     // Create reservation and update slot status in a transaction
     const reservation = await prisma.$transaction(async (tx) => {
-      // Update slot status
+      // Update slot status to "reserved" (matching schema comment)
       await tx.slot.update({
         where: { id: slotId },
-        data: { status: "booked" },
+        data: { status: "reserved" },
       });
 
       // Create reservation
@@ -238,9 +247,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {
-    console.error("Error creating reservation:", error);
+    console.error("[Reservation] Error creating reservation:", error);
+    // Include more details in the error for debugging
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to create reservation" },
+      { error: "Failed to create reservation", details: errorMessage },
       { status: 500 }
     );
   }

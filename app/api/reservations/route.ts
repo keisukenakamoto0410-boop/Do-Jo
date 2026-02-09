@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendBookingConfirmationEmail, sendLearnerBookingConfirmationEmail } from "@/lib/email";
+import { sendLineBookingNotification } from "@/lib/line";
 
 // GET reservations for the current user
 export async function GET(req: NextRequest) {
@@ -185,6 +186,7 @@ export async function POST(req: NextRequest) {
               email: true,
               avatar: true,
               role: true,
+              lineId: true,
             },
           },
           learner: {
@@ -244,6 +246,29 @@ export async function POST(req: NextRequest) {
     }).catch((err) => {
       console.error("[Reservation] Failed to send booking confirmation email to learner:", err);
     });
+
+    // LINE notification to host (if LINE connected)
+    const hostLineId = (reservation.host as { lineId?: string | null }).lineId;
+    if (hostLineId) {
+      console.log("[Reservation] Host has LINE connected, sending notification...");
+      sendLineBookingNotification({
+        lineUserId: hostLineId,
+        hostName: reservation.host.name,
+        learnerName: reservation.learner.name,
+        sessionDate: reservation.slot.startTime,
+        sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
+      }).then((result) => {
+        if (result.success) {
+          console.log("[Reservation] LINE notification sent successfully");
+        } else {
+          console.error("[Reservation] LINE notification failed:", result.error);
+        }
+      }).catch((err) => {
+        console.error("[Reservation] Failed to send LINE notification:", err);
+      });
+    } else {
+      console.log("[Reservation] Host does not have LINE connected, skipping LINE notification");
+    }
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {

@@ -100,3 +100,119 @@ export async function sendLinePushMessageToMultiple(
     results,
   };
 }
+
+// Format date in Japanese style
+function formatDateJa(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+  };
+  return date.toLocaleDateString("ja-JP", options);
+}
+
+/**
+ * Send booking confirmation to host via LINE
+ */
+export async function sendLineBookingNotification({
+  lineUserId,
+  hostName,
+  learnerName,
+  sessionDate,
+  sessionUrl,
+}: {
+  lineUserId: string;
+  hostName: string;
+  learnerName: string;
+  sessionDate: Date;
+  sessionUrl: string;
+}): Promise<LinePushMessageResponse> {
+  const message = `【Do Jo】新しい予約が入りました
+
+${hostName}さん、こんにちは！
+
+新しい会話セッションの予約が入りました。
+
+📅 日時: ${formatDateJa(sessionDate)}
+👤 相手: ${learnerName} さん
+
+当日は開始5分前にログインしてお待ちください。
+
+🔗 セッションURL:
+${sessionUrl}`;
+
+  console.log("[LINE] Sending booking notification to:", lineUserId);
+  return sendLinePushMessage(lineUserId, message);
+}
+
+/**
+ * Send session reminder via LINE (30 minutes before)
+ */
+export async function sendLineReminderNotification({
+  lineUserId,
+  name,
+  partnerName,
+  sessionDate,
+  sessionUrl,
+}: {
+  lineUserId: string;
+  name: string;
+  partnerName: string;
+  sessionDate: Date;
+  sessionUrl: string;
+}): Promise<LinePushMessageResponse> {
+  const message = `【Do Jo】まもなくセッション開始です
+
+${name}さん
+
+セッションの開始時刻が近づいています！
+
+📅 日時: ${formatDateJa(sessionDate)}
+👤 相手: ${partnerName} さん
+
+下のリンクをタップしてセッションに参加してください👇
+
+🔗 ${sessionUrl}`;
+
+  console.log("[LINE] Sending reminder to:", lineUserId);
+  return sendLinePushMessage(lineUserId, message);
+}
+
+/**
+ * Send cancellation notification via LINE
+ */
+export async function sendLineCancellationNotification({
+  lineUserId,
+  recipientName,
+  cancellerName,
+  sessionDate,
+  reason,
+}: {
+  lineUserId: string;
+  recipientName: string;
+  cancellerName: string;
+  sessionDate: Date;
+  reason?: string;
+}): Promise<LinePushMessageResponse> {
+  let message = `【Do Jo】予約がキャンセルされました
+
+${recipientName}さん
+
+予定されていた会話セッションがキャンセルされました。
+
+📅 予定日時: ${formatDateJa(sessionDate)}
+👤 学習者: ${cancellerName} さん`;
+
+  if (reason) {
+    message += `\n\n💬 キャンセル理由:\n「${reason}」`;
+  }
+
+  message += `\n\nこの時間帯は再び予約可能になりました。`;
+
+  console.log("[LINE] Sending cancellation notification to:", lineUserId);
+  return sendLinePushMessage(lineUserId, message);
+}

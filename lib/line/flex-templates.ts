@@ -1,0 +1,745 @@
+// lib/line/flex-templates.ts
+// LINE Flex Message Templates for Do Jo Registration Flow
+
+import { LineMessage } from "./messaging";
+
+// Design constants
+const COLORS = {
+  primary: "#4F46E5", // Indigo - main color
+  warning: "#F59E0B", // Yellow - reminders
+  error: "#EF4444", // Red - cancellation
+  success: "#10B981", // Green - success
+  selected: "#4F46E5", // Selected button
+  unselected: "#E5E7EB", // Unselected button
+};
+
+/**
+ * Welcome message for new LINE friends
+ * Prompts user to enter their name
+ */
+export function buildWelcomeMessage(): LineMessage {
+  return {
+    type: "flex",
+    altText: "Do Joへようこそ！お名前を入力してください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "🎉 Do Joへようこそ！",
+            weight: "bold",
+            size: "xl",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "日本語会話練習のボランティアにご登録いただきありがとうございます！",
+            wrap: true,
+            size: "sm",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "まずはお名前を教えてください",
+            weight: "bold",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "（ニックネームでもOK）",
+            size: "xs",
+            color: "#888888",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Area selection message after name input
+ */
+export function buildAreaSelectMessage(name: string): LineMessage {
+  const prefectures = [
+    ["北海道", "東北", "関東", "中部"],
+    ["近畿", "中国", "四国", "九州"],
+  ];
+
+  const buttons = prefectures.flat().map((area) => ({
+    type: "button",
+    style: "secondary",
+    action: {
+      type: "postback",
+      label: area,
+      data: `action=select_area&area=${area}`,
+    },
+    height: "sm",
+    margin: "sm",
+  }));
+
+  return {
+    type: "flex",
+    altText: `${name}さん、お住まいの地域を選んでください`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `${name}さん、ようこそ！`,
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📍 お住まいの地域を選んでください",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            contents: buttons.slice(0, 4).map((btn) => ({
+              ...btn,
+              type: "button" as const,
+            })),
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            contents: buttons.slice(4).map((btn) => ({
+              ...btn,
+              type: "button" as const,
+            })),
+            margin: "sm",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Day selection message for schedule registration
+ * Shows toggleable day buttons
+ */
+export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage {
+  const days = ["月", "火", "水", "木", "金", "土", "日"];
+
+  const dayButtons = days.map((day) => {
+    const isSelected = selectedDays.includes(day);
+    return {
+      type: "button",
+      style: isSelected ? "primary" : "secondary",
+      color: isSelected ? COLORS.selected : undefined,
+      action: {
+        type: "postback",
+        label: `${day}曜日${isSelected ? " ✓" : ""}`,
+        data: `action=toggle_day&day=${day}`,
+      },
+      height: "sm",
+      margin: "xs",
+      flex: 1,
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: "スケジュール登録 - 曜日を選んでください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📅 スケジュール登録",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "会話できる曜日を選んでください",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "（複数選択可能）",
+            size: "xs",
+            color: "#888888",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: dayButtons.slice(0, 4).map((btn) => ({
+              ...btn,
+              type: "button" as const,
+            })),
+            margin: "lg",
+            spacing: "xs",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: dayButtons.slice(4).map((btn) => ({
+              ...btn,
+              type: "button" as const,
+            })),
+            margin: "sm",
+            spacing: "xs",
+          },
+          selectedDays.length > 0
+            ? {
+                type: "text",
+                text: `選択中: ${selectedDays.join("・")}曜日`,
+                size: "sm",
+                color: COLORS.primary,
+                margin: "lg",
+                align: "center",
+              }
+            : {
+                type: "filler",
+              },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: selectedDays.length > 0 ? COLORS.success : COLORS.unselected,
+            action: {
+              type: "postback",
+              label: "この曜日で決定 ✓",
+              data: "action=confirm_days",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Time slot selection message for a specific day
+ */
+export function buildTimeSelectMessage(
+  day: string,
+  selectedTimes: string[] = []
+): LineMessage {
+  const timeSlots = [
+    "09:00",
+    "10:00",
+    "11:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
+  ];
+
+  // Create 3 rows of 4 buttons each
+  const rows = [];
+  for (let i = 0; i < timeSlots.length; i += 4) {
+    const rowSlots = timeSlots.slice(i, i + 4);
+    rows.push({
+      type: "box",
+      layout: "horizontal",
+      contents: rowSlots.map((time) => {
+        const isSelected = selectedTimes.includes(time);
+        return {
+          type: "button",
+          style: isSelected ? "primary" : "secondary",
+          action: {
+            type: "postback",
+            label: time,
+            data: `action=select_time&day=${day}&time=${time}`,
+          },
+          height: "sm",
+          flex: 1,
+        };
+      }),
+      spacing: "xs",
+      margin: "sm",
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: `${day}曜日の時間を選んでください`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `⏰ ${day}曜日の時間帯`,
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "会話可能な時間を選んでください",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "（1つ選択すると次の曜日へ進みます）",
+            size: "xs",
+            color: "#888888",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          ...rows,
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Schedule confirmation message after all slots are registered
+ */
+export function buildScheduleConfirmMessage(
+  slots: Array<{ startTime: Date; endTime: Date }>
+): LineMessage {
+  const formatSlot = (slot: { startTime: Date }) => {
+    const date = new Date(slot.startTime);
+    const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+    const dayName = dayNames[date.getDay()];
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${month}/${day}(${dayName}) ${hours}:${minutes}`;
+  };
+
+  const slotTexts = slots.map((slot) => ({
+    type: "text",
+    text: `📌 ${formatSlot(slot)}`,
+    size: "sm",
+    margin: "sm",
+  }));
+
+  return {
+    type: "flex",
+    altText: "スケジュール登録完了！",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "✅ スケジュール登録完了！",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.success,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "以下の時間で登録しました",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            contents: slotTexts.slice(0, 10), // Limit to 10 slots for display
+            margin: "md",
+          },
+          slots.length > 10
+            ? {
+                type: "text",
+                text: `他${slots.length - 10}件...`,
+                size: "xs",
+                color: "#888888",
+              }
+            : { type: "filler" },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "学習者から予約が入るとLINEでお知らせします！",
+            size: "sm",
+            wrap: true,
+            margin: "lg",
+            color: "#666666",
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "secondary",
+            action: {
+              type: "postback",
+              label: "スケジュールを追加する",
+              data: "action=start_schedule",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Menu message for registered users
+ */
+export function buildMainMenuMessage(userName: string): LineMessage {
+  return {
+    type: "flex",
+    altText: "Do Jo メニュー",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `${userName}さん`,
+            weight: "bold",
+            size: "lg",
+          },
+          {
+            type: "text",
+            text: "何をしますか？",
+            size: "sm",
+            color: "#888888",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "postback",
+              label: "📅 スケジュールを登録",
+              data: "action=start_schedule",
+            },
+            margin: "lg",
+          },
+          {
+            type: "button",
+            style: "secondary",
+            action: {
+              type: "postback",
+              label: "📋 予約一覧を見る",
+              data: "action=view_reservations",
+            },
+            margin: "sm",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Booking notification message for hosts when a learner books a session
+ * Includes OK and Cancel buttons for quick response
+ */
+export function buildBookingNotification(params: {
+  learnerName: string;
+  day: string;
+  time: string;
+  topic?: string;
+  reservationId?: string;
+}): LineMessage {
+  const { learnerName, day, time, topic, reservationId } = params;
+
+  const infoContents: object[] = [
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "相手",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: `${learnerName} さん`,
+          size: "sm",
+          flex: 5,
+        },
+      ],
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "日時",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: `${day} ${time}`,
+          size: "sm",
+          flex: 5,
+        },
+      ],
+    },
+  ];
+
+  // Add topic row
+  infoContents.push({
+    type: "box",
+    layout: "horizontal",
+    contents: [
+      {
+        type: "text",
+        text: "トピック",
+        size: "sm",
+        color: "#999999",
+        flex: 2,
+      },
+      {
+        type: "text",
+        text: topic || "未定",
+        size: "sm",
+        flex: 5,
+      },
+    ],
+  });
+
+  return {
+    type: "flex",
+    altText: "予約が確定しました！",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "✅ 予約が確定しました！",
+            weight: "bold",
+            size: "lg",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            margin: "lg",
+            spacing: "sm",
+            contents: infoContents,
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "postback",
+              label: "OK 👍",
+              data: `action=ack_booking${reservationId ? `&reservationId=${reservationId}` : ""}`,
+            },
+            style: "primary",
+            color: "#06C755",
+            flex: 1,
+          },
+          {
+            type: "button",
+            action: {
+              type: "postback",
+              label: "キャンセル",
+              data: `action=cancel_booking${reservationId ? `&reservationId=${reservationId}` : ""}`,
+            },
+            style: "secondary",
+            flex: 1,
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Session info message sent before the session starts (e.g., 30 minutes before)
+ * Includes session details in a styled box and a session URL button
+ */
+export function buildSessionInfoMessage(params: {
+  learnerName: string;
+  topic?: string;
+  targetWords?: string[];
+  sessionUrl: string;
+}): LineMessage {
+  const { learnerName, topic, targetWords, sessionUrl } = params;
+
+  // Info box contents
+  const infoBoxContents: object[] = [
+    {
+      type: "text",
+      text: `👤 ${learnerName} さん`,
+      weight: "bold",
+      size: "md",
+    },
+    {
+      type: "text",
+      text: `📝 トピック: ${topic || "日常会話"}`,
+      size: "sm",
+      margin: "md",
+    },
+    {
+      type: "text",
+      text: `💬 使いたい単語: ${targetWords && targetWords.length > 0 ? targetWords.join(", ") : "なし"}`,
+      size: "sm",
+      margin: "sm",
+      wrap: true,
+    },
+  ];
+
+  return {
+    type: "flex",
+    altText: "まもなくセッション開始！",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📋 まもなくセッション開始！",
+            weight: "bold",
+            size: "lg",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            margin: "lg",
+            spacing: "sm",
+            backgroundColor: "#F5F5F5",
+            cornerRadius: "md",
+            paddingAll: "lg",
+            contents: infoBoxContents,
+          },
+          {
+            type: "text",
+            text: "💡 相手の単語を自然に会話に入れてあげると喜ばれます！",
+            size: "xs",
+            color: "#666666",
+            margin: "lg",
+            wrap: true,
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "uri",
+              label: "セッションに参加",
+              uri: sessionUrl,
+            },
+            style: "primary",
+            color: "#06C755",
+          },
+        ],
+      },
+    },
+  };
+}

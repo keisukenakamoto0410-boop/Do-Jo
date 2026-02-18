@@ -23,6 +23,11 @@ model User {
   // OAuth Provider IDs
   lineId          String?   @unique  // LINE user ID for LINE notifications
 
+  // LINE登録フロー用
+  registrationStep String?   // "AWAITING_NAME" | "AWAITING_AREA" | "COMPLETED"
+  selectedDays    String?   // JSON配列: 選択中の曜日
+  scheduleStep    String?   // JSON: スケジュール登録の進捗状態
+
   // プロフィール（共通）
   avatar          String?
   bio             String?   @db.Text  // 自己紹介

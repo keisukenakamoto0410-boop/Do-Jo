@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import {
+  handleFollow,
+  handleMessage,
+  handlePostback,
+} from "@/lib/line/handlers";
 
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || "";
-const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
 
 // LINE署名検証
 function verifySignature(body: string, signature: string): boolean {
@@ -14,8 +18,85 @@ function verifySignature(body: string, signature: string): boolean {
   return hash === signature;
 }
 
-// LINEにメッセージを返信
-async function replyMessage(replyToken: string, message: string) {
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.text();
+    const signature = req.headers.get("x-line-signature") || "";
+
+    // 署名検証
+    if (!verifySignature(body, signature)) {
+      console.error("[LINE Webhook] Invalid signature");
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    const data = JSON.parse(body);
+    console.log("[LINE Webhook] Received:", JSON.stringify(data, null, 2));
+
+    // イベント処理
+    for (const event of data.events || []) {
+      const lineUserId = event.source?.userId;
+      if (!lineUserId) continue;
+
+      console.log("[LINE Webhook] Event type:", event.type, "User:", lineUserId);
+
+      try {
+        switch (event.type) {
+          case "follow":
+            // 友だち追加時
+            await handleFollow(event);
+            break;
+
+          case "postback":
+            // ボタンタップ時
+            await handlePostback(event);
+            break;
+
+          case "message":
+            if (event.message?.type === "text") {
+              // テキストメッセージ受信時
+              // まず既存のメール連携機能をチェック
+              const handled = await handleLegacyEmailLinking(event);
+              if (!handled) {
+                // メール連携ではない場合、新しいハンドラーへ
+                await handleMessage(event);
+              }
+            }
+            break;
+
+          case "unfollow":
+            // ブロック時（オプション: ログのみ）
+            console.log("[LINE Webhook] User unfollowed:", lineUserId);
+            break;
+        }
+      } catch (eventError) {
+        console.error("[LINE Webhook] Event processing error:", eventError);
+        // Continue processing other events
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[LINE Webhook] Error:", error);
+    return NextResponse.json(
+      { error: "Webhook processing failed" },
+      { status: 500 }
+    );
+  }
+}
+
+// LINE Developers ConsoleからのWebhook URL検証用
+export async function GET() {
+  return NextResponse.json({ status: "ok" });
+}
+
+// ============================================
+// Legacy Email Linking Handler
+// 既存のメール連携機能を維持（学習者向け）
+// ============================================
+
+const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || "";
+
+async function replyMessageLegacy(replyToken: string, message: string) {
   try {
     const response = await fetch("https://api.line.me/v2/bot/message/reply", {
       method: "POST",
@@ -38,163 +119,129 @@ async function replyMessage(replyToken: string, message: string) {
   }
 }
 
-// メールアドレスの形式チェック
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.text();
-    const signature = req.headers.get("x-line-signature") || "";
+/**
+ * Handle legacy email-based linking for existing users (learners)
+ * Returns true if the message was handled by this function
+ */
+async function handleLegacyEmailLinking(event: {
+  source: { userId: string };
+  replyToken: string;
+  message: { text: string };
+}): Promise<boolean> {
+  const lineUserId = event.source.userId;
+  const messageText = event.message.text.trim();
+  const replyToken = event.replyToken;
 
-    // 署名検証
-    if (!verifySignature(body, signature)) {
-      console.error("[LINE Webhook] Invalid signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  // Check if user is in LINE registration flow (senior volunteer)
+  const registrationUser = await prisma.user.findUnique({
+    where: { lineId: lineUserId },
+    select: { registrationStep: true },
+  });
 
-    const data = JSON.parse(body);
-    console.log("[LINE Webhook] Received:", JSON.stringify(data, null, 2));
-
-    // イベント処理
-    for (const event of data.events || []) {
-      if (event.type === "message" && event.message.type === "text") {
-        const lineUserId = event.source.userId;
-        const messageText = event.message.text.trim();
-        const replyToken = event.replyToken;
-
-        console.log("[LINE Webhook] Message from:", lineUserId, "Text:", messageText);
-
-        // メールアドレスかどうか判定
-        if (isValidEmail(messageText)) {
-          const email = messageText.toLowerCase();
-
-          // DBでユーザーを検索
-          const user = await prisma.user.findUnique({
-            where: { email },
-            select: { id: true, name: true, email: true, lineId: true },
-          });
-
-          if (!user) {
-            // ユーザーが見つからない
-            await replyMessage(
-              replyToken,
-              `このメールアドレスで登録されたアカウントが見つかりませんでした。\n\nDo Joに登録したメールアドレスを入力してください。\n\n登録がまだの方は先にアプリで登録してください:\nhttps://do-jo.vercel.app/login`
-            );
-          } else if (user.lineId === lineUserId) {
-            // 既に連携済み
-            await replyMessage(
-              replyToken,
-              `${user.name}さん、このアカウントは既にLINEと連携されています！\n\n予約が入った時にLINEでお知らせします。`
-            );
-          } else if (user.lineId && user.lineId !== lineUserId) {
-            // 別のLINEアカウントと連携済み
-            await replyMessage(
-              replyToken,
-              `このメールアドレスは既に別のLINEアカウントと連携されています。\n\n連携を変更したい場合はサポートまでご連絡ください。`
-            );
-          } else {
-            // LINE IDを紐付け
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { lineId: lineUserId },
-            });
-
-            console.log("[LINE Webhook] Linked user:", user.email, "to LINE:", lineUserId);
-
-            await replyMessage(
-              replyToken,
-              `${user.name}さん、LINE連携が完了しました！\n\n今後、予約が入った時やセッションのリマインダーをLINEでお知らせします。`
-            );
-          }
-        } else if (messageText === "解除" || messageText === "連携解除") {
-          // 連携解除
-          const user = await prisma.user.findFirst({
-            where: { lineId: lineUserId },
-            select: { id: true, name: true },
-          });
-
-          if (user) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { lineId: null },
-            });
-
-            await replyMessage(
-              replyToken,
-              `${user.name}さん、LINE連携を解除しました。\n\n再度連携する場合は、登録したメールアドレスを送ってください。`
-            );
-          } else {
-            await replyMessage(
-              replyToken,
-              `現在、連携されているアカウントはありません。`
-            );
-          }
-        } else if (messageText === "確認" || messageText === "ステータス") {
-          // 連携状態確認
-          const user = await prisma.user.findFirst({
-            where: { lineId: lineUserId },
-            select: { name: true, email: true },
-          });
-
-          if (user) {
-            await replyMessage(
-              replyToken,
-              `連携状態: 連携済み\n\n名前: ${user.name}\nメール: ${user.email}\n\n連携を解除する場合は「解除」と送ってください。`
-            );
-          } else {
-            await replyMessage(
-              replyToken,
-              `連携状態: 未連携\n\nDo Joに登録したメールアドレスを送ると、LINE通知が届くようになります。`
-            );
-          }
-        } else {
-          // ヘルプメッセージ
-          await replyMessage(
-            replyToken,
-            `Do Jo LINE通知サービスです。\n\n【使い方】\n・Do Joに登録したメールアドレスを送る → LINE連携\n・「確認」と送る → 連携状態を確認\n・「解除」と送る → 連携を解除\n\n連携すると、予約通知やリマインダーがLINEに届きます。`
-          );
-        }
-      } else if (event.type === "follow") {
-        // 友だち追加時
-        const lineUserId = event.source.userId;
-        const replyToken = event.replyToken;
-
-        console.log("[LINE Webhook] New follower:", lineUserId);
-
-        // 既に連携されているか確認
-        const existingUser = await prisma.user.findFirst({
-          where: { lineId: lineUserId },
-          select: { name: true },
-        });
-
-        if (existingUser) {
-          await replyMessage(
-            replyToken,
-            `${existingUser.name}さん、おかえりなさい！\n\nLINE連携は有効です。予約が入った時にお知らせします。`
-          );
-        } else {
-          await replyMessage(
-            replyToken,
-            `Do Joへようこそ！\n\nLINE通知を受け取るには、Do Joに登録したメールアドレスをこちらに送ってください。\n\n例: example@gmail.com\n\nまだ登録していない方はこちらから:\nhttps://do-jo.vercel.app/login`
-          );
-        }
-      }
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[LINE Webhook] Error:", error);
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 }
-    );
+  // If user is in registration flow, let the new handlers handle it
+  if (
+    registrationUser?.registrationStep &&
+    registrationUser.registrationStep !== "COMPLETED"
+  ) {
+    return false;
   }
-}
 
-// LINE Developers ConsoleからのWebhook URL検証用
-export async function GET() {
-  return NextResponse.json({ status: "ok" });
+  // Handle email-based linking for existing users
+  if (isValidEmail(messageText)) {
+    const email = messageText.toLowerCase();
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true, email: true, lineId: true },
+    });
+
+    if (!user) {
+      await replyMessageLegacy(
+        replyToken,
+        `このメールアドレスで登録されたアカウントが見つかりませんでした。\n\nDo Joに登録したメールアドレスを入力してください。\n\n登録がまだの方は先にアプリで登録してください:\nhttps://do-jo.vercel.app/login`
+      );
+    } else if (user.lineId === lineUserId) {
+      await replyMessageLegacy(
+        replyToken,
+        `${user.name}さん、このアカウントは既にLINEと連携されています！\n\n予約が入った時にLINEでお知らせします。`
+      );
+    } else if (user.lineId && user.lineId !== lineUserId) {
+      await replyMessageLegacy(
+        replyToken,
+        `このメールアドレスは既に別のLINEアカウントと連携されています。\n\n連携を変更したい場合はサポートまでご連絡ください。`
+      );
+    } else {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lineId: lineUserId },
+      });
+
+      console.log(
+        "[LINE Webhook] Linked user:",
+        user.email,
+        "to LINE:",
+        lineUserId
+      );
+
+      await replyMessageLegacy(
+        replyToken,
+        `${user.name}さん、LINE連携が完了しました！\n\n今後、予約が入った時やセッションのリマインダーをLINEでお知らせします。`
+      );
+    }
+    return true;
+  }
+
+  // Handle special commands
+  if (messageText === "解除" || messageText === "連携解除") {
+    const user = await prisma.user.findFirst({
+      where: { lineId: lineUserId },
+      select: { id: true, name: true },
+    });
+
+    if (user) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lineId: null },
+      });
+
+      await replyMessageLegacy(
+        replyToken,
+        `${user.name}さん、LINE連携を解除しました。\n\n再度連携する場合は、登録したメールアドレスを送ってください。`
+      );
+    } else {
+      await replyMessageLegacy(
+        replyToken,
+        `現在、連携されているアカウントはありません。`
+      );
+    }
+    return true;
+  }
+
+  if (messageText === "確認" || messageText === "ステータス") {
+    const user = await prisma.user.findFirst({
+      where: { lineId: lineUserId },
+      select: { name: true, email: true },
+    });
+
+    if (user) {
+      await replyMessageLegacy(
+        replyToken,
+        `連携状態: 連携済み\n\n名前: ${user.name}\nメール: ${user.email}\n\n連携を解除する場合は「解除」と送ってください。`
+      );
+    } else {
+      await replyMessageLegacy(
+        replyToken,
+        `連携状態: 未連携\n\nDo Joに登録したメールアドレスを送ると、LINE通知が届くようになります。`
+      );
+    }
+    return true;
+  }
+
+  // Not handled by legacy system
+  return false;
 }

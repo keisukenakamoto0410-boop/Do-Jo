@@ -1665,6 +1665,25 @@ export function buildUsageGuideMessage(): LineMessage {
           },
           {
             type: "text",
+            text: "📝 プロフィール登録",
+            weight: "bold",
+            size: "md",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "名前・性別・年代・地域・趣味・自己紹介を登録すると、学習者があなたのプロフィールを見て予約できるようになります。",
+            size: "sm",
+            wrap: true,
+            margin: "sm",
+            color: "#666666",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
             text: "📅 スケジュール登録",
             weight: "bold",
             size: "md",
@@ -1691,7 +1710,7 @@ export function buildUsageGuideMessage(): LineMessage {
           },
           {
             type: "text",
-            text: "学習者から予約が入ると、LINEに通知が届きます。",
+            text: "学習者から予約が入ると、LINEに通知が届きます。セッション30分前にも詳細が届きます。",
             size: "sm",
             wrap: true,
             margin: "sm",
@@ -1703,18 +1722,255 @@ export function buildUsageGuideMessage(): LineMessage {
           },
           {
             type: "text",
-            text: "💬 セッション前",
+            text: "💬 お問い合わせ",
             weight: "bold",
             size: "md",
             margin: "lg",
           },
           {
             type: "text",
-            text: "セッション30分前に、学習者が話したいトピックと練習したい単語が届きます。会話の参考にしてください！",
+            text: "ご質問やご要望がありましたら、このままメッセージを入力してください。担当者が確認してお返事します。",
             size: "sm",
             wrap: true,
             margin: "sm",
             color: "#666666",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Profile display message
+ * Shows current profile info with edit button
+ */
+export function buildProfileMessage(params: {
+  name: string;
+  gender: string | null;
+  ageRange: string | null;
+  prefecture: string | null;
+  interests: string[];
+  bio: string | null;
+}): LineMessage {
+  const { name, gender, ageRange, prefecture, interests, bio } = params;
+
+  const genderLabel =
+    gender === "male" ? "男性" : gender === "female" ? "女性" : "その他";
+  const ageLabel = ageRange ? `${ageRange.replace("s", "")}代` : "未設定";
+
+  const profileItems: object[] = [
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "名前",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: name,
+          size: "sm",
+          flex: 5,
+          wrap: true,
+        },
+      ],
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "性別",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: gender ? genderLabel : "未設定",
+          size: "sm",
+          flex: 5,
+        },
+      ],
+      margin: "sm",
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "年代",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: ageLabel,
+          size: "sm",
+          flex: 5,
+        },
+      ],
+      margin: "sm",
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "地域",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: prefecture || "未設定",
+          size: "sm",
+          flex: 5,
+        },
+      ],
+      margin: "sm",
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "趣味",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: interests.length > 0 ? interests.join("・") : "未設定",
+          size: "sm",
+          flex: 5,
+          wrap: true,
+        },
+      ],
+      margin: "sm",
+    },
+    {
+      type: "box",
+      layout: "horizontal",
+      contents: [
+        {
+          type: "text",
+          text: "自己紹介",
+          size: "sm",
+          color: "#999999",
+          flex: 2,
+        },
+        {
+          type: "text",
+          text: bio || "未設定",
+          size: "sm",
+          flex: 5,
+          wrap: true,
+        },
+      ],
+      margin: "sm",
+    },
+  ];
+
+  return {
+    type: "flex",
+    altText: "プロフィール",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "👤 プロフィール",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: profileItems,
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "postback",
+              label: "✏️ プロフィールを変更する",
+              data: "action=edit_profile",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Profile incomplete warning message
+ * Shown when user tries to register schedule without completing profile
+ */
+export function buildProfileIncompleteMessage(): LineMessage {
+  return {
+    type: "flex",
+    altText: "プロフィールを設定してください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "⚠️ プロフィール未完了",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.warning,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "スケジュール登録の前に、プロフィール設定を完了してください！",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "名前・性別・年代・地域・趣味・自己紹介を登録すると、学習者があなたのことを知ることができます。",
+            size: "sm",
+            color: "#666666",
+            margin: "lg",
+            wrap: true,
           },
         ],
       },
@@ -1728,8 +1984,8 @@ export function buildUsageGuideMessage(): LineMessage {
             color: COLORS.primary,
             action: {
               type: "postback",
-              label: "📅 スケジュールを登録する",
-              data: "action=start_schedule",
+              label: "📝 プロフィールを設定する",
+              data: "action=edit_profile",
             },
           },
         ],

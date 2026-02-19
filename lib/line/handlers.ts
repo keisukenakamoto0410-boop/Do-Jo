@@ -17,6 +17,8 @@ import {
   buildMainMenuMessage,
   buildScheduleStatusMessage,
   buildUsageGuideMessage,
+  buildProfileMessage,
+  buildProfileIncompleteMessage,
 } from "./flex-templates";
 
 // ==============================
@@ -143,6 +145,7 @@ const LOCKABLE_ACTIONS = [
   "toggle_interest",
   "confirm_interests",
   "skip_bio",
+  "edit_profile",
 ];
 
 export async function handlePostback(event: {

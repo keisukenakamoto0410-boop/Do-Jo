@@ -703,14 +703,68 @@ async function handleViewReservations(
 // --- Helper Functions ---
 
 /**
+ * Get the Monday of next week
+ */
+function getNextMonday(): Date {
+  const now = new Date();
+  const current = now.getDay(); // 0=Sun, 1=Mon, ...
+
+  // Days until next Monday
+  let daysUntilMonday = 1 - current; // Monday = 1
+  if (daysUntilMonday <= 0) {
+    daysUntilMonday += 7; // Move to next week
+  }
+  daysUntilMonday += 7; // Always push to the week after next
+
+  const result = new Date(now);
+  result.setDate(result.getDate() + daysUntilMonday);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
+ * Get the date for a specific weekday based on next Monday
+ */
+function getDateForDay(dayName: string): Date {
+  const dayOffsets: Record<string, number> = {
+    月: 0,
+    火: 1,
+    水: 2,
+    木: 3,
+    金: 4,
+    土: 5,
+    日: 6,
+  };
+
+  const nextMonday = getNextMonday();
+  const result = new Date(nextMonday);
+  result.setDate(nextMonday.getDate() + dayOffsets[dayName]);
+  return result;
+}
+
+/**
  * Create a slot for the given day and time (next week)
+ * Skips if a slot with the same hostId and startTime already exists
  */
 async function createSlot(userId: string, dayName: string, time: string) {
-  const nextDate = getNextWeekDay(dayName);
+  const nextDate = getDateForDay(dayName);
   const [hours, minutes] = time.split(":").map(Number);
 
   const startTime = new Date(nextDate);
   startTime.setHours(hours, minutes, 0, 0);
+
+  // Check if slot already exists
+  const existingSlot = await prisma.slot.findFirst({
+    where: {
+      hostId: userId,
+      startTime,
+    },
+  });
+
+  if (existingSlot) {
+    console.log(`[LINE] Slot already exists for ${userId} at ${startTime}, skipping`);
+    return;
+  }
 
   const endTime = new Date(startTime.getTime() + 25 * 60 * 1000); // 25 min session
 
@@ -723,33 +777,6 @@ async function createSlot(userId: string, dayName: string, time: string) {
       sessionType: "both", // Default to both business and casual
     },
   });
-}
-
-/**
- * Get the date of the next occurrence of a weekday (always next week)
- */
-function getNextWeekDay(dayName: string): Date {
-  const dayMap: Record<string, number> = {
-    日: 0,
-    月: 1,
-    火: 2,
-    水: 3,
-    木: 4,
-    金: 5,
-    土: 6,
-  };
-
-  const now = new Date();
-  const target = dayMap[dayName];
-  const current = now.getDay();
-
-  let diff = target - current;
-  if (diff <= 0) diff += 7; // If today or past, move to next week
-  diff += 7; // Always push to next week for safety
-
-  const result = new Date(now);
-  result.setDate(result.getDate() + diff);
-  return result;
 }
 
 /**

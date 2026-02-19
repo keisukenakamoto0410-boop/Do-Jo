@@ -650,29 +650,22 @@ export function buildAreaSelectMessage(name: string): LineMessage {
 }
 
 /**
- * Get the date of the next occurrence of a weekday (always next week)
+ * Get the Monday of next week
  */
-function getNextWeekDay(dayName: string): Date {
-  const dayMap: Record<string, number> = {
-    日: 0,
-    月: 1,
-    火: 2,
-    水: 3,
-    木: 4,
-    金: 5,
-    土: 6,
-  };
-
+function getNextMonday(): Date {
   const now = new Date();
-  const target = dayMap[dayName];
-  const current = now.getDay();
+  const current = now.getDay(); // 0=Sun, 1=Mon, ...
 
-  let diff = target - current;
-  if (diff <= 0) diff += 7;
-  diff += 7; // Always push to next week
+  // Days until next Monday
+  let daysUntilMonday = 1 - current; // Monday = 1
+  if (daysUntilMonday <= 0) {
+    daysUntilMonday += 7; // Move to next week
+  }
+  daysUntilMonday += 7; // Always push to the week after next
 
   const result = new Date(now);
-  result.setDate(result.getDate() + diff);
+  result.setDate(result.getDate() + daysUntilMonday);
+  result.setHours(0, 0, 0, 0);
   return result;
 }
 
@@ -682,34 +675,39 @@ function getNextWeekDay(dayName: string): Date {
  */
 export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage {
   const days = ["月", "火", "水", "木", "金", "土", "日"];
-  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  const dayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 
-  // Calculate dates for each day
-  const dayDates = days.map((day) => {
-    const date = getNextWeekDay(day);
+  // Get next Monday and calculate all dates from there
+  const nextMonday = getNextMonday();
+
+  const dayDates = days.map((day, index) => {
+    const date = new Date(nextMonday);
+    date.setDate(nextMonday.getDate() + index); // Mon=0, Tue=1, ..., Sun=6
     return {
       day,
       date,
       month: date.getMonth() + 1,
       dayOfMonth: date.getDate(),
-      dayName: dayNames[date.getDay()],
+      dayLabel: dayLabels[date.getDay()],
     };
   });
 
-  // Get date range for header
-  const mondayDate = dayDates[0]; // 月曜日
-  const sundayDate = dayDates[6]; // 日曜日
-  const dateRangeText = `📅 ${mondayDate.month}/${mondayDate.dayOfMonth}(${mondayDate.dayName}) 〜 ${sundayDate.month}/${sundayDate.dayOfMonth}(${sundayDate.dayName})`;
+  // Get date range for header (Monday to Sunday)
+  const mondayDate = dayDates[0];
+  const sundayDate = dayDates[6];
+  const dateRangeText = `📅 ${mondayDate.month}/${mondayDate.dayOfMonth}(${mondayDate.dayLabel}) 〜 ${sundayDate.month}/${sundayDate.dayOfMonth}(${sundayDate.dayLabel})`;
 
   const dayButtons = dayDates.map(({ day, month, dayOfMonth }) => {
     const isSelected = selectedDays.includes(day);
+    // Shorter label: "月3/2" or "月3/2✓"
+    const label = isSelected ? `${day}${month}/${dayOfMonth}✓` : `${day}${month}/${dayOfMonth}`;
     return {
       type: "button",
       style: isSelected ? "primary" : "secondary",
       color: isSelected ? COLORS.selected : undefined,
       action: {
         type: "postback",
-        label: `${day} ${month}/${dayOfMonth}${isSelected ? " ✓" : ""}`,
+        label,
         data: `action=toggle_day&day=${day}`,
       },
       height: "sm",

@@ -247,6 +247,11 @@ export async function handlePostback(event: {
         await handleViewReservations(event, user);
         break;
 
+      // --- Profile Edit ---
+      case "edit_profile":
+        await handleEditProfile(event, user);
+        break;
+
       default:
         await replyMessage(event.replyToken, {
           type: "text",
@@ -463,10 +468,46 @@ async function handleSelectArea(
   }
 }
 
+async function handleEditProfile(
+  event: { replyToken: string },
+  user: { id: string; lineId: string | null }
+) {
+  // Fetch LINE profile for display name
+  const profile = user.lineId ? await getProfile(user.lineId) : null;
+  const displayName = profile?.displayName || undefined;
+
+  // Reset registration step to restart flow
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { registrationStep: "AWAITING_NAME" },
+  });
+
+  try {
+    await replyMessage(event.replyToken, buildWelcomeMessage(displayName));
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleEditProfile:", error);
+  }
+}
+
 async function handleStartSchedule(
   event: { replyToken: string },
   user: { id: string; lineId: string | null }
 ) {
+  // Check if profile is complete
+  const userData = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { registrationStep: true },
+  });
+
+  if (userData?.registrationStep !== "COMPLETED") {
+    try {
+      await replyMessage(event.replyToken, buildProfileIncompleteMessage());
+    } catch (error) {
+      console.error("[LINE] Failed to reply profile incomplete:", error);
+    }
+    return;
+  }
+
   // Clear any previous selection state
   await prisma.user.update({
     where: { id: user.id },
@@ -767,6 +808,17 @@ async function handleRichMenuText(
   try {
     switch (text) {
       case "スケジュール": {
+        // Check if profile is complete
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { registrationStep: true },
+        });
+
+        if (user?.registrationStep !== "COMPLETED") {
+          await replyMessage(replyToken, buildProfileIncompleteMessage());
+          return;
+        }
+
         // Fetch available slots
         const availableSlots = await prisma.slot.findMany({
           where: {
@@ -808,12 +860,35 @@ async function handleRichMenuText(
         break;
       }
 
-      case "お問い合わせ":
-        await replyMessage(replyToken, {
-          type: "text",
-          text: "ご質問やご要望がありましたら、このままメッセージを入力してください。担当者が確認してお返事します。",
+      case "プロフィール": {
+        // Fetch user profile data
+        const profileUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            name: true,
+            gender: true,
+            ageRange: true,
+            prefecture: true,
+            interests: true,
+            bio: true,
+          },
         });
+
+        if (profileUser) {
+          await replyMessage(
+            replyToken,
+            buildProfileMessage({
+              name: profileUser.name,
+              gender: profileUser.gender,
+              ageRange: profileUser.ageRange,
+              prefecture: profileUser.prefecture,
+              interests: profileUser.interests,
+              bio: profileUser.bio,
+            })
+          );
+        }
         break;
+      }
 
       case "使い方":
         await replyMessage(replyToken, buildUsageGuideMessage());
@@ -825,9 +900,10 @@ async function handleRichMenuText(
         break;
 
       default:
+        // Any other text is treated as inquiry/feedback
         await replyMessage(replyToken, {
           type: "text",
-          text: "「メニュー」と送ると操作メニューが表示されます！",
+          text: "メッセージを受け付けました。担当者が確認してお返事します。\n\n下のメニューから「スケジュール」「プロフィール」「使い方」を選ぶこともできます。",
         });
     }
   } catch (error) {

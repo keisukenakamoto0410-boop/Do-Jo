@@ -21,74 +21,75 @@ function verifySignature(body: string, signature: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.text();
-    const signature = req.headers.get("x-line-signature") || "";
+  const body = await req.text();
+  const signature = req.headers.get("x-line-signature") || "";
 
-    // 署名検証
-    if (!verifySignature(body, signature)) {
-      console.error("[LINE Webhook] Invalid signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
-    const data = JSON.parse(body);
-    console.log("[LINE Webhook] Received:", JSON.stringify(data, null, 2));
-
-    // イベント処理
-    for (const event of data.events || []) {
-      const lineUserId = event.source?.userId;
-      if (!lineUserId) continue;
-
-      console.log("[LINE Webhook] Event type:", event.type, "User:", lineUserId);
-
-      try {
-        switch (event.type) {
-          case "follow":
-            // 友だち追加時
-            await handleFollow(event);
-            break;
-
-          case "postback":
-            // ボタンタップ時
-            await handlePostback(event);
-            break;
-
-          case "message":
-            if (event.message?.type === "text") {
-              // テキストメッセージ受信時
-              // まず既存のメール連携機能をチェック
-              const handled = await handleLegacyEmailLinking(event);
-              if (!handled) {
-                // メール連携ではない場合、新しいハンドラーへ
-                await handleMessage(event);
-              }
-            }
-            break;
-
-          case "unfollow":
-            // ブロック時（オプション: ログのみ）
-            console.log("[LINE Webhook] User unfollowed:", lineUserId);
-            break;
-        }
-      } catch (eventError) {
-        console.error("[LINE Webhook] Event processing error:", eventError);
-        // Continue processing other events
-      }
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[LINE Webhook] Error:", error);
-    return NextResponse.json(
-      { error: "Webhook processing failed" },
-      { status: 500 }
-    );
+  // 署名検証
+  if (!verifySignature(body, signature)) {
+    console.error("[LINE Webhook] Invalid signature");
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
+
+  const data = JSON.parse(body);
+  console.log("[LINE Webhook] Received events:", data.events?.length || 0);
+
+  // イベントを並列処理（各イベントは独立して処理）
+  const eventPromises = (data.events || []).map(async (event: LineEvent) => {
+    const lineUserId = event.source?.userId;
+    if (!lineUserId) return;
+
+    console.log("[LINE Webhook] Event type:", event.type, "User:", lineUserId);
+
+    try {
+      switch (event.type) {
+        case "follow":
+          await handleFollow(event);
+          break;
+
+        case "postback":
+          await handlePostback(event);
+          break;
+
+        case "message":
+          if (event.message?.type === "text") {
+            const handled = await handleLegacyEmailLinking(event);
+            if (!handled) {
+              await handleMessage(event);
+            }
+          }
+          break;
+
+        case "unfollow":
+          console.log("[LINE Webhook] User unfollowed:", lineUserId);
+          break;
+      }
+    } catch (eventError) {
+      console.error("[LINE Webhook] Event processing error:", eventError);
+    }
+  });
+
+  // 全イベントを並列処理（LINEには即座にレスポンスを返す必要があるが、
+  // replyTokenの有効期限内に処理を完了する必要がある）
+  await Promise.allSettled(eventPromises);
+
+  return NextResponse.json({ success: true });
 }
 
 // LINE Developers ConsoleからのWebhook URL検証用
 export async function GET() {
   return NextResponse.json({ status: "ok" });
+}
+
+// ============================================
+// Types
+// ============================================
+
+interface LineEvent {
+  type: string;
+  source?: { userId: string };
+  replyToken?: string;
+  message?: { type: string; text?: string };
+  postback?: { data: string };
 }
 
 // ============================================
@@ -178,21 +179,25 @@ async function handleLegacyEmailLinking(event: {
         `このメールアドレスは既に別のLINEアカウントと連携されています。\n\n連携を変更したい場合はサポートまでご連絡ください。`
       );
     } else {
-      await prisma.user.update({
+      // Update in parallel with reply
+      const updatePromise = prisma.user.update({
         where: { id: user.id },
         data: { lineId: lineUserId },
       });
+
+      await Promise.all([
+        replyMessageLegacy(
+          replyToken,
+          `${user.name}さん、LINE連携が完了しました！\n\n今後、予約が入った時やセッションのリマインダーをLINEでお知らせします。`
+        ),
+        updatePromise,
+      ]);
 
       console.log(
         "[LINE Webhook] Linked user:",
         user.email,
         "to LINE:",
         lineUserId
-      );
-
-      await replyMessageLegacy(
-        replyToken,
-        `${user.name}さん、LINE連携が完了しました！\n\n今後、予約が入った時やセッションのリマインダーをLINEでお知らせします。`
       );
     }
     return true;
@@ -206,15 +211,19 @@ async function handleLegacyEmailLinking(event: {
     });
 
     if (user) {
-      await prisma.user.update({
+      // Update in parallel with reply
+      const updatePromise = prisma.user.update({
         where: { id: user.id },
         data: { lineId: null },
       });
 
-      await replyMessageLegacy(
-        replyToken,
-        `${user.name}さん、LINE連携を解除しました。\n\n再度連携する場合は、登録したメールアドレスを送ってください。`
-      );
+      await Promise.all([
+        replyMessageLegacy(
+          replyToken,
+          `${user.name}さん、LINE連携を解除しました。\n\n再度連携する場合は、登録したメールアドレスを送ってください。`
+        ),
+        updatePromise,
+      ]);
     } else {
       await replyMessageLegacy(
         replyToken,
@@ -231,33 +240,33 @@ async function handleLegacyEmailLinking(event: {
     });
 
     if (user) {
-      // Fetch available slots (no reservation)
-      const availableSlots = await prisma.slot.findMany({
-        where: {
-          hostId: user.id,
-          status: "available",
-          startTime: { gte: new Date() },
-        },
-        orderBy: { startTime: "asc" },
-        take: 10,
-      });
-
-      // Fetch booked slots (with reservation)
-      const bookedReservations = await prisma.reservation.findMany({
-        where: {
-          hostId: user.id,
-          status: { in: ["pending", "active"] },
-          slot: {
+      // Fetch slots and reservations in parallel
+      const [availableSlots, bookedReservations] = await Promise.all([
+        prisma.slot.findMany({
+          where: {
+            hostId: user.id,
+            status: "available",
             startTime: { gte: new Date() },
           },
-        },
-        include: {
-          slot: true,
-          learner: { select: { name: true } },
-        },
-        orderBy: { slot: { startTime: "asc" } },
-        take: 10,
-      });
+          orderBy: { startTime: "asc" },
+          take: 10,
+        }),
+        prisma.reservation.findMany({
+          where: {
+            hostId: user.id,
+            status: { in: ["pending", "active"] },
+            slot: {
+              startTime: { gte: new Date() },
+            },
+          },
+          include: {
+            slot: true,
+            learner: { select: { name: true } },
+          },
+          orderBy: { slot: { startTime: "asc" } },
+          take: 10,
+        }),
+      ]);
 
       const bookedSlots = bookedReservations.map((r) => ({
         startTime: r.slot.startTime,

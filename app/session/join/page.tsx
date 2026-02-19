@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function SessionJoinPage() {
+function SessionJoinContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -114,5 +114,26 @@ export default function SessionJoinPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-sky-500 border-t-transparent mx-auto mb-6"></div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          読み込み中...
+        </h1>
+      </div>
+    </div>
+  );
+}
+
+export default function SessionJoinPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <SessionJoinContent />
+    </Suspense>
   );
 }

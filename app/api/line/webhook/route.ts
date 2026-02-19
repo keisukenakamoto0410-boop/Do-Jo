@@ -36,25 +36,43 @@ export async function POST(req: NextRequest) {
   // イベントを並列処理（各イベントは独立して処理）
   const eventPromises = (data.events || []).map(async (event: LineEvent) => {
     const lineUserId = event.source?.userId;
-    if (!lineUserId) return;
+    const replyToken = event.replyToken;
+    if (!lineUserId || !replyToken) return;
 
     console.log("[LINE Webhook] Event type:", event.type, "User:", lineUserId);
+
+    // Type-safe event with required fields
+    const safeEvent = {
+      source: { userId: lineUserId },
+      replyToken,
+      message: event.message,
+      postback: event.postback,
+    };
 
     try {
       switch (event.type) {
         case "follow":
-          await handleFollow(event);
+          await handleFollow(safeEvent);
           break;
 
         case "postback":
-          await handlePostback(event);
+          if (safeEvent.postback) {
+            await handlePostback({
+              ...safeEvent,
+              postback: safeEvent.postback,
+            });
+          }
           break;
 
         case "message":
-          if (event.message?.type === "text") {
-            const handled = await handleLegacyEmailLinking(event);
+          if (event.message?.type === "text" && event.message.text) {
+            const messageEvent = {
+              ...safeEvent,
+              message: { text: event.message.text },
+            };
+            const handled = await handleLegacyEmailLinking(messageEvent);
             if (!handled) {
-              await handleMessage(event);
+              await handleMessage(messageEvent);
             }
           }
           break;

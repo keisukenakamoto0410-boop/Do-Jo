@@ -917,3 +917,278 @@ export function buildSessionInfoMessage(params: {
     },
   };
 }
+
+/**
+ * Schedule status message with current slots/reservations and schedule registration button
+ * Used for rich menu "スケジュール" action
+ */
+export function buildScheduleStatusMessage(params: {
+  availableSlots: Array<{ startTime: Date }>;
+  bookedSlots: Array<{
+    startTime: Date;
+    learnerName: string;
+    topic?: string | null;
+  }>;
+}): LineMessage {
+  const { availableSlots, bookedSlots } = params;
+
+  const formatDate = (date: Date) => {
+    const d = new Date(date);
+    const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const dayName = dayNames[d.getDay()];
+    const hours = d.getHours().toString().padStart(2, "0");
+    const minutes = d.getMinutes().toString().padStart(2, "0");
+    return `${month}/${day}(${dayName}) ${hours}:${minutes}`;
+  };
+
+  const bodyContents: object[] = [
+    {
+      type: "text",
+      text: "📅 スケジュール",
+      weight: "bold",
+      size: "lg",
+    },
+    {
+      type: "separator",
+      margin: "lg",
+    },
+  ];
+
+  // No slots at all
+  if (availableSlots.length === 0 && bookedSlots.length === 0) {
+    bodyContents.push({
+      type: "text",
+      text: "まだスケジュールが登録されていません",
+      size: "sm",
+      color: "#888888",
+      margin: "lg",
+      wrap: true,
+    });
+    bodyContents.push({
+      type: "text",
+      text: "下のボタンからスケジュールを登録しましょう！",
+      size: "sm",
+      color: "#888888",
+      margin: "sm",
+      wrap: true,
+    });
+  } else {
+    // Available slots section
+    if (availableSlots.length > 0) {
+      bodyContents.push({
+        type: "text",
+        text: "【募集中】",
+        weight: "bold",
+        size: "sm",
+        margin: "lg",
+        color: COLORS.primary,
+      });
+
+      for (const slot of availableSlots.slice(0, 5)) {
+        bodyContents.push({
+          type: "text",
+          text: `・${formatDate(slot.startTime)} - まだ予約なし`,
+          size: "sm",
+          margin: "sm",
+          wrap: true,
+        });
+      }
+
+      if (availableSlots.length > 5) {
+        bodyContents.push({
+          type: "text",
+          text: `他${availableSlots.length - 5}件...`,
+          size: "xs",
+          color: "#888888",
+          margin: "sm",
+        });
+      }
+    }
+
+    // Booked slots section
+    if (bookedSlots.length > 0) {
+      bodyContents.push({
+        type: "text",
+        text: "【予約確定】",
+        weight: "bold",
+        size: "sm",
+        margin: "lg",
+        color: COLORS.success,
+      });
+
+      for (const slot of bookedSlots.slice(0, 5)) {
+        const topicText = slot.topic ? `（${slot.topic}）` : "";
+        bodyContents.push({
+          type: "text",
+          text: `・${formatDate(slot.startTime)} - ${slot.learnerName} さん${topicText}`,
+          size: "sm",
+          margin: "sm",
+          wrap: true,
+        });
+      }
+
+      if (bookedSlots.length > 5) {
+        bodyContents.push({
+          type: "text",
+          text: `他${bookedSlots.length - 5}件...`,
+          size: "xs",
+          color: "#888888",
+          margin: "sm",
+        });
+      }
+    }
+  }
+
+  return {
+    type: "flex",
+    altText: "スケジュール",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: bodyContents,
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "postback",
+              label: "📅 新しくスケジュールを登録",
+              data: "action=start_schedule",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Usage guide message explaining how to use Do Jo
+ * Used for rich menu "使い方" action
+ */
+export function buildUsageGuideMessage(): LineMessage {
+  return {
+    type: "flex",
+    altText: "Do Joの使い方",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📖 Do Joの使い方",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "🌏 Do Joとは？",
+            weight: "bold",
+            size: "md",
+          },
+          {
+            type: "text",
+            text: "外国人の日本語学習者と25分間の会話練習をするボランティアサービスです。",
+            size: "sm",
+            wrap: true,
+            margin: "sm",
+            color: "#666666",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "📅 スケジュール登録",
+            weight: "bold",
+            size: "md",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "会話できる曜日と時間を登録すると、学習者があなたのスケジュールを見て予約できるようになります。",
+            size: "sm",
+            wrap: true,
+            margin: "sm",
+            color: "#666666",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "🔔 予約通知",
+            weight: "bold",
+            size: "md",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "学習者から予約が入ると、LINEに通知が届きます。",
+            size: "sm",
+            wrap: true,
+            margin: "sm",
+            color: "#666666",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "💬 セッション前",
+            weight: "bold",
+            size: "md",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "セッション30分前に、学習者が話したいトピックと練習したい単語が届きます。会話の参考にしてください！",
+            size: "sm",
+            wrap: true,
+            margin: "sm",
+            color: "#666666",
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "postback",
+              label: "📅 スケジュールを登録する",
+              data: "action=start_schedule",
+            },
+          },
+        ],
+      },
+    },
+  };
+}

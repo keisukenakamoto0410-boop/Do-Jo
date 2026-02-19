@@ -10,6 +10,8 @@ import {
   buildTimeSelectMessage,
   buildScheduleConfirmMessage,
   buildMainMenuMessage,
+  buildScheduleStatusMessage,
+  buildUsageGuideMessage,
 } from "./flex-templates";
 
 // ==============================
@@ -87,15 +89,8 @@ export async function handleMessage(event: {
 
     case "COMPLETED":
     case null:
-      // Registered user sending text -> show menu
-      if (text === "メニュー" || text === "menu") {
-        await replyMessage(event.replyToken, buildMainMenuMessage(user.name));
-      } else {
-        await replyMessage(event.replyToken, {
-          type: "text",
-          text: "「メニュー」と送ると操作メニューが表示されます！",
-        });
-      }
+      // Registered user sending text -> handle rich menu actions
+      await handleRichMenuText(event.replyToken, user.id, user.name, text);
       break;
 
     default:
@@ -482,4 +477,84 @@ async function getUserUpcomingSlots(userId: string) {
     orderBy: { startTime: "asc" },
     take: 20,
   });
+}
+
+/**
+ * Handle rich menu text messages
+ */
+async function handleRichMenuText(
+  replyToken: string,
+  userId: string,
+  userName: string,
+  text: string
+) {
+  try {
+    switch (text) {
+      case "スケジュール": {
+        // Fetch available slots
+        const availableSlots = await prisma.slot.findMany({
+          where: {
+            hostId: userId,
+            status: "available",
+            startTime: { gte: new Date() },
+          },
+          orderBy: { startTime: "asc" },
+          take: 10,
+        });
+
+        // Fetch booked reservations
+        const bookedReservations = await prisma.reservation.findMany({
+          where: {
+            hostId: userId,
+            status: { in: ["pending", "active"] },
+            slot: {
+              startTime: { gte: new Date() },
+            },
+          },
+          include: {
+            slot: true,
+            learner: { select: { name: true } },
+          },
+          orderBy: { slot: { startTime: "asc" } },
+          take: 10,
+        });
+
+        const bookedSlots = bookedReservations.map((r) => ({
+          startTime: r.slot.startTime,
+          learnerName: r.learner.name,
+          topic: r.selectedTopic,
+        }));
+
+        await replyMessage(
+          replyToken,
+          buildScheduleStatusMessage({ availableSlots, bookedSlots })
+        );
+        break;
+      }
+
+      case "お問い合わせ":
+        await replyMessage(replyToken, {
+          type: "text",
+          text: "ご質問やご要望がありましたら、このままメッセージを入力してください。担当者が確認してお返事します。",
+        });
+        break;
+
+      case "使い方":
+        await replyMessage(replyToken, buildUsageGuideMessage());
+        break;
+
+      case "メニュー":
+      case "menu":
+        await replyMessage(replyToken, buildMainMenuMessage(userName));
+        break;
+
+      default:
+        await replyMessage(replyToken, {
+          type: "text",
+          text: "「メニュー」と送ると操作メニューが表示されます！",
+        });
+    }
+  } catch (error) {
+    console.error("[LINE] Failed to handle rich menu text:", error);
+  }
 }

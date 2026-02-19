@@ -3,6 +3,42 @@
 
 const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
 
+export interface LineProfile {
+  userId: string;
+  displayName: string;
+  pictureUrl?: string;
+  statusMessage?: string;
+  language?: string;
+}
+
+/**
+ * Get LINE user profile
+ * Used to fetch user's display name and profile picture
+ */
+export async function getProfile(lineUserId: string): Promise<LineProfile | null> {
+  try {
+    const response = await fetch(
+      `https://api.line.me/v2/bot/profile/${lineUserId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error("LINE getProfile error:", await response.text());
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("LINE getProfile exception:", error);
+    return null;
+  }
+}
+
 export interface LineMessage {
   type: string;
   text?: string;

@@ -24,9 +24,10 @@ model User {
   lineId          String?   @unique  // LINE user ID for LINE notifications
 
   // LINE登録フロー用
-  registrationStep String?   // "AWAITING_NAME" | "AWAITING_AREA" | "COMPLETED"
+  registrationStep String?   // "AWAITING_NAME" | "AWAITING_GENDER" | "AWAITING_AGE" | "AWAITING_AREA" | "AWAITING_INTERESTS" | "AWAITING_BIO" | "COMPLETED"
   selectedDays    String?   // JSON配列: 選択中の曜日
   scheduleStep    String?   // JSON: スケジュール登録の進捗状態
+  gender          String?   // "male" | "female" | "other"
 
   // プロフィール（共通）
   avatar          String?

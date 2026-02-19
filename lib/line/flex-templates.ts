@@ -15,12 +15,12 @@ const COLORS = {
 
 /**
  * Welcome message for new LINE friends
- * Prompts user to enter their name
+ * Shows LINE display name and asks for confirmation
  */
-export function buildWelcomeMessage(): LineMessage {
+export function buildWelcomeMessage(lineDisplayName?: string): LineMessage {
   return {
     type: "flex",
-    altText: "Do Joへようこそ！お名前を入力してください",
+    altText: "Do Joへようこそ！",
     contents: {
       type: "bubble",
       header: {
@@ -54,15 +54,515 @@ export function buildWelcomeMessage(): LineMessage {
           },
           {
             type: "text",
-            text: "まずはお名前を教えてください",
+            text: lineDisplayName
+              ? `「${lineDisplayName}」さんでよろしいですか？`
+              : "お名前を教えてください",
             weight: "bold",
+            margin: "lg",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: lineDisplayName
+              ? "別の名前を使いたい場合は入力してください"
+              : "（ニックネームでもOK）",
+            size: "xs",
+            color: "#888888",
+            wrap: true,
+          },
+        ],
+      },
+      footer: lineDisplayName
+        ? {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                color: COLORS.primary,
+                action: {
+                  type: "postback",
+                  label: `「${lineDisplayName}」で登録`,
+                  data: `action=confirm_name&name=${encodeURIComponent(lineDisplayName)}`,
+                },
+              },
+            ],
+          }
+        : undefined,
+    },
+  };
+}
+
+/**
+ * Gender selection message
+ */
+export function buildGenderSelectMessage(name: string): LineMessage {
+  return {
+    type: "flex",
+    altText: "性別を選んでください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `${name}さん、ようこそ！`,
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "👤 性別を教えてください",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "（プロフィールに表示されます）",
+            size: "xs",
+            color: "#888888",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                action: {
+                  type: "postback",
+                  label: "👨 男性",
+                  data: "action=select_gender&gender=male",
+                },
+                height: "sm",
+                margin: "sm",
+              },
+              {
+                type: "button",
+                style: "secondary",
+                action: {
+                  type: "postback",
+                  label: "👩 女性",
+                  data: "action=select_gender&gender=female",
+                },
+                height: "sm",
+                margin: "sm",
+              },
+              {
+                type: "button",
+                style: "secondary",
+                action: {
+                  type: "postback",
+                  label: "🙂 その他・回答しない",
+                  data: "action=select_gender&gender=other",
+                },
+                height: "sm",
+                margin: "sm",
+              },
+            ],
+            margin: "lg",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Age range selection message
+ */
+export function buildAgeSelectMessage(): LineMessage {
+  const ageRanges = [
+    { label: "20代", value: "20s" },
+    { label: "30代", value: "30s" },
+    { label: "40代", value: "40s" },
+    { label: "50代", value: "50s" },
+    { label: "60代", value: "60s" },
+    { label: "70代以上", value: "70s" },
+  ];
+
+  return {
+    type: "flex",
+    altText: "年代を選んでください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📅 年代を教えてください",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "（プロフィールに表示されます）",
+            size: "xs",
+            color: "#888888",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: ageRanges.slice(0, 3).map((age) => ({
+              type: "button" as const,
+              style: "secondary" as const,
+              action: {
+                type: "postback" as const,
+                label: age.label,
+                data: `action=select_age&age=${age.value}`,
+              },
+              height: "sm" as const,
+              flex: 1,
+            })),
+            margin: "lg",
+            spacing: "xs",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: ageRanges.slice(3).map((age) => ({
+              type: "button" as const,
+              style: "secondary" as const,
+              action: {
+                type: "postback" as const,
+                label: age.label,
+                data: `action=select_age&age=${age.value}`,
+              },
+              height: "sm" as const,
+              flex: 1,
+            })),
+            margin: "sm",
+            spacing: "xs",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Interests/hobbies multi-select message
+ */
+export function buildInterestsSelectMessage(
+  selectedInterests: string[] = []
+): LineMessage {
+  const interestOptions = [
+    { label: "🍳 料理", value: "料理" },
+    { label: "📚 読書", value: "読書" },
+    { label: "🎵 音楽", value: "音楽" },
+    { label: "⚽ スポーツ", value: "スポーツ" },
+    { label: "✈️ 旅行", value: "旅行" },
+    { label: "🎬 映画・ドラマ", value: "映画" },
+    { label: "🎮 ゲーム", value: "ゲーム" },
+    { label: "🌱 園芸", value: "園芸" },
+  ];
+
+  const buttons = interestOptions.map((interest) => {
+    const isSelected = selectedInterests.includes(interest.value);
+    return {
+      type: "button" as const,
+      style: (isSelected ? "primary" : "secondary") as "primary" | "secondary",
+      color: isSelected ? COLORS.selected : undefined,
+      action: {
+        type: "postback" as const,
+        label: `${interest.label}${isSelected ? " ✓" : ""}`,
+        data: `action=toggle_interest&interest=${encodeURIComponent(interest.value)}`,
+      },
+      height: "sm" as const,
+      flex: 1,
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: "興味・趣味を選んでください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "🎯 興味・趣味を教えてください",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "（複数選択可能・学習者とのマッチングに使います）",
+            size: "xs",
+            color: "#888888",
+            wrap: true,
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: buttons.slice(0, 2),
+            margin: "lg",
+            spacing: "xs",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: buttons.slice(2, 4),
+            margin: "sm",
+            spacing: "xs",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: buttons.slice(4, 6),
+            margin: "sm",
+            spacing: "xs",
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: buttons.slice(6, 8),
+            margin: "sm",
+            spacing: "xs",
+          },
+          selectedInterests.length > 0
+            ? {
+                type: "text",
+                text: `選択中: ${selectedInterests.join("・")}`,
+                size: "sm",
+                color: COLORS.primary,
+                margin: "lg",
+                align: "center",
+                wrap: true,
+              }
+            : {
+                type: "filler",
+              },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: selectedInterests.length > 0 ? COLORS.success : COLORS.unselected,
+            action: {
+              type: "postback",
+              label: "決定する ✓",
+              data: "action=confirm_interests",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Bio input prompt message
+ */
+export function buildBioPromptMessage(): LineMessage {
+  return {
+    type: "flex",
+    altText: "自己紹介を入力してください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📝 自己紹介を教えてください",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "学習者に表示されるプロフィール文を入力してください。",
+            size: "sm",
+            wrap: true,
+          },
+          {
+            type: "separator",
             margin: "lg",
           },
           {
             type: "text",
-            text: "（ニックネームでもOK）",
-            size: "xs",
+            text: "例：",
+            size: "sm",
+            margin: "lg",
             color: "#888888",
+          },
+          {
+            type: "text",
+            text: "「東京で営業職をしていました。趣味は釣りと料理です。日本の文化や歴史の話が好きです！」",
+            size: "sm",
+            color: "#888888",
+            wrap: true,
+            margin: "sm",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "💬 テキストを入力して送信してください",
+            weight: "bold",
+            size: "sm",
+            margin: "lg",
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "secondary",
+            action: {
+              type: "postback",
+              label: "スキップする",
+              data: "action=skip_bio",
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Registration complete message
+ */
+export function buildRegistrationCompleteMessage(
+  name: string,
+  avatarPath?: string
+): LineMessage {
+  const bodyContents: object[] = [
+    {
+      type: "text",
+      text: `${name}さん、登録が完了しました！`,
+      weight: "bold",
+      size: "md",
+      wrap: true,
+    },
+    {
+      type: "separator",
+      margin: "lg",
+    },
+    {
+      type: "text",
+      text: "早速、スケジュールを登録して学習者からの予約を受け付けましょう！",
+      size: "sm",
+      wrap: true,
+      margin: "lg",
+    },
+  ];
+
+  if (avatarPath) {
+    bodyContents.unshift({
+      type: "image",
+      url: avatarPath,
+      size: "sm",
+      aspectMode: "cover",
+      aspectRatio: "1:1",
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: "登録完了！",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "✅ 登録完了！",
+            weight: "bold",
+            size: "xl",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.success,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: bodyContents,
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "postback",
+              label: "📅 スケジュールを登録する",
+              data: "action=start_schedule",
+            },
           },
         ],
       },

@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pushMessage } from "@/lib/line/messaging";
 import { buildSessionInfoMessage } from "@/lib/line/flex-templates";
+import { createSessionToken, buildSessionUrl } from "@/lib/session-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,7 +67,13 @@ export async function GET(request: Request) {
       // Send LINE notification to host if they have a LINE ID
       if (host?.lineId) {
         try {
-          const sessionUrl = `${process.env.NEXTAUTH_URL}/session/${reservation.id}`;
+          // Create one-time token for session join (expires 1 hour after session start)
+          const token = await createSessionToken(
+            reservation.id,
+            host.id,
+            reservation.slot.startTime
+          );
+          const sessionUrl = buildSessionUrl(token);
 
           // Parse target words from reservation
           const targetWords = reservation.targetWords || [];
@@ -82,7 +89,7 @@ export async function GET(request: Request) {
           );
 
           console.log(
-            `[Session Reminder] Sent notification to host ${host.name} (${host.lineId})`
+            `[Session Reminder] Sent notification to host ${host.name} (${host.lineId}) with token`
           );
           notifiedCount++;
         } catch (error) {

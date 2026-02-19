@@ -576,3 +576,18 @@ model ProductMapping {
   @@index([isActive])
   @@map("product_mappings")
 }
+
+// セッション参加用ワンタイムトークン（LINE通知からの認証バイパス用）
+model SessionToken {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  reservationId String
+  userId        String
+  expiresAt     DateTime
+  usedAt        DateTime?  // 使用済みフラグ（nullなら未使用）
+  createdAt     DateTime @default(now())
+
+  @@index([token])
+  @@index([reservationId])
+  @@map("session_tokens")
+}

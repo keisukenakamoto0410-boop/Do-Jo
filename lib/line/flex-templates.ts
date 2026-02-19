@@ -150,13 +150,58 @@ export function buildAreaSelectMessage(name: string): LineMessage {
 }
 
 /**
+ * Get the date of the next occurrence of a weekday (always next week)
+ */
+function getNextWeekDay(dayName: string): Date {
+  const dayMap: Record<string, number> = {
+    日: 0,
+    月: 1,
+    火: 2,
+    水: 3,
+    木: 4,
+    金: 5,
+    土: 6,
+  };
+
+  const now = new Date();
+  const target = dayMap[dayName];
+  const current = now.getDay();
+
+  let diff = target - current;
+  if (diff <= 0) diff += 7;
+  diff += 7; // Always push to next week
+
+  const result = new Date(now);
+  result.setDate(result.getDate() + diff);
+  return result;
+}
+
+/**
  * Day selection message for schedule registration
- * Shows toggleable day buttons
+ * Shows toggleable day buttons with actual dates
  */
 export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage {
   const days = ["月", "火", "水", "木", "金", "土", "日"];
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
 
-  const dayButtons = days.map((day) => {
+  // Calculate dates for each day
+  const dayDates = days.map((day) => {
+    const date = getNextWeekDay(day);
+    return {
+      day,
+      date,
+      month: date.getMonth() + 1,
+      dayOfMonth: date.getDate(),
+      dayName: dayNames[date.getDay()],
+    };
+  });
+
+  // Get date range for header
+  const mondayDate = dayDates[0]; // 月曜日
+  const sundayDate = dayDates[6]; // 日曜日
+  const dateRangeText = `📅 ${mondayDate.month}/${mondayDate.dayOfMonth}(${mondayDate.dayName}) 〜 ${sundayDate.month}/${sundayDate.dayOfMonth}(${sundayDate.dayName})`;
+
+  const dayButtons = dayDates.map(({ day, month, dayOfMonth }) => {
     const isSelected = selectedDays.includes(day);
     return {
       type: "button",
@@ -164,7 +209,7 @@ export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage 
       color: isSelected ? COLORS.selected : undefined,
       action: {
         type: "postback",
-        label: `${day}曜日${isSelected ? " ✓" : ""}`,
+        label: `${day} ${month}/${dayOfMonth}${isSelected ? " ✓" : ""}`,
         data: `action=toggle_day&day=${day}`,
       },
       height: "sm",
@@ -184,9 +229,9 @@ export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage 
         contents: [
           {
             type: "text",
-            text: "📅 スケジュール登録",
+            text: dateRangeText,
             weight: "bold",
-            size: "lg",
+            size: "md",
             color: "#FFFFFF",
           },
         ],
@@ -199,7 +244,7 @@ export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage 
         contents: [
           {
             type: "text",
-            text: "会話できる曜日を選んでください",
+            text: "空き日を選んでください",
             weight: "bold",
             wrap: true,
           },
@@ -236,7 +281,7 @@ export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage 
           selectedDays.length > 0
             ? {
                 type: "text",
-                text: `選択中: ${selectedDays.join("・")}曜日`,
+                text: `選択中: ${selectedDays.join("・")}`,
                 size: "sm",
                 color: COLORS.primary,
                 margin: "lg",
@@ -257,7 +302,7 @@ export function buildDaySelectMessage(selectedDays: string[] = []): LineMessage 
             color: selectedDays.length > 0 ? COLORS.success : COLORS.unselected,
             action: {
               type: "postback",
-              label: "この曜日で決定 ✓",
+              label: "この日程で決定 ✓",
               data: "action=confirm_days",
             },
           },

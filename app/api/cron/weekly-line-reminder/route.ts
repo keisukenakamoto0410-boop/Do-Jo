@@ -1,42 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendLinePushMessageToMultiple } from "@/lib/line";
+import { pushMessage } from "@/lib/line/messaging";
+import { buildWeeklyReminderMessage } from "@/lib/line/flex-templates";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * Weekly LINE reminder for hosts
- * Sends a reminder to create availability slots
+ * Sends a Flex Message reminder to register schedule
  *
- * POST /api/cron/weekly-line-reminder
+ * GET /api/cron/weekly-line-reminder
  *
  * Security: Protected by CRON_SECRET
- * Schedule: Every Sunday (configure in Vercel Cron or external scheduler)
+ * Schedule: Every Sunday 10:00 JST (1:00 UTC)
  */
-export async function POST(req: NextRequest) {
+export async function GET(request: Request) {
+  // Verify cron secret for security (Vercel Cron sets this header)
+  const authHeader = request.headers.get("authorization");
+  if (
+    process.env.CRON_SECRET &&
+    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    // Verify cron secret
-    const authHeader = req.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret) {
-      console.error("[CRON] CRON_SECRET is not configured");
-      return NextResponse.json(
-        { error: "Server configuration error" },
-        { status: 500 }
-      );
-    }
-
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.error("[CRON] Invalid authorization");
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // Get all hosts (seniors and students) with LINE ID
+    // Get all seniors with LINE ID
     const hostsWithLineId = await prisma.user.findMany({
       where: {
-        role: { in: ["senior", "student"] },
+        role: "senior",
         lineId: { not: null },
       },
       select: {
@@ -46,8 +39,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log(
+      `[Weekly Reminder] Found ${hostsWithLineId.length} hosts with LINE ID`
+    );
+
     if (hostsWithLineId.length === 0) {
-      console.log("[CRON] No hosts with LINE ID found");
       return NextResponse.json({
         success: true,
         message: "No hosts with LINE ID found",
@@ -57,50 +53,44 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Prepare message
-    const message = `今週の予約枠を作りませんか？\nhttps://do-jo.vercel.app/senior/schedule`;
+    let sentCount = 0;
+    let failedCount = 0;
 
-    // Send LINE messages
-    const users = hostsWithLineId
-      .filter((host): host is { id: string; name: string; lineId: string } => host.lineId !== null)
-      .map((host) => ({
-        lineId: host.lineId,
-        name: host.name,
-      }));
+    // Send Flex Message to each host
+    for (const host of hostsWithLineId) {
+      if (!host.lineId) continue;
 
-    const result = await sendLinePushMessageToMultiple(users, message);
+      try {
+        await pushMessage(host.lineId, buildWeeklyReminderMessage());
+        sentCount++;
+        console.log(
+          `[Weekly Reminder] Sent to ${host.name} (${host.lineId})`
+        );
+      } catch (error) {
+        failedCount++;
+        console.error(
+          `[Weekly Reminder] Failed to send to ${host.name}:`,
+          error
+        );
+      }
+    }
 
-    console.log("[CRON] Weekly LINE reminder completed:", {
-      total: result.total,
-      success: result.success,
-      failed: result.failed,
-    });
+    console.log(
+      `[Weekly Reminder] Completed: sent=${sentCount}, failed=${failedCount}`
+    );
 
     return NextResponse.json({
       success: true,
-      message: "Weekly LINE reminder sent",
-      total: result.total,
-      sent: result.success,
-      failed: result.failed,
-      details: result.results.map((r) => ({
-        name: r.name,
-        success: r.success,
-        error: r.error,
-      })),
+      total: hostsWithLineId.length,
+      sent: sentCount,
+      failed: failedCount,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[CRON] Weekly LINE reminder error:", error);
+    console.error("[Weekly Reminder] Error:", error);
     return NextResponse.json(
-      {
-        error: "Failed to send weekly LINE reminder",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
-
-// Also support GET for Vercel Cron (which uses GET by default)
-export async function GET(req: NextRequest) {
-  return POST(req);
 }

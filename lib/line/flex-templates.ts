@@ -1237,3 +1237,68 @@ export function buildUsageGuideMessage(): LineMessage {
     },
   };
 }
+
+/**
+ * Weekly reminder message sent every Sunday to prompt schedule registration
+ */
+export function buildWeeklyReminderMessage(): LineMessage {
+  return {
+    type: "flex",
+    altText: "今週のスケジュール登録",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📅 今週のスケジュール登録",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "来週の空き時間を登録しませんか？",
+            weight: "bold",
+            size: "md",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "ボタン1つで簡単に登録できます！",
+            size: "sm",
+            color: "#666666",
+            margin: "md",
+            wrap: true,
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "postback",
+              label: "スケジュールを登録する",
+              data: "action=start_schedule",
+            },
+          },
+        ],
+      },
+    },
+  };
+}

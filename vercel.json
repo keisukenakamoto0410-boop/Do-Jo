@@ -8,5 +8,6 @@
       "path": "/api/cron/weekly-line-reminder",
       "schedule": "0 1 * * 0"
     }
-  ]
+  ],
+  "regions": ["hnd1"]
 }

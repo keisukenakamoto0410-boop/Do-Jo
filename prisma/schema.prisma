@@ -87,6 +87,9 @@ model User {
   // SNS投稿関連
   totalPosts       Int      @default(0)     // 総投稿数
 
+  // LINE Bot連打対策
+  isProcessing     Boolean  @default(false) // 処理中フラグ
+
   // リレーション
   slots                   Slot[]
   reservationsAsLearner   Reservation[] @relation("LearnerReservations")

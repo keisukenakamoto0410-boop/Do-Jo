@@ -104,6 +104,9 @@ export async function handleMessage(event: {
 // ==============================
 // postback: Button tap -> Route to handler
 // ==============================
+// Actions that require processing lock (to prevent button spam)
+const LOCKABLE_ACTIONS = ["toggle_day", "confirm_days", "select_time", "start_schedule"];
+
 export async function handlePostback(event: {
   source: { userId: string };
   replyToken: string;
@@ -125,40 +128,74 @@ export async function handlePostback(event: {
     return;
   }
 
-  switch (action) {
-    // --- Registration Flow ---
-    case "select_area":
-      await handleSelectArea(event, user, data);
-      break;
+  // Check if this action requires locking
+  const requiresLock = action && LOCKABLE_ACTIONS.includes(action);
 
-    // --- Schedule Registration: Day Selection ---
-    case "toggle_day":
-      await handleToggleDay(event, user, data);
-      break;
+  if (requiresLock) {
+    // Check if already processing
+    if (user.isProcessing) {
+      try {
+        await replyMessage(event.replyToken, {
+          type: "text",
+          text: "処理中です、少々お待ちください。",
+        });
+      } catch (error) {
+        console.error("[LINE] Failed to send processing message:", error);
+      }
+      return;
+    }
 
-    case "confirm_days":
-      await handleConfirmDays(event, user);
-      break;
+    // Set processing flag
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isProcessing: true },
+    });
+  }
 
-    case "start_schedule":
-      await handleStartSchedule(event, user);
-      break;
+  try {
+    switch (action) {
+      // --- Registration Flow ---
+      case "select_area":
+        await handleSelectArea(event, user, data);
+        break;
 
-    // --- Schedule Registration: Time Selection ---
-    case "select_time":
-      await handleSelectTime(event, user, data);
-      break;
+      // --- Schedule Registration: Day Selection ---
+      case "toggle_day":
+        await handleToggleDay(event, user, data);
+        break;
 
-    // --- View Reservations ---
-    case "view_reservations":
-      await handleViewReservations(event, user);
-      break;
+      case "confirm_days":
+        await handleConfirmDays(event, user);
+        break;
 
-    default:
-      await replyMessage(event.replyToken, {
-        type: "text",
-        text: "不明な操作です。メニューからお選びください。",
+      case "start_schedule":
+        await handleStartSchedule(event, user);
+        break;
+
+      // --- Schedule Registration: Time Selection ---
+      case "select_time":
+        await handleSelectTime(event, user, data);
+        break;
+
+      // --- View Reservations ---
+      case "view_reservations":
+        await handleViewReservations(event, user);
+        break;
+
+      default:
+        await replyMessage(event.replyToken, {
+          type: "text",
+          text: "不明な操作です。メニューからお選びください。",
+        });
+    }
+  } finally {
+    // Always release the lock
+    if (requiresLock) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isProcessing: false },
       });
+    }
   }
 }
 

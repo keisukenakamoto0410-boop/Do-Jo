@@ -658,6 +658,180 @@ export function buildBookingNotification(params: {
  * Session info message sent before the session starts (e.g., 30 minutes before)
  * Includes session details in a styled box and a session URL button
  */
+/**
+ * Status message showing user's slots and reservations
+ */
+export function buildStatusMessage(params: {
+  userName: string;
+  userEmail: string;
+  availableSlots: Array<{ startTime: Date }>;
+  bookedSlots: Array<{
+    startTime: Date;
+    learnerName: string;
+    topic?: string | null;
+  }>;
+}): LineMessage {
+  const { userName, userEmail, availableSlots, bookedSlots } = params;
+
+  const formatDate = (date: Date) => {
+    const d = new Date(date);
+    const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+    const dayName = dayNames[d.getDay()];
+    const hours = d.getHours().toString().padStart(2, "0");
+    const minutes = d.getMinutes().toString().padStart(2, "0");
+    return `${month}/${day}(${dayName}) ${hours}:${minutes}`;
+  };
+
+  const bodyContents: object[] = [
+    {
+      type: "text",
+      text: "📋 あなたの予約状況",
+      weight: "bold",
+      size: "lg",
+    },
+    {
+      type: "separator",
+      margin: "lg",
+    },
+  ];
+
+  // No slots at all
+  if (availableSlots.length === 0 && bookedSlots.length === 0) {
+    bodyContents.push({
+      type: "text",
+      text: "まだスケジュールが登録されていません",
+      size: "sm",
+      color: "#888888",
+      margin: "lg",
+      wrap: true,
+    });
+  } else {
+    // Available slots section
+    if (availableSlots.length > 0) {
+      bodyContents.push({
+        type: "text",
+        text: "【募集中】",
+        weight: "bold",
+        size: "sm",
+        margin: "lg",
+        color: COLORS.primary,
+      });
+
+      for (const slot of availableSlots.slice(0, 5)) {
+        bodyContents.push({
+          type: "text",
+          text: `・${formatDate(slot.startTime)} - まだ予約なし`,
+          size: "sm",
+          margin: "sm",
+          wrap: true,
+        });
+      }
+
+      if (availableSlots.length > 5) {
+        bodyContents.push({
+          type: "text",
+          text: `他${availableSlots.length - 5}件...`,
+          size: "xs",
+          color: "#888888",
+          margin: "sm",
+        });
+      }
+    }
+
+    // Booked slots section
+    if (bookedSlots.length > 0) {
+      bodyContents.push({
+        type: "text",
+        text: "【予約確定】",
+        weight: "bold",
+        size: "sm",
+        margin: "lg",
+        color: COLORS.success,
+      });
+
+      for (const slot of bookedSlots.slice(0, 5)) {
+        const topicText = slot.topic ? `（トピック: ${slot.topic}）` : "";
+        bodyContents.push({
+          type: "text",
+          text: `・${formatDate(slot.startTime)} - ${slot.learnerName} さん${topicText}`,
+          size: "sm",
+          margin: "sm",
+          wrap: true,
+        });
+      }
+
+      if (bookedSlots.length > 5) {
+        bodyContents.push({
+          type: "text",
+          text: `他${bookedSlots.length - 5}件...`,
+          size: "xs",
+          color: "#888888",
+          margin: "sm",
+        });
+      }
+    }
+  }
+
+  // User info section
+  bodyContents.push({
+    type: "separator",
+    margin: "lg",
+  });
+  bodyContents.push({
+    type: "text",
+    text: `連携情報: ${userName} / ${userEmail}`,
+    size: "xs",
+    color: "#888888",
+    margin: "lg",
+    wrap: true,
+  });
+
+  const footerContents: object[] = [];
+
+  // Show schedule registration button if no slots
+  if (availableSlots.length === 0 && bookedSlots.length === 0) {
+    footerContents.push({
+      type: "button",
+      style: "primary",
+      color: COLORS.primary,
+      action: {
+        type: "postback",
+        label: "📅 スケジュールを登録",
+        data: "action=start_schedule",
+      },
+    });
+  }
+
+  footerContents.push({
+    type: "text",
+    text: "連携を解除する場合は「解除」と送ってください",
+    size: "xs",
+    color: "#888888",
+    align: "center",
+    margin: footerContents.length > 0 ? "md" : "none",
+  });
+
+  return {
+    type: "flex",
+    altText: "あなたの予約状況",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: bodyContents,
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: footerContents,
+      },
+    },
+  };
+}
+
 export function buildSessionInfoMessage(params: {
   learnerName: string;
   topic?: string;

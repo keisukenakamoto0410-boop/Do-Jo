@@ -6,6 +6,8 @@ import {
   handleMessage,
   handlePostback,
 } from "@/lib/line/handlers";
+import { replyMessage } from "@/lib/line/messaging";
+import { buildStatusMessage } from "@/lib/line/flex-templates";
 
 const LINE_CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET || "";
 
@@ -225,14 +227,57 @@ async function handleLegacyEmailLinking(event: {
   if (messageText === "確認" || messageText === "ステータス") {
     const user = await prisma.user.findFirst({
       where: { lineId: lineUserId },
-      select: { name: true, email: true },
+      select: { id: true, name: true, email: true },
     });
 
     if (user) {
-      await replyMessageLegacy(
-        replyToken,
-        `連携状態: 連携済み\n\n名前: ${user.name}\nメール: ${user.email}\n\n連携を解除する場合は「解除」と送ってください。`
-      );
+      // Fetch available slots (no reservation)
+      const availableSlots = await prisma.slot.findMany({
+        where: {
+          hostId: user.id,
+          status: "available",
+          startTime: { gte: new Date() },
+        },
+        orderBy: { startTime: "asc" },
+        take: 10,
+      });
+
+      // Fetch booked slots (with reservation)
+      const bookedReservations = await prisma.reservation.findMany({
+        where: {
+          hostId: user.id,
+          status: { in: ["pending", "active"] },
+          slot: {
+            startTime: { gte: new Date() },
+          },
+        },
+        include: {
+          slot: true,
+          learner: { select: { name: true } },
+        },
+        orderBy: { slot: { startTime: "asc" } },
+        take: 10,
+      });
+
+      const bookedSlots = bookedReservations.map((r) => ({
+        startTime: r.slot.startTime,
+        learnerName: r.learner.name,
+        topic: r.selectedTopic,
+      }));
+
+      try {
+        await replyMessage(
+          replyToken,
+          buildStatusMessage({
+            userName: user.name,
+            userEmail: user.email,
+            availableSlots,
+            bookedSlots,
+          })
+        );
+      } catch (error) {
+        console.error("[LINE Webhook] Failed to send status message:", error);
+      }
     } else {
       await replyMessageLegacy(
         replyToken,

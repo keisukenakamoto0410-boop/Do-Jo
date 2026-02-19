@@ -7,7 +7,6 @@ import {
   buildWelcomeMessage,
   buildGenderSelectMessage,
   buildAgeSelectMessage,
-  buildAreaSelectMessage,
   buildInterestsSelectMessage,
   buildBioPromptMessage,
   buildRegistrationCompleteMessage,
@@ -141,7 +140,6 @@ const LOCKABLE_ACTIONS = [
   "confirm_name",
   "select_gender",
   "select_age",
-  "select_area",
   "toggle_interest",
   "confirm_interests",
   "skip_bio",
@@ -206,10 +204,6 @@ export async function handlePostback(event: {
 
       case "select_age":
         await handleSelectAge(event, user, data);
-        break;
-
-      case "select_area":
-        await handleSelectArea(event, user, data);
         break;
 
       case "toggle_interest":
@@ -338,22 +332,18 @@ async function handleSelectAge(
   const age = data.get("age");
   if (!age) return;
 
+  // Set age and default prefecture to 豊橋市, then proceed to interests
   await prisma.user.update({
     where: { id: user.id },
-    data: { ageRange: age, registrationStep: "AWAITING_AREA" },
-  });
-
-  // Fetch user name for area select message
-  const updatedUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { name: true },
+    data: {
+      ageRange: age,
+      prefecture: "豊橋市",
+      registrationStep: "AWAITING_INTERESTS",
+    },
   });
 
   try {
-    await replyMessage(
-      event.replyToken,
-      buildAreaSelectMessage(updatedUser?.name || "")
-    );
+    await replyMessage(event.replyToken, buildInterestsSelectMessage());
   } catch (error) {
     console.error("[LINE] Failed to reply in handleSelectAge:", error);
   }
@@ -446,25 +436,6 @@ async function handleSkipBio(
     );
   } catch (error) {
     console.error("[LINE] Failed to reply in handleSkipBio:", error);
-  }
-}
-
-async function handleSelectArea(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null; name: string },
-  data: URLSearchParams
-) {
-  const area = data.get("area");
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { prefecture: area, registrationStep: "AWAITING_INTERESTS" },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildInterestsSelectMessage());
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleSelectArea:", error);
   }
 }
 

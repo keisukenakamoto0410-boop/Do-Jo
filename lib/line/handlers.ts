@@ -181,11 +181,15 @@ async function handleSelectArea(
     data: { prefecture: area, registrationStep: "COMPLETED" },
   });
 
-  await replyMessage(event.replyToken, [
-    { type: "text", text: `${user.name}さん、登録が完了しました！` },
-    { type: "text", text: "早速スケジュールを登録しましょう！" },
-    buildDaySelectMessage(),
-  ]);
+  try {
+    await replyMessage(event.replyToken, [
+      { type: "text", text: `${user.name}さん、登録が完了しました！` },
+      { type: "text", text: "早速スケジュールを登録しましょう！" },
+      buildDaySelectMessage(),
+    ]);
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleSelectArea:", error);
+  }
 }
 
 async function handleStartSchedule(
@@ -198,50 +202,81 @@ async function handleStartSchedule(
     data: { selectedDays: null, scheduleStep: null },
   });
 
-  await replyMessage(event.replyToken, buildDaySelectMessage());
+  try {
+    await replyMessage(event.replyToken, buildDaySelectMessage());
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleStartSchedule:", error);
+  }
 }
 
 async function handleToggleDay(
   event: { replyToken: string },
-  user: { id: string; lineId: string | null; selectedDays: string | null },
+  user: { id: string; lineId: string | null },
   data: URLSearchParams
 ) {
   const day = data.get("day");
   if (!day) return;
 
-  // Get current selected days
-  const currentDays: string[] = user.selectedDays
-    ? JSON.parse(user.selectedDays)
-    : [];
+  // Use transaction to prevent race condition from button spam
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    // Re-fetch latest data from DB
+    const latestUser = await tx.user.findUnique({
+      where: { id: user.id },
+      select: { selectedDays: true },
+    });
 
-  // Toggle the day
-  const updatedDays = currentDays.includes(day)
-    ? currentDays.filter((d) => d !== day)
-    : [...currentDays, day];
+    const currentDays: string[] = latestUser?.selectedDays
+      ? JSON.parse(latestUser.selectedDays)
+      : [];
 
-  // Save updated selection
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { selectedDays: JSON.stringify(updatedDays) },
+    // Toggle the day
+    const updatedDays = currentDays.includes(day)
+      ? currentDays.filter((d) => d !== day)
+      : [...currentDays, day];
+
+    // Save updated selection
+    return tx.user.update({
+      where: { id: user.id },
+      data: { selectedDays: JSON.stringify(updatedDays) },
+      select: { selectedDays: true },
+    });
   });
 
+  const updatedDays: string[] = updatedUser.selectedDays
+    ? JSON.parse(updatedUser.selectedDays)
+    : [];
+
   // Show updated day selection message
-  await replyMessage(event.replyToken, buildDaySelectMessage(updatedDays));
+  try {
+    await replyMessage(event.replyToken, buildDaySelectMessage(updatedDays));
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleToggleDay:", error);
+  }
 }
 
 async function handleConfirmDays(
   event: { replyToken: string },
-  user: { id: string; lineId: string | null; selectedDays: string | null }
+  user: { id: string; lineId: string | null }
 ) {
-  const days: string[] = user.selectedDays
-    ? JSON.parse(user.selectedDays)
+  // Re-fetch latest data from DB to prevent race condition
+  const latestUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { selectedDays: true },
+  });
+
+  const days: string[] = latestUser?.selectedDays
+    ? JSON.parse(latestUser.selectedDays)
     : [];
 
   if (days.length === 0) {
-    await replyMessage(event.replyToken, {
-      type: "text",
-      text: "曜日を1つ以上選んでください！",
-    });
+    try {
+      await replyMessage(event.replyToken, {
+        type: "text",
+        text: "曜日を1つ以上選んでください！",
+      });
+    } catch (error) {
+      console.error("[LINE] Failed to reply in handleConfirmDays:", error);
+    }
     return;
   }
 
@@ -262,20 +297,30 @@ async function handleConfirmDays(
   });
 
   // Show time selection for first day
-  await replyMessage(event.replyToken, buildTimeSelectMessage(days[0]));
+  try {
+    await replyMessage(event.replyToken, buildTimeSelectMessage(days[0]));
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleConfirmDays:", error);
+  }
 }
 
 async function handleSelectTime(
   event: { replyToken: string },
-  user: { id: string; lineId: string | null; scheduleStep: string | null },
+  user: { id: string; lineId: string | null },
   data: URLSearchParams
 ) {
   const time = data.get("time");
   const day = data.get("day");
   if (!time || !day) return;
 
-  const stepData = user.scheduleStep
-    ? JSON.parse(user.scheduleStep)
+  // Re-fetch latest data from DB to prevent race condition
+  const latestUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { scheduleStep: true },
+  });
+
+  const stepData = latestUser?.scheduleStep
+    ? JSON.parse(latestUser.scheduleStep)
     : { days: [], currentIndex: 0, selectedTimes: {} };
 
   // Create the slot for this day/time
@@ -295,14 +340,22 @@ async function handleSelectTime(
         }),
       },
     });
-    await replyMessage(
-      event.replyToken,
-      buildTimeSelectMessage(stepData.days[nextIndex])
-    );
+    try {
+      await replyMessage(
+        event.replyToken,
+        buildTimeSelectMessage(stepData.days[nextIndex])
+      );
+    } catch (error) {
+      console.error("[LINE] Failed to reply in handleSelectTime:", error);
+    }
   } else {
     // All days completed
     const slots = await getUserUpcomingSlots(user.id);
-    await replyMessage(event.replyToken, buildScheduleConfirmMessage(slots));
+    try {
+      await replyMessage(event.replyToken, buildScheduleConfirmMessage(slots));
+    } catch (error) {
+      console.error("[LINE] Failed to reply in handleSelectTime:", error);
+    }
 
     // Clear temporary data
     await prisma.user.update({
@@ -333,10 +386,14 @@ async function handleViewReservations(
   });
 
   if (reservations.length === 0) {
-    await replyMessage(event.replyToken, {
-      type: "text",
-      text: "現在、予約はありません。\nスケジュールを登録して学習者からの予約を待ちましょう！",
-    });
+    try {
+      await replyMessage(event.replyToken, {
+        type: "text",
+        text: "現在、予約はありません。\nスケジュールを登録して学習者からの予約を待ちましょう！",
+      });
+    } catch (error) {
+      console.error("[LINE] Failed to reply in handleViewReservations:", error);
+    }
     return;
   }
 
@@ -350,10 +407,14 @@ async function handleViewReservations(
     .map((r) => `📌 ${formatDate(r.slot.startTime)} - ${r.learner.name}さん`)
     .join("\n");
 
-  await replyMessage(event.replyToken, {
-    type: "text",
-    text: `📋 直近の予約\n\n${reservationList}`,
-  });
+  try {
+    await replyMessage(event.replyToken, {
+      type: "text",
+      text: `📋 直近の予約\n\n${reservationList}`,
+    });
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleViewReservations:", error);
+  }
 }
 
 // --- Helper Functions ---

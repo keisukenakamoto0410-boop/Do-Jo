@@ -57,11 +57,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSubmitHovered, setIsSubmitHovered] = useState(false);
+  const [seniorCount, setSeniorCount] = useState<number | null>(null);
 
   useEffect(() => {
     // ページロード時のフェードイン
     const timer = setTimeout(() => setIsLoaded(true), 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // 日本人シニアの人数を取得
+    fetch("/api/users/senior-count")
+      .then((res) => res.json())
+      .then((data) => setSeniorCount(data.count))
+      .catch(() => setSeniorCount(null));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -303,6 +312,12 @@ export default function LoginPage() {
                   Connect with Japanese.<br />
                   A community for real conversations.
                 </p>
+                {seniorCount !== null && (
+                  <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#00A8CC]/10 to-[#FF6B35]/10 border border-[#00A8CC]/20">
+                    <span className="text-2xl font-bold text-[#00A8CC]">{seniorCount}</span>
+                    <span className="text-xs text-[#566573]">Japanese speakers ready to talk</span>
+                  </div>
+                )}
               </div>
 
               {/* ソーシャルログインボタン */}

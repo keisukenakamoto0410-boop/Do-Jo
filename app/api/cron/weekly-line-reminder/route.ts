@@ -39,11 +39,16 @@ export async function GET(request: Request) {
       },
     });
 
+    // Deduplicate by LINE ID to prevent sending multiple messages to the same person
+    const uniqueLineIds = [
+      ...new Set(hostsWithLineId.map((h) => h.lineId).filter(Boolean)),
+    ] as string[];
+
     console.log(
-      `[Weekly Reminder] Found ${hostsWithLineId.length} hosts with LINE ID`
+      `[Weekly Reminder] Found ${hostsWithLineId.length} hosts with LINE ID (${uniqueLineIds.length} unique)`
     );
 
-    if (hostsWithLineId.length === 0) {
+    if (uniqueLineIds.length === 0) {
       return NextResponse.json({
         success: true,
         message: "No hosts with LINE ID found",
@@ -56,22 +61,15 @@ export async function GET(request: Request) {
     let sentCount = 0;
     let failedCount = 0;
 
-    // Send Flex Message to each host
-    for (const host of hostsWithLineId) {
-      if (!host.lineId) continue;
-
+    // Send Flex Message to each unique LINE ID
+    for (const lineId of uniqueLineIds) {
       try {
-        await pushMessage(host.lineId, buildWeeklyReminderMessage());
+        await pushMessage(lineId, buildWeeklyReminderMessage());
         sentCount++;
-        console.log(
-          `[Weekly Reminder] Sent to ${host.name} (${host.lineId})`
-        );
+        console.log(`[Weekly Reminder] Sent to ${lineId}`);
       } catch (error) {
         failedCount++;
-        console.error(
-          `[Weekly Reminder] Failed to send to ${host.name}:`,
-          error
-        );
+        console.error(`[Weekly Reminder] Failed to send to ${lineId}:`, error);
       }
     }
 
@@ -82,6 +80,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       total: hostsWithLineId.length,
+      uniqueLineIds: uniqueLineIds.length,
       sent: sentCount,
       failed: failedCount,
       timestamp: new Date().toISOString(),

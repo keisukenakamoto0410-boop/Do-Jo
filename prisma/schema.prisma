@@ -583,13 +583,20 @@ model ProductMapping {
 
 // セッション参加用ワンタイムトークン（LINE通知からの認証バイパス用）
 model SessionToken {
-  id            String   @id @default(cuid())
-  token         String   @unique
-  reservationId String
-  userId        String
-  expiresAt     DateTime
-  usedAt        DateTime?  // 使用済みフラグ（nullなら未使用）
-  createdAt     DateTime @default(now())
+  id               String    @id @default(cuid())
+  token            String    @unique
+  reservationId    String
+  userId           String
+  expiresAt        DateTime
+  usedAt           DateTime?  // 使用済みフラグ（nullなら未使用）
+  sessionStartTime DateTime   // セッション開始時刻（時刻制限用）
+
+  // セキュリティ強化フィールド
+  firstAccessIp    String?    // 初回アクセスのIPアドレス
+  lastAccessIp     String?    // 最後のアクセスのIPアドレス
+  accessCount      Int        @default(0)  // アクセス回数
+
+  createdAt        DateTime   @default(now())
 
   @@index([token])
   @@index([reservationId])

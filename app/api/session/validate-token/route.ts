@@ -2,7 +2,7 @@
 // API endpoint to validate session token
 
 import { NextRequest, NextResponse } from "next/server";
-import { validateSessionToken } from "@/lib/session-token";
+import { validateSessionToken, getClientIp } from "@/lib/session-token";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await validateSessionToken(token);
+    // Get client IP address for security validation
+    const clientIp = getClientIp(request);
+    console.log("[Validate Token] Client IP:", clientIp);
+
+    const result = await validateSessionToken(token, clientIp);
 
     if (!result) {
       return NextResponse.json(

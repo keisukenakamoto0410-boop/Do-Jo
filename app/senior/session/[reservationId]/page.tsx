@@ -25,6 +25,10 @@ export default function SeniorSessionPage() {
   const reservationId = params.reservationId as string;
   const { data: session } = useSession();
 
+  // Support token-based authentication from URL parameter
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const token = searchParams?.get('token');
+
   // Video refs
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLDivElement>(null);
@@ -137,7 +141,15 @@ export default function SeniorSessionPage() {
 
   const fetchReservation = async () => {
     try {
-      const response = await fetch(`/api/reservations/${reservationId}`);
+      // Get token from sessionStorage if available (for LINE users)
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('sessionToken') : null;
+
+      const headers: HeadersInit = {};
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
+      const response = await fetch(`/api/reservations/${reservationId}`, { headers });
       if (!response.ok) {
         throw new Error("予約が見つかりませんでした");
       }
@@ -187,8 +199,17 @@ export default function SeniorSessionPage() {
       const AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
       const agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
+      // Get token from sessionStorage if available (for LINE users)
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('sessionToken') : null;
+
+      const headers: HeadersInit = {};
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
       const response = await fetch(
-        `/api/reservations/${reservationId}/agora-token`
+        `/api/reservations/${reservationId}/agora-token`,
+        { headers }
       );
 
       if (!response.ok) {
@@ -501,10 +522,10 @@ export default function SeniorSessionPage() {
       )}
 
       {/* Session Chat */}
-      {session?.user?.id && (
+      {(session?.user?.id || (typeof window !== 'undefined' && sessionStorage.getItem('sessionUserId'))) && (
         <SessionChat
           reservationId={reservationId}
-          currentUserId={session.user.id}
+          currentUserId={session?.user?.id || (typeof window !== 'undefined' ? sessionStorage.getItem('sessionUserId') || '' : '')}
           language="ja"
         />
       )}

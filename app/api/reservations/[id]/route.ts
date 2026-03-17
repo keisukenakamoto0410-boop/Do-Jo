@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendCancellationEmail } from "@/lib/email";
+import { validateSessionToken, getClientIp } from "@/lib/session-token";
 
 // Admin emails for access control
 const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
@@ -120,12 +121,34 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
+
+    // Try token-based authentication first (for LINE users)
+    const authHeader = req.headers.get("Authorization");
+    const sessionToken = authHeader?.replace("Bearer ", "") || req.nextUrl.searchParams.get("token");
+
+    let userId: string | null = null;
+    let userRole: string | null = null;
+
+    if (sessionToken) {
+      // Validate session token with IP address verification
+      const clientIp = getClientIp(req);
+      const tokenData = await validateSessionToken(sessionToken, clientIp);
+      if (tokenData && tokenData.reservationId === id) {
+        userId = tokenData.userId;
+        userRole = tokenData.userRole;
+      }
     }
 
-    const { id } = await params;
+    // Fall back to NextAuth session if no token
+    if (!userId) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.user.id;
+      userRole = session.user.role;
+    }
 
     const reservation = await prisma.reservation.findUnique({
       where: { id },
@@ -208,9 +231,9 @@ export async function GET(
     }
 
     // Check if user is part of this reservation or admin
-    const isLearner = reservation.learnerId === session.user.id;
-    const isHost = reservation.hostId === session.user.id;
-    const isAdmin = session.user.role === "admin" || ADMIN_EMAILS.includes(session.user.email || "");
+    const isLearner = reservation.learnerId === userId;
+    const isHost = reservation.hostId === userId;
+    const isAdmin = userRole === "admin";
 
     if (!isLearner && !isHost && !isAdmin) {
       return NextResponse.json(

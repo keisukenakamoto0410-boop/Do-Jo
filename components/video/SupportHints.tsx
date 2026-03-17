@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { getWordsInfo } from "@/lib/wordDictionary";
+import { AGENDA_TEMPLATES } from "@/lib/agenda-templates";
 
 interface SupportHintsProps {
   targetWords?: string[];
@@ -47,12 +48,20 @@ export default function SupportHints({
     return getWordsInfo(targetWords);
   }, [targetWords]);
 
+  // トピックに応じた便利フレーズを取得
+  const keyPhrases = useMemo(() => {
+    if (!selectedTopic) return [];
+    const template = AGENDA_TEMPLATES[selectedTopic];
+    return template?.keyPhrases || [];
+  }, [selectedTopic]);
+
   // 何も情報がなければ表示しない
   const hasTargetWords = targetWords && targetWords.length > 0;
   const hasTopic = selectedTopic && selectedTopic.trim() !== "";
   const hasGoal = conversationGoal && conversationGoal.trim() !== "";
+  const hasKeyPhrases = keyPhrases.length > 0;
 
-  if (!hasTargetWords && !hasTopic && !hasGoal) return null;
+  if (!hasTargetWords && !hasTopic && !hasGoal && !hasKeyPhrases) return null;
 
   // トピックを翻訳
   const getTopicText = (topic: string) => {
@@ -144,6 +153,30 @@ export default function SupportHints({
                   ※ 会話の中でこれらの単語を使えるよう導いてあげてください。
                   <br />
                   学習者が使えたら、たくさん褒めてあげましょう！ 😊
+                </p>
+              </div>
+            )}
+
+            {/* トピック別の便利フレーズ */}
+            {hasKeyPhrases && (
+              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                <p className="text-sm text-orange-700 font-medium mb-3">
+                  💬 このトピックで使える便利フレーズ
+                </p>
+                <div className="space-y-2">
+                  {keyPhrases.map((phrase: string, index: number) => (
+                    <div
+                      key={index}
+                      className="bg-white px-4 py-2 rounded-lg border border-orange-200 shadow-sm"
+                    >
+                      <span className="text-gray-800 font-medium">
+                        {phrase}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-orange-600 mt-3 bg-white p-2 rounded border border-orange-200">
+                  💡 会話の中でこれらのフレーズを使って話しかけてみましょう
                 </p>
               </div>
             )}

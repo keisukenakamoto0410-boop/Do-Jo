@@ -95,6 +95,138 @@ export function buildWelcomeMessage(lineDisplayName?: string): LineMessage {
 }
 
 /**
+ * Email input prompt message
+ * Asks user to enter their email address for account linking
+ */
+export function buildEmailInputMessage(name: string): LineMessage {
+  return {
+    type: "flex",
+    altText: "メールアドレスを入力してください",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `${name}さん、ようこそ！`,
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📧 メールアドレスを入力してください",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "（セッションのリマインダーや大切なお知らせを送ります）",
+            size: "xs",
+            color: "#888888",
+            wrap: true,
+            margin: "sm",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "💬 メールアドレスを入力して送信してください",
+            weight: "bold",
+            size: "sm",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "例: example@gmail.com",
+            size: "xs",
+            color: "#888888",
+            margin: "sm",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Email validation error message
+ */
+export function buildEmailErrorMessage(invalidEmail: string): LineMessage {
+  return {
+    type: "flex",
+    altText: "メールアドレスの形式が正しくありません",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "⚠️ 入力エラー",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.warning,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "メールアドレスの形式が正しくありません",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: `入力: ${invalidEmail}`,
+            size: "sm",
+            color: "#888888",
+            margin: "md",
+            wrap: true,
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "正しい形式で再入力してください",
+            size: "sm",
+            margin: "lg",
+          },
+          {
+            type: "text",
+            text: "例: example@gmail.com",
+            size: "xs",
+            color: "#888888",
+            margin: "sm",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
  * Gender selection message
  */
 export function buildGenderSelectMessage(name: string): LineMessage {

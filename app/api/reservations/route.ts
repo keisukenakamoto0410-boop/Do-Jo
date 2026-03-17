@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendBookingConfirmationEmail, sendLearnerBookingConfirmationEmail } from "@/lib/email";
 import { sendLineBookingNotification } from "@/lib/line";
+import { getBaseUrl, createSessionToken, buildSessionUrl } from "@/lib/session-token";
 
 // GET reservations for the current user
 export async function GET(req: NextRequest) {
@@ -202,13 +203,23 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    // Send booking confirmation emails (async, don't block response)
-    const rawUrl = process.env.NEXTAUTH_URL;
-    const BASE_URL = (rawUrl || "https://do-jo.vercel.app").replace(/\\+$/, "").replace(/\/+$/, "");
+    // Create session tokens for both host and learner
+    // Tokens expire 1 hour after session start time
+    const hostToken = await createSessionToken(
+      reservation.id,
+      reservation.host.id,
+      reservation.slot.startTime
+    );
+    const learnerToken = await createSessionToken(
+      reservation.id,
+      reservation.learner.id,
+      reservation.slot.startTime
+    );
+
+    const hostSessionUrl = buildSessionUrl(hostToken);
+    const learnerSessionUrl = buildSessionUrl(learnerToken);
 
     console.log("[Reservation] Sending confirmation emails...");
-    console.log("[Reservation] NEXTAUTH_URL raw value:", JSON.stringify(rawUrl));
-    console.log("[Reservation] BASE_URL used:", BASE_URL);
     console.log("[Reservation] Host email:", reservation.host.email);
     console.log("[Reservation] Learner email:", reservation.learner.email);
     console.log("[Reservation] GMAIL_USER configured:", !!process.env.GMAIL_USER);
@@ -220,7 +231,7 @@ export async function POST(req: NextRequest) {
       hostName: reservation.host.name,
       learnerName: reservation.learner.name,
       sessionDate: reservation.slot.startTime,
-      sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
+      sessionUrl: hostSessionUrl,
       topic: reservation.selectedTopic || undefined,
       words: reservation.targetWords || [],
     }).then((result) => {
@@ -234,12 +245,13 @@ export async function POST(req: NextRequest) {
     });
 
     // Email to learner (English)
+    const BASE_URL = getBaseUrl();
     sendLearnerBookingConfirmationEmail({
       learnerEmail: reservation.learner.email!,
       learnerName: reservation.learner.name,
       hostName: reservation.host.name,
       sessionDate: reservation.slot.startTime,
-      sessionUrl: `${BASE_URL}/learner/session/${reservation.id}`,
+      sessionUrl: learnerSessionUrl,
       prepareUrl: `${BASE_URL}/learner/prepare/${reservation.id}`,
     }).then((result) => {
       if (result.success) {
@@ -252,7 +264,6 @@ export async function POST(req: NextRequest) {
     });
 
     // LINE notification to host (if LINE connected)
-    // Debug: Log the full host object to see what's available
     console.log("[Reservation] Host object:", JSON.stringify(reservation.host, null, 2));
     console.log("[Reservation] Host lineId from reservation:", reservation.host.lineId);
 
@@ -266,7 +277,7 @@ export async function POST(req: NextRequest) {
         hostName: reservation.host.name,
         learnerName: reservation.learner.name,
         sessionDate: reservation.slot.startTime,
-        sessionUrl: `${BASE_URL}/senior/session/${reservation.id}`,
+        sessionUrl: hostSessionUrl,
         topic: reservation.selectedTopic || undefined,
         words: reservation.targetWords || [],
       }).then((result) => {

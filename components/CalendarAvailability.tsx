@@ -20,15 +20,20 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState<string>("10:00");
+  const [endTime, setEndTime] = useState<string>("16:00");
   const [sessionType, setSessionType] = useState("both");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Time slots from 10:00 to 21:00 in 30-minute increments
   const timeSlots = [];
-  for (let hour = 10; hour < 21; hour++) {
-    timeSlots.push(`${hour.toString().padStart(2, "0")}:00`);
-    timeSlots.push(`${hour.toString().padStart(2, "0")}:30`);
+  for (let hour = 10; hour <= 21; hour++) {
+    if (hour < 21) {
+      timeSlots.push(`${hour.toString().padStart(2, "0")}:00`);
+      timeSlots.push(`${hour.toString().padStart(2, "0")}:30`);
+    } else {
+      timeSlots.push(`${hour.toString().padStart(2, "0")}:00`);
+    }
   }
 
   useEffect(() => {
@@ -86,13 +91,6 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
     });
   };
 
-  const getExistingTimesForDate = (date: Date): string[] => {
-    return getSlotsForDate(date).map((slot) => {
-      const slotDate = new Date(slot.startTime);
-      return `${slotDate.getHours().toString().padStart(2, "0")}:${slotDate.getMinutes().toString().padStart(2, "0")}`;
-    });
-  };
-
   const handleDateClick = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -100,47 +98,57 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
     if (date < today) return; // Can't select past dates
 
     setSelectedDate(date);
-    setSelectedTimes(getExistingTimesForDate(date));
-  };
-
-  const toggleTimeSlot = (time: string) => {
-    setSelectedTimes((prev) =>
-      prev.includes(time) ? prev.filter((t) => t !== time) : [...prev, time]
-    );
+    setStartTime("10:00");
+    setEndTime("16:00");
   };
 
   const handleSave = async () => {
     if (!selectedDate) return;
 
+    // Validate that end time is after start time
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (endMinutes <= startMinutes) {
+      alert("終了時刻は開始時刻より後にしてください");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Delete existing slots for this date
-      const existingSlots = getSlotsForDate(selectedDate);
-      for (const slot of existingSlots) {
-        if (slot.status === "available") {
-          await fetch(`/api/host/slots/${slot.id}`, { method: "DELETE" });
-        }
+      // Generate all 30-minute slots between start and end time
+      const slotsToCreate: string[] = [];
+      let currentMinutes = startMinutes;
+
+      while (currentMinutes < endMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+        slotsToCreate.push(`${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`);
+        currentMinutes += 30;
       }
 
-      // Create new slots
-      for (const time of selectedTimes) {
-        // Check if this time already exists
-        const existingTime = getExistingTimesForDate(selectedDate);
-        if (existingTime.includes(time)) continue;
-
+      // Create slots
+      let createdCount = 0;
+      for (const time of slotsToCreate) {
         const [hours, minutes] = time.split(":").map(Number);
-        const startTime = new Date(selectedDate);
-        startTime.setHours(hours, minutes, 0, 0);
+        const slotStartTime = new Date(selectedDate);
+        slotStartTime.setHours(hours, minutes, 0, 0);
 
         // Use /api/slots for creating slots (POST endpoint)
-        await fetch("/api/slots", {
+        const response = await fetch("/api/slots", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            startTime: startTime.toISOString(),
+            startTime: slotStartTime.toISOString(),
             sessionType: sessionType === "both" ? "casual" : sessionType,
           }),
         });
+
+        if (response.ok) {
+          createdCount++;
+        }
       }
 
       await fetchSlots();
@@ -148,13 +156,13 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
       setSelectedDate(null);
 
       // Show success message
-      const count = selectedTimes.length - getExistingTimesForDate(selectedDate).length;
-      if (count > 0) {
-        setSuccessMessage(`${count}件の予約枠を作成しました！`);
+      if (createdCount > 0) {
+        setSuccessMessage(`${createdCount}件の予約枠を作成しました！（${startTime}〜${endTime}）`);
         setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (error) {
       console.error("Failed to save slots:", error);
+      alert("予約枠の作成に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -296,7 +304,7 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
                   weekday: "short",
                 })}
               </h3>
-              <p className="text-sm text-sky-100">時間スロットを選択してください</p>
+              <p className="text-sm text-sky-100">時間帯を設定してください</p>
             </div>
 
             <div className="p-4">
@@ -316,33 +324,47 @@ export default function CalendarAvailability({ onSlotsChange }: CalendarAvailabi
                 </select>
               </div>
 
-              {/* Time Grid */}
-              <div className="grid grid-cols-4 gap-2">
-                {timeSlots.map((time) => {
-                  const isSelected = selectedTimes.includes(time);
-                  const existingSlot = getSlotsForDate(selectedDate).find((slot) => {
-                    const slotTime = new Date(slot.startTime);
-                    return `${slotTime.getHours().toString().padStart(2, "0")}:${slotTime.getMinutes().toString().padStart(2, "0")}` === time;
-                  });
-                  const isBooked = existingSlot?.status === "booked";
-
-                  return (
-                    <button
-                      key={time}
-                      onClick={() => !isBooked && toggleTimeSlot(time)}
-                      disabled={isBooked}
-                      className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                        isBooked
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : isSelected
-                          ? "bg-sky-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-sky-100"
-                      }`}
-                    >
+              {/* Time Range Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  開始時刻
+                </label>
+                <select
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                >
+                  {timeSlots.map((time) => (
+                    <option key={time} value={time}>
                       {time}
-                    </button>
-                  );
-                })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  終了時刻
+                </label>
+                <select
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                >
+                  {timeSlots.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview */}
+              <div className="mb-4 p-3 bg-sky-50 rounded-lg border border-sky-200">
+                <p className="text-sm text-sky-700 font-medium mb-1">作成される予約枠</p>
+                <p className="text-xs text-sky-600">
+                  {startTime}〜{endTime}の間、30分刻みでスロットを作成します
+                </p>
               </div>
 
               {/* Actions */}

@@ -1038,6 +1038,175 @@ export function buildTimeSelectMessage(
 }
 
 /**
+ * Start time selection message (new flow)
+ */
+export function buildStartTimeSelectMessage(day: string): LineMessage {
+  const timeSlots = [
+    "09:00", "10:00", "11:00", "12:00",
+    "13:00", "14:00", "15:00", "16:00",
+    "17:00", "18:00", "19:00", "20:00", "21:00",
+  ];
+
+  // Create rows of 4 buttons each
+  const rows = [];
+  for (let i = 0; i < timeSlots.length; i += 4) {
+    const rowSlots = timeSlots.slice(i, i + 4);
+    rows.push({
+      type: "box",
+      layout: "horizontal",
+      contents: rowSlots.map((time) => ({
+        type: "button",
+        style: "secondary",
+        action: {
+          type: "postback",
+          label: time,
+          data: `action=select_start_time&day=${day}&time=${time}`,
+        },
+        height: "sm",
+        flex: 1,
+      })),
+      spacing: "xs",
+      margin: "sm",
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: `${day}曜日の開始時刻を選んでください`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `⏰ ${day}曜日の時間設定`,
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "開始時刻を選んでください",
+            weight: "bold",
+            wrap: true,
+          },
+          {
+            type: "text",
+            text: "例: 10:00を選択 → 10時から会話可能",
+            size: "xs",
+            color: "#888888",
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          ...rows,
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * End time selection message (new flow)
+ */
+export function buildEndTimeSelectMessage(day: string, startTime: string): LineMessage {
+  const timeSlots = [
+    "09:00", "10:00", "11:00", "12:00",
+    "13:00", "14:00", "15:00", "16:00",
+    "17:00", "18:00", "19:00", "20:00", "21:00",
+  ];
+
+  // Create rows of 4 buttons each
+  const rows = [];
+  for (let i = 0; i < timeSlots.length; i += 4) {
+    const rowSlots = timeSlots.slice(i, i + 4);
+    rows.push({
+      type: "box",
+      layout: "horizontal",
+      contents: rowSlots.map((time) => ({
+        type: "button",
+        style: "secondary",
+        action: {
+          type: "postback",
+          label: time,
+          data: `action=select_end_time&day=${day}&startTime=${startTime}&endTime=${time}`,
+        },
+        height: "sm",
+        flex: 1,
+      })),
+      spacing: "xs",
+      margin: "sm",
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: `${day}曜日の終了時刻を選んでください`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `⏰ ${day}曜日の時間設定`,
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `開始時刻: ${startTime}`,
+            weight: "bold",
+            color: COLORS.primary,
+            margin: "md",
+          },
+          {
+            type: "text",
+            text: "終了時刻を選んでください",
+            weight: "bold",
+            wrap: true,
+            margin: "md",
+          },
+          {
+            type: "text",
+            text: `${startTime}〜終了時刻の間、30分刻みで予約枠が作成されます`,
+            size: "xs",
+            color: "#888888",
+            wrap: true,
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          ...rows,
+        ],
+      },
+    },
+  };
+}
+
+/**
  * Schedule confirmation message after all slots are registered
  */
 export function buildScheduleConfirmMessage(

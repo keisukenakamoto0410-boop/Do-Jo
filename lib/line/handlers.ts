@@ -14,6 +14,8 @@ import {
   buildRegistrationCompleteMessage,
   buildDaySelectMessage,
   buildTimeSelectMessage,
+  buildStartTimeSelectMessage,
+  buildEndTimeSelectMessage,
   buildScheduleConfirmMessage,
   buildMainMenuMessage,
   buildScheduleStatusMessage,
@@ -265,6 +267,14 @@ export async function handlePostback(event: {
       // --- Schedule Registration: Time Selection ---
       case "select_time":
         await handleSelectTime(event, user, data);
+        break;
+
+      case "select_start_time":
+        await handleSelectStartTime(event, user, data);
+        break;
+
+      case "select_end_time":
+        await handleSelectEndTime(event, user, data);
         break;
 
       // --- View Reservations ---
@@ -610,9 +620,9 @@ async function handleConfirmDays(
     },
   });
 
-  // Show time selection for first day
+  // Show start time selection for first day (new flow)
   try {
-    await replyMessage(event.replyToken, buildTimeSelectMessage(days[0]));
+    await replyMessage(event.replyToken, buildStartTimeSelectMessage(days[0]));
   } catch (error) {
     console.error("[LINE] Failed to reply in handleConfirmDays:", error);
   }
@@ -669,6 +679,108 @@ async function handleSelectTime(
       await replyMessage(event.replyToken, buildScheduleConfirmMessage(slots));
     } catch (error) {
       console.error("[LINE] Failed to reply in handleSelectTime:", error);
+    }
+
+    // Clear temporary data
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { selectedDays: null, scheduleStep: null },
+    });
+  }
+}
+
+// New flow: Start time selection
+async function handleSelectStartTime(
+  event: { replyToken: string },
+  user: { id: string; lineId: string | null },
+  data: URLSearchParams
+) {
+  const time = data.get("time");
+  const day = data.get("day");
+  if (!time || !day) return;
+
+  // Show end time selection
+  try {
+    await replyMessage(event.replyToken, buildEndTimeSelectMessage(day, time));
+  } catch (error) {
+    console.error("[LINE] Failed to reply in handleSelectStartTime:", error);
+  }
+}
+
+// New flow: End time selection and slot creation
+async function handleSelectEndTime(
+  event: { replyToken: string },
+  user: { id: string; lineId: string | null },
+  data: URLSearchParams
+) {
+  const day = data.get("day");
+  const startTime = data.get("startTime");
+  const endTime = data.get("endTime");
+  if (!day || !startTime || !endTime) return;
+
+  // Validate that end time is after start time
+  const [startHour, startMin] = startTime.split(":").map(Number);
+  const [endHour, endMin] = endTime.split(":").map(Number);
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+
+  if (endMinutes <= startMinutes) {
+    await replyMessage(event.replyToken, {
+      type: "text",
+      text: "終了時刻は開始時刻より後にしてください。もう一度やり直してください。",
+    });
+    return;
+  }
+
+  // Create slots for the range
+  let currentMinutes = startMinutes;
+  while (currentMinutes < endMinutes) {
+    const hour = Math.floor(currentMinutes / 60);
+    const minute = currentMinutes % 60;
+    const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+    await createSlot(user.id, day, timeStr);
+    currentMinutes += 30;
+  }
+
+  // Re-fetch latest data from DB
+  const latestUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { scheduleStep: true },
+  });
+
+  const stepData = latestUser?.scheduleStep
+    ? JSON.parse(latestUser.scheduleStep)
+    : { days: [], currentIndex: 0, selectedTimes: {} };
+
+  // Move to next day
+  const nextIndex = stepData.currentIndex + 1;
+
+  if (nextIndex < stepData.days.length) {
+    // More days to process
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        scheduleStep: JSON.stringify({
+          ...stepData,
+          currentIndex: nextIndex,
+        }),
+      },
+    });
+    try {
+      await replyMessage(
+        event.replyToken,
+        buildStartTimeSelectMessage(stepData.days[nextIndex])
+      );
+    } catch (error) {
+      console.error("[LINE] Failed to reply in handleSelectEndTime:", error);
+    }
+  } else {
+    // All days completed
+    const slots = await getUserUpcomingSlots(user.id);
+    try {
+      await replyMessage(event.replyToken, buildScheduleConfirmMessage(slots));
+    } catch (error) {
+      console.error("[LINE] Failed to reply in handleSelectEndTime:", error);
     }
 
     // Clear temporary data

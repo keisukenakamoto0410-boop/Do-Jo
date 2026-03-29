@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
       grammarScore,
       enthusiasmScore,
       comprehensionScore,
+      energyRating,
       goodExpression,
       improvementFrom,
       improvementTo,
@@ -113,6 +114,13 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "All scores are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!energyRating || energyRating < 1 || energyRating > 5) {
+      return NextResponse.json(
+        { error: "Energy rating is required (1-5)" },
         { status: 400 }
       );
     }
@@ -187,6 +195,17 @@ export async function POST(req: NextRequest) {
         encouragementMessage,
       },
     });
+
+    // エンゲージメントログに元気度評価を保存
+    try {
+      await prisma.engagementLog.updateMany({
+        where: { sessionId: reservationId },
+        data: { seniorEnergyRating: energyRating },
+      });
+    } catch (engagementError) {
+      console.error("Failed to update engagement log:", engagementError);
+      // エラーがあっても処理は継続
+    }
 
     // メール通知を送信
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";

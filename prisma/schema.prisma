@@ -602,3 +602,17 @@ model SessionToken {
   @@index([reservationId])
   @@map("session_tokens")
 }
+
+// エンゲージメント（発話量）計測ログ
+model EngagementLog {
+  id                 String   @id @default(cuid())
+  sessionId          String   // Reservation ID
+  foreignerSpeakSec  Int      // 外国人の発話秒数
+  seniorSpeakSec     Int      // シニアの発話秒数
+  silenceSec         Int      // 沈黙秒数
+  seniorEnergyRating Int?     // シニアによる主観的元気度評価 (1-5: 1=元気なし, 5=とても元気)
+  recordedAt         DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("engagement_logs")
+}

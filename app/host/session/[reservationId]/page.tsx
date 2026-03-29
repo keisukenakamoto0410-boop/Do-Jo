@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { getSupabase } from "@/lib/supabase";
 
 // Agora型定義（動的インポート用）
 type IAgoraRTCClient = any;
 type ICameraVideoTrack = any;
 type IMicrophoneAudioTrack = any;
+
+// エンゲージメント計測定数
+const SPEAK_THRESHOLD = 15; // Agoraのlevelは0〜100スケール
+const INTERVAL_SEC = 0.2;   // 200ms = 0.2秒
 
 export default function HostSessionPage() {
   const router = useRouter();
@@ -40,6 +45,13 @@ export default function HostSessionPage() {
     questions: string[];
   } | null>(null);
   const [advisorLoading, setAdvisorLoading] = useState(true);
+
+  // エンゲージメント計測用ref
+  const speakDataRef = useRef({
+    foreignerCount: 0,
+    seniorCount: 0,
+    totalCount: 0,
+  });
 
   useEffect(() => {
     console.log("Component mounted");
@@ -252,6 +264,22 @@ export default function HostSessionPage() {
       await agoraClient.join(appId, channelName, token, uid);
       console.log("Joined channel successfully!");
 
+      // 発話量の取得を開始
+      agoraClient.enableAudioVolumeIndicator();
+
+      agoraClient.on("volume-indicator", (volumes: any) => {
+        volumes.forEach(({ uid: volumeUid, level }: { uid: number; level: number }) => {
+          if (volumeUid === 0 && level >= SPEAK_THRESHOLD) {
+            // uid === 0 はローカルユーザー（ホスト/シニア）
+            speakDataRef.current.seniorCount++;
+          } else if (volumeUid !== 0 && level >= SPEAK_THRESHOLD) {
+            // uid !== 0 はリモートユーザー（学習者/外国人）
+            speakDataRef.current.foreignerCount++;
+          }
+        });
+        speakDataRef.current.totalCount++;
+      });
+
       // ローカルトラック作成
       console.log("Creating local tracks...");
       const [audioTrack, videoTrack] =
@@ -342,6 +370,30 @@ export default function HostSessionPage() {
     }
   };
 
+  const saveEngagement = async () => {
+    const d = speakDataRef.current;
+    const toSec = (n: number) => Math.round(n * INTERVAL_SEC);
+
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from("engagement_logs")
+        .insert({
+          session_id: reservationId,
+          foreigner_speak_sec: toSec(d.foreignerCount),
+          senior_speak_sec: toSec(d.seniorCount),
+          silence_sec:
+            toSec(d.totalCount) -
+            toSec(d.foreignerCount) -
+            toSec(d.seniorCount),
+        });
+
+      if (error) console.error("engagement保存失敗", error);
+    } catch (err) {
+      console.error("engagement保存エラー", err);
+    }
+  };
+
   const handleSessionEnd = async () => {
     // Show confirmation dialog
     const confirmed = window.confirm(
@@ -349,6 +401,7 @@ export default function HostSessionPage() {
     );
     if (!confirmed) return;
 
+    await saveEngagement();
     await leaveChannel();
 
     try {

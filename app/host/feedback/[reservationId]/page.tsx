@@ -52,6 +52,13 @@ const SCORE_OPTIONS = {
     { value: 2, label: "簡単な言葉でも伝わりにくかった" },
     { value: 1, label: "ほとんど通じなかった" },
   ],
+  energy: [
+    { value: 5, label: "😊 とても元気で明るかった", emoji: "😊" },
+    { value: 4, label: "🙂 元気だった", emoji: "🙂" },
+    { value: 3, label: "😐 普通", emoji: "😐" },
+    { value: 2, label: "😔 少し元気がなかった", emoji: "😔" },
+    { value: 1, label: "😞 元気がなく心配", emoji: "😞" },
+  ],
 };
 
 const EXAMPLE_MESSAGES = [
@@ -81,6 +88,7 @@ export default function HostFeedbackPage() {
   const [grammarScore, setGrammarScore] = useState<number | null>(null);
   const [enthusiasmScore, setEnthusiasmScore] = useState<number | null>(null);
   const [comprehensionScore, setComprehensionScore] = useState<number | null>(null);
+  const [energyRating, setEnergyRating] = useState<number | null>(null);
   const [goodExpression, setGoodExpression] = useState("");
   const [improvementFrom, setImprovementFrom] = useState("");
   const [improvementTo, setImprovementTo] = useState("");
@@ -144,7 +152,8 @@ export default function HostFeedbackPage() {
       pronunciationScore !== null &&
       grammarScore !== null &&
       enthusiasmScore !== null &&
-      comprehensionScore !== null;
+      comprehensionScore !== null &&
+      energyRating !== null;
     const hasMessage = encouragementMessage.trim().length >= 50;
     const improvementValid =
       (improvementFrom.trim() === "" && improvementTo.trim() === "") ||
@@ -175,6 +184,7 @@ export default function HostFeedbackPage() {
           grammarScore,
           enthusiasmScore,
           comprehensionScore,
+          energyRating,
           goodExpression: goodExpression.trim() || null,
           improvementFrom: improvementFrom.trim() || null,
           improvementTo: improvementTo.trim() || null,
@@ -449,6 +459,32 @@ export default function HostFeedbackPage() {
           </div>
         </div>
 
+        {/* Energy Rating */}
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl shadow-lg p-6 mb-6 border-2 border-blue-200">
+          <h2 className="font-bold text-gray-900 mb-2">
+            ■ 今日の学習者の元気度（必須）
+          </h2>
+          <p className="text-sm text-blue-700 mb-4">
+            会話中の学習者の様子から、あなたが感じた元気度を教えてください
+          </p>
+          <div className="space-y-2">
+            {SCORE_OPTIONS.energy.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setEnergyRating(option.value)}
+                className={`w-full p-4 rounded-xl text-left transition-all flex items-center gap-3 ${
+                  energyRating === option.value
+                    ? "bg-blue-500 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-blue-50 border border-blue-200"
+                }`}
+              >
+                <span className="text-2xl">{option.emoji}</span>
+                <span className="font-medium">{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Good Expression */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <h2 className="font-bold text-gray-900 mb-2">
@@ -586,7 +622,8 @@ export default function HostFeedbackPage() {
                   : pronunciationScore === null ||
                     grammarScore === null ||
                     enthusiasmScore === null ||
-                    comprehensionScore === null
+                    comprehensionScore === null ||
+                    energyRating === null
                   ? "すべての評価項目を選択してください"
                   : encouragementMessage.length < 50
                   ? "応援メッセージを50文字以上入力してください"

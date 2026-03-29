@@ -59,6 +59,7 @@ export default function PreparationPage() {
   const { data: session } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(true);
   const [error, setError] = useState("");
   const [isFirstSession, setIsFirstSession] = useState(true);
   const [previousTopic, setPreviousTopic] = useState<string | null>(null);
@@ -81,24 +82,56 @@ export default function PreparationPage() {
   // 空でない単語のみを取得
   const getFilledTargetWords = () => targetWords.filter(word => word.trim() !== "");
 
-  // 前回の会話履歴を取得
+  // 予約データと前回の会話履歴を取得
   useEffect(() => {
-    const fetchPreviousSession = async () => {
+    const fetchData = async () => {
+      setFetchingData(true);
       try {
-        const res = await fetch(`/api/learner/previous-session`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.previousSession) {
+        // 1. 現在の予約データを取得（予約時に入力した情報を初期値とする）
+        const reservationRes = await fetch(`/api/reservations/${reservationId}`);
+        if (reservationRes.ok) {
+          const reservationData = await reservationRes.json();
+
+          // 予約時に入力した情報を初期値として設定
+          if (reservationData.selectedTopic) {
+            setSelectedTopic(reservationData.selectedTopic);
+          }
+          if (reservationData.slideTopic) {
+            setSlideTopic(reservationData.slideTopic);
+          }
+          if (reservationData.targetWords && reservationData.targetWords.length > 0) {
+            const words = [...reservationData.targetWords];
+            // 5つの枠に収まるように調整
+            while (words.length < 5) {
+              words.push("");
+            }
+            setTargetWords(words.slice(0, 5));
+          }
+          if (reservationData.conversationGoal) {
+            setConversationGoal(reservationData.conversationGoal);
+          }
+          if (reservationData.additionalNotes) {
+            setAdditionalNotes(reservationData.additionalNotes);
+          }
+        }
+
+        // 2. 前回の会話履歴を取得
+        const previousRes = await fetch(`/api/learner/previous-session`);
+        if (previousRes.ok) {
+          const previousData = await previousRes.json();
+          if (previousData.previousSession) {
             setIsFirstSession(false);
-            setPreviousTopic(data.previousSession.topic);
+            setPreviousTopic(previousData.previousSession.topic);
           }
         }
       } catch (err) {
-        console.error("Failed to fetch previous session:", err);
+        console.error("Failed to fetch data:", err);
+      } finally {
+        setFetchingData(false);
       }
     };
-    fetchPreviousSession();
-  }, []);
+    fetchData();
+  }, [reservationId]);
 
   // フォーム送信
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,6 +182,18 @@ export default function PreparationPage() {
     }
   };
 
+  // ローディング中の表示
+  if (fetchingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your booking information...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
@@ -170,8 +215,8 @@ export default function PreparationPage() {
           Prepare for Your Conversation
         </h1>
         <p className="text-gray-600 mb-8">
-          Answer a few questions so we can create the perfect conversation
-          agenda for you.
+          Review and update your conversation preferences.
+          {selectedTopic && " (We've pre-filled your booking information)"}
         </p>
 
         {error && (
@@ -219,6 +264,13 @@ export default function PreparationPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               What do you want to talk about?
             </h2>
+            {selectedTopic && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  ✓ You selected this topic when booking. You can change it if you'd like!
+                </p>
+              </div>
+            )}
             {previousTopic && (
               <p className="text-sm text-amber-600 mb-4">
                 Tip: Try a different topic from last time for variety!
@@ -249,6 +301,13 @@ export default function PreparationPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
               Target Words to Use (Optional)
             </h2>
+            {getFilledTargetWords().length > 0 && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">
+                  ✓ We've pre-filled the words you entered when booking. You can edit or add more!
+                </p>
+              </div>
+            )}
             <p className="text-sm text-gray-500 mb-4">
               Enter up to 5 Japanese words you want to practice using during the conversation.
               Your host will see these and help you use them naturally.

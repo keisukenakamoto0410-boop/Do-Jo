@@ -244,6 +244,12 @@ export default function AdminProductsPage() {
               >
                 商品管理
               </Link>
+              <Link
+                href="/admin/engagement"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                エンゲージメント
+              </Link>
               <span className="text-gray-600">{session.user.email}</span>
             </nav>
           </div>

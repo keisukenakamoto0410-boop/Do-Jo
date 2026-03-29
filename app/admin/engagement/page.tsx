@@ -79,7 +79,23 @@ export default function AdminEngagementPage() {
       const response = await fetch("/api/admin/engagement");
 
       if (!response.ok) {
-        throw new Error("Failed to fetch engagement data");
+        console.error("API error:", response.status, response.statusText);
+        // エラーの場合は空のデータで続行
+        setLogs([]);
+        setSessionStats([]);
+        setStats({
+          totalSessions: 0,
+          avgForeignerRate: 0,
+          avgSilenceSec: 0,
+          needFollowUp: 0,
+          highEnergyCount: 0,
+          lowEnergyCount: 0,
+          ratedSessions: 0,
+          matchingRate: 0,
+        });
+        setError("データの読み込みに失敗しました。セッションデータがまだ存在しない可能性があります。");
+        setLoading(false);
+        return;
       }
 
       const { logs } = await response.json();

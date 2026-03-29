@@ -4,7 +4,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getSupabase } from "@/lib/supabase";
 
 // Admin emails that can access this page
 const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com", "admin@dojo.com"];
@@ -77,15 +76,14 @@ export default function AdminEngagementPage() {
   const fetchEngagementData = async () => {
     try {
       setLoading(true);
-      const supabase = getSupabase();
-      const { data, error: fetchError } = await supabase
-        .from("engagement_logs")
-        .select("*")
-        .order("recorded_at", { ascending: false });
+      const response = await fetch("/api/admin/engagement");
 
-      if (fetchError) throw fetchError;
+      if (!response.ok) {
+        throw new Error("Failed to fetch engagement data");
+      }
 
-      const engagementLogs = (data || []) as EngagementLog[];
+      const { logs } = await response.json();
+      const engagementLogs = (logs || []) as EngagementLog[];
       setLogs(engagementLogs);
 
       // セッション別統計を計算

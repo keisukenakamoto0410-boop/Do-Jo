@@ -97,7 +97,7 @@ export default function AboutPage() {
 
         <div className="mt-12 text-center">
           <Link
-            href="/register"
+            href="/login"
             className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
           >
             Get Started Today

@@ -108,6 +108,54 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+    // LIFF (LINE Front-end Framework) 用の認証プロバイダー
+    CredentialsProvider({
+      id: "line-credentials",
+      name: "LINE",
+      credentials: {
+        lineUserId: { label: "LINE User ID", type: "text" },
+      },
+      async authorize(credentials) {
+        console.log("[AUTH] LINE authorize called with LINE ID:", credentials?.lineUserId);
+
+        if (!credentials?.lineUserId) {
+          console.log("[AUTH] Error: Missing LINE User ID");
+          throw new Error("LINE User IDが必要です");
+        }
+
+        try {
+          console.log("[AUTH] Looking up user by LINE ID in database...");
+          const user = await db.user.findUnique({
+            where: { lineId: credentials.lineUserId },
+          });
+
+          console.log("[AUTH] User found:", user ? { id: user.id, email: user.email, lineId: user.lineId } : null);
+
+          if (!user) {
+            console.log("[AUTH] Error: User not found for LINE ID");
+            throw new Error("ユーザーが見つかりません");
+          }
+
+          // Update last login
+          console.log("[AUTH] Updating last login...");
+          await db.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+
+          console.log("[AUTH] Success! Returning user:", { id: user.id, email: user.email, role: user.role });
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role as UserRole,
+          };
+        } catch (error) {
+          console.error("[AUTH] Error in LINE authorize:", error);
+          throw error;
+        }
+      },
+    }),
   ],
   session: {
     strategy: "jwt",
@@ -229,13 +277,16 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Credentialsログインの場合のみuserからIDを取得
-      // (OAuth認証の場合はDBから取得済みなので上書きしない)
+      // Credentialsログイン (email/password または LINE credentials) の場合
+      // userオブジェクトからIDとroleを取得
       if (user && !account?.provider) {
+        console.log("[AUTH JWT] Credentials login, setting token from user:", { id: user.id, role: user.role });
         token.id = user.id;
         token.role = user.role;
       } else if (user && user.role && !token.role) {
         // OAuthでもroleがない場合は設定
+        console.log("[AUTH JWT] OAuth login without role, setting from user:", { id: user.id, role: user.role });
+        token.id = user.id;
         token.role = user.role;
       }
 
@@ -258,10 +309,21 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      console.log("[AUTH SESSION] Creating session from token:", {
+        tokenId: token.id,
+        tokenRole: token.role,
+        tokenEmail: token.email
+      });
+
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.email = token.email as string;
+
+        console.log("[AUTH SESSION] Session created:", {
+          userId: session.user.id,
+          userRole: session.user.role
+        });
       }
       return session;
     },

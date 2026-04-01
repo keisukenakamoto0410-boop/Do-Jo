@@ -2229,6 +2229,227 @@ export function buildProfileMessage(params: {
 }
 
 /**
+ * Available slots message for learners (Phase 1)
+ * Shows available time slots in FlexMessage format
+ */
+export function buildAvailableSlotsMessage(params: {
+  slots: Array<{
+    id: string;
+    startTime: Date;
+    endTime: Date;
+    sessionType: string;
+    host: {
+      name: string;
+      bio?: string | null;
+      interests: string[];
+    };
+  }>;
+}): LineMessage {
+  const { slots } = params;
+
+  if (slots.length === 0) {
+    return {
+      type: "flex",
+      altText: "利用可能な日程がありません",
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "📅 利用可能な日程",
+              weight: "bold",
+              size: "lg",
+              color: "#FFFFFF",
+            },
+          ],
+          backgroundColor: COLORS.primary,
+          paddingAll: "15px",
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "現在、利用可能な日程がありません",
+              size: "sm",
+              color: "#888888",
+              wrap: true,
+            },
+            {
+              type: "text",
+              text: "後ほど再度ご確認ください",
+              size: "sm",
+              color: "#888888",
+              margin: "sm",
+              wrap: true,
+            },
+          ],
+        },
+      },
+    };
+  }
+
+  const formatSlotTime = (slot: { startTime: Date; endTime: Date }) => {
+    const start = new Date(slot.startTime);
+    const end = new Date(slot.endTime);
+    const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+    const month = start.getMonth() + 1;
+    const day = start.getDate();
+    const dayName = dayNames[start.getDay()];
+    const startHour = start.getHours().toString().padStart(2, "0");
+    const startMin = start.getMinutes().toString().padStart(2, "0");
+    const endHour = end.getHours().toString().padStart(2, "0");
+    const endMin = end.getMinutes().toString().padStart(2, "0");
+    return `${month}/${day}(${dayName}) ${startHour}:${startMin}-${endHour}:${endMin}`;
+  };
+
+  // Create slot items (max 5 slots per bubble to avoid overflow)
+  const slotItems = slots.slice(0, 5).map((slot) => ({
+    type: "box" as const,
+    layout: "vertical" as const,
+    contents: [
+      {
+        type: "box" as const,
+        layout: "horizontal" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: formatSlotTime(slot),
+            weight: "bold" as const,
+            size: "sm" as const,
+            flex: 5,
+            wrap: true,
+          },
+          {
+            type: "text" as const,
+            text: slot.sessionType === "business" ? "ビジネス" : slot.sessionType === "casual" ? "カジュアル" : "両方",
+            size: "xs" as const,
+            color: "#888888",
+            align: "right" as const,
+            flex: 2,
+          },
+        ],
+      },
+      {
+        type: "text" as const,
+        text: `先生: ${slot.host.name}`,
+        size: "xs" as const,
+        color: "#666666",
+        margin: "xs" as const,
+      },
+      slot.host.interests.length > 0
+        ? {
+            type: "text" as const,
+            text: `興味: ${slot.host.interests.slice(0, 3).join("・")}`,
+            size: "xs" as const,
+            color: "#888888",
+            margin: "xs" as const,
+            wrap: true,
+          }
+        : { type: "filler" as const },
+      {
+        type: "button" as const,
+        action: {
+          type: "uri" as const,
+          label: "予約する",
+          uri: `${process.env.NEXTAUTH_URL || "https://do-jo.vercel.app"}/learner/slots/${slot.id}`,
+        },
+        style: "primary" as const,
+        color: COLORS.success,
+        height: "sm" as const,
+        margin: "sm" as const,
+      },
+      {
+        type: "separator" as const,
+        margin: "md" as const,
+      },
+    ],
+    margin: "md" as const,
+    spacing: "sm" as const,
+  }));
+
+  // Remove last separator
+  if (slotItems.length > 0) {
+    const lastItem = slotItems[slotItems.length - 1];
+    if (lastItem.contents && Array.isArray(lastItem.contents)) {
+      lastItem.contents = lastItem.contents.filter(
+        (c: { type: string }) => c.type !== "separator"
+      );
+    }
+  }
+
+  return {
+    type: "flex",
+    altText: `利用可能な日程 (${slots.length}件)`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📅 利用可能な日程",
+            weight: "bold",
+            size: "lg",
+            color: "#FFFFFF",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "15px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `${slots.length}件の空き枠があります`,
+            size: "sm",
+            color: "#888888",
+            wrap: true,
+          },
+          {
+            type: "separator",
+            margin: "lg",
+          },
+          ...slotItems,
+          slots.length > 5
+            ? {
+                type: "text",
+                text: `他${slots.length - 5}件...`,
+                size: "xs",
+                color: "#888888",
+                align: "center",
+                margin: "md",
+              }
+            : { type: "filler" },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            action: {
+              type: "uri",
+              label: "全ての日程を見る",
+              uri: `${process.env.NEXTAUTH_URL || "https://do-jo.vercel.app"}/learner/slots`,
+            },
+            style: "secondary",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
  * Profile incomplete warning message
  * Shown when user tries to register schedule without completing profile
  */

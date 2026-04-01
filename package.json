@@ -32,6 +32,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^5.2.2",
     "@line/bot-sdk": "^10.6.0",
+    "@line/liff": "^2.28.0",
     "@prisma/client": "^6.18.0",
     "@supabase/supabase-js": "^2.90.0",
     "@types/nodemailer": "^7.0.4",

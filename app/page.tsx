@@ -1,21 +1,48 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
+export default function HomePage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
 
-  // ログイン済みの場合は各ダッシュボードにリダイレクト
-  if (session) {
-    const role = session.user?.role;
-    if (role === "learner") {
-      redirect("/learner/dashboard");
-    } else if (role === "senior") {
-      redirect("/senior/dashboard");
-    } else {
-      redirect("/host/dashboard");
+  useEffect(() => {
+    // LIFFログイン後のリダイレクトを検出
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+      const liffClientId = urlParams.get("liffClientId");
+
+      // LIFFパラメータが存在する場合、/loginにリダイレクト
+      if (code && liffClientId) {
+        console.log("[HOME] LIFF redirect detected, redirecting to /login with params");
+        // すべてのパラメータを保持したまま/loginにリダイレクト
+        router.replace(`/login${window.location.search}`);
+        return;
+      }
     }
+  }, [router]);
+
+  useEffect(() => {
+    // ログイン済みの場合は各ダッシュボードにリダイレクト
+    if (session?.user) {
+      const role = session.user.role;
+      if (role === "learner") {
+        router.push("/learner/dashboard");
+      } else if (role === "senior") {
+        router.push("/senior/dashboard");
+      } else {
+        router.push("/host/dashboard");
+      }
+    }
+  }, [session, router]);
+
+  // ローディング中は何も表示しない
+  if (status === "loading") {
+    return null;
   }
 
   // 未ログインの場合はユーザータイプ選択画面を表示

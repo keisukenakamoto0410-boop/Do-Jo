@@ -260,9 +260,9 @@ export default function ForStudentsPage() {
             className="text-center text-gray-500 text-sm mt-3"
             style={{ fontFamily: "'Outfit', sans-serif" }}
           >
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-[#00A8CC] hover:underline font-medium">
-              Create one
+            Ready to start?{" "}
+            <Link href="/login" className="text-[#00A8CC] hover:underline font-medium">
+              Sign in with LINE
             </Link>
           </p>
         </div>

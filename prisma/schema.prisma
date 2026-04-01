@@ -31,9 +31,11 @@ model User {
 
   // プロフィール（共通）
   avatar          String?
+  image           String?   // プロフィール画像URL（NextAuth用）
   bio             String?   @db.Text  // 自己紹介
   interests       String[]  // 興味タグ ["料理", "歴史", "ビジネス", "アニメ"]
   languages       String[]  // 話せる言語 ["日本語", "英語"]
+  onboardingCompleted Boolean @default(false) // 初回プロフィール設定完了フラグ
 
   // 外国人学習者用フィールド
   jlptLevel       String?   // "N1" | "N2" | "N3" | "N4" | "N5"

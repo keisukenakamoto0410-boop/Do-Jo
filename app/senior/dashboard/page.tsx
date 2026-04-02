@@ -58,7 +58,7 @@ export default function SeniorDashboard() {
         setSeniorCount(data.count);
       }
     } catch (error) {
-      console.error("シニア数の取得に失敗:", error);
+      console.error("日本人数の取得に失敗:", error);
     }
   };
 
@@ -165,7 +165,7 @@ export default function SeniorDashboard() {
           </h2>
           <p className="text-gray-600" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
             {seniorCount !== null && (
-              <span>現在、{seniorCount}人のシニアが登録しています。</span>
+              <span>現在、{seniorCount}人の日本人が登録しています。</span>
             )}
           </p>
         </div>

@@ -100,44 +100,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check for duplicate: same senior + same start time
-    const existingSlot = await prisma.slot.findFirst({
-      where: {
-        hostId: session.user.id,
-        startTime: startDateTime,
-      },
-    });
+    // Generate 30-minute interval slots
+    const slots = [];
+    const SLOT_DURATION_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-    if (existingSlot) {
-      console.log("[/api/senior/slots/create] Duplicate slot detected");
-      return NextResponse.json(
-        { error: "You already have a slot at this time" },
-        { status: 409 }
-      );
+    let currentStart = new Date(startDateTime);
+
+    while (currentStart < endDateTime) {
+      const currentEnd = new Date(currentStart.getTime() + SLOT_DURATION_MS);
+
+      // Don't create a slot if it would extend beyond the end time
+      if (currentEnd > endDateTime) {
+        break;
+      }
+
+      // Check for duplicate: same host + same start time
+      const existingSlot = await prisma.slot.findFirst({
+        where: {
+          hostId: session.user.id,
+          startTime: currentStart,
+        },
+      });
+
+      if (existingSlot) {
+        console.log("[/api/senior/slots/create] Duplicate slot detected at:", currentStart);
+        // Skip this slot but continue with others
+        currentStart = currentEnd;
+        continue;
+      }
+
+      // Create the 30-minute slot
+      const slot = await prisma.slot.create({
+        data: {
+          hostId: session.user.id,
+          sessionType: "both",
+          startTime: currentStart,
+          endTime: currentEnd,
+          status: "available",
+        },
+      });
+
+      slots.push({
+        id: slot.id,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        status: slot.status,
+      });
+
+      console.log("[/api/senior/slots/create] Created 30-min slot:", slot.id, currentStart.toISOString());
+
+      // Move to next 30-minute interval
+      currentStart = currentEnd;
     }
 
-    // Create the slot
-    const slot = await prisma.slot.create({
-      data: {
-        hostId: session.user.id,
-        sessionType: "both",
-        startTime: startDateTime,
-        endTime: endDateTime,
-        status: "available",
-      },
-    });
-
-    console.log("[/api/senior/slots/create] Slot created successfully:", slot.id);
+    console.log("[/api/senior/slots/create] Created", slots.length, "slots successfully");
 
     return NextResponse.json(
       {
         success: true,
-        slot: {
-          id: slot.id,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          status: slot.status,
-        },
+        message: `${slots.length}個のスロットを作成しました`,
+        slots,
       },
       { status: 201 }
     );

@@ -98,7 +98,8 @@ export default function CreateSchedulePage() {
         throw new Error(data.error || "予定の登録に失敗しました");
       }
 
-      setSuccess("予定を登録しました！");
+      const slotsCreated = data.slots?.length || 1;
+      setSuccess(`${slotsCreated}個の予定を登録しました！（30分刻み）`);
     } catch (err) {
       console.error("予定登録エラー:", err);
       setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -144,8 +145,8 @@ export default function CreateSchedulePage() {
         {success ? (
           <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-8 text-center">
             <div className="text-6xl mb-4">✓</div>
-            <h2 className="text-2xl font-bold text-green-700 mb-2">予定を登録しました！</h2>
-            <p className="text-green-600 mb-6">学習者が予約できるようになりました</p>
+            <h2 className="text-2xl font-bold text-green-700 mb-2">{success}</h2>
+            <p className="text-green-600 mb-6">学習者が30分刻みで予約できるようになりました</p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
               <button
                 type="button"

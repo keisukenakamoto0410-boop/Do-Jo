@@ -297,7 +297,7 @@ export default function LearnerReservationsPage() {
                       </div>
                       <p className="text-neutral-500 text-sm mb-2">
                         {reservation.host.role === "senior"
-                          ? "Senior Professional"
+                          ? "Japanese Professional"
                           : "University Student"}
                         {reservation.host.university &&
                           ` • ${reservation.host.university}`}

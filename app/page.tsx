@@ -134,7 +134,7 @@ export default function HomePage() {
                     className="text-xl font-bold text-gray-900 mb-1 group-hover:text-[#FF6B35] transition-colors"
                     style={{ fontFamily: "'Noto Sans JP', sans-serif" }}
                   >
-                    日本語を教えたい（シニアの方）
+                    日本語を教えたい（日本人の方）
                   </h3>
                   <p
                     className="text-gray-500 text-sm"

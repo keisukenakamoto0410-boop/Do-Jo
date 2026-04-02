@@ -365,7 +365,7 @@ function BrowseContent() {
                           </h3>
                           <p className="text-sm text-gray-500">
                             {host.role === "senior"
-                              ? "Senior Professional"
+                              ? "Japanese Professional"
                               : "University Student"}
                             {host.university && ` • ${host.university}`}
                           </p>
@@ -473,7 +473,7 @@ function BrowseContent() {
                     </h3>
                     <p className="text-gray-500 mt-1">
                       {selectedHost.host.role === "senior"
-                        ? "Senior Professional"
+                        ? "Japanese Professional"
                         : "University Student"}
                       {selectedHost.host.university &&
                         ` • ${selectedHost.host.university}`}
@@ -514,7 +514,7 @@ function BrowseContent() {
                   </div>
                 )}
 
-                {/* Career History (Senior only) */}
+                {/* Career History (Japanese professionals only) */}
                 {selectedHost.host.careerHistory && (
                   <div className="mb-6">
                     <h4 className="font-semibold text-gray-900 mb-2">Career History</h4>

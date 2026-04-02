@@ -78,6 +78,29 @@ export default function SeniorDashboard() {
     return `${hours}:${minutes}`;
   };
 
+  const handleCancelSlot = async (slotId: string) => {
+    if (!confirm("この予定をキャンセルしますか？")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/senior/slots/${slotId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "キャンセルに失敗しました");
+      }
+
+      // Refresh slots
+      fetchSlots();
+    } catch (error) {
+      console.error("キャンセルエラー:", error);
+      alert(error instanceof Error ? error.message : "エラーが発生しました");
+    }
+  };
+
   // 今週と来週の予定に絞る
   const now = new Date();
   const twoWeeksLater = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -159,9 +182,7 @@ export default function SeniorDashboard() {
                   あなたの空いている時間を教えてください
                 </p>
                 <Link
-                  href="https://forms.gle/wgGKF32EoiKgp3CS9"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/senior/schedule/create"
                   className="inline-block bg-white text-sky-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all"
                 >
                   予定を登録する →
@@ -243,9 +264,17 @@ export default function SeniorDashboard() {
                         {formatTime(slot.startTime)}-{formatTime(slot.endTime)}
                       </p>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
-                      空き
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
+                        空き
+                      </span>
+                      <button
+                        onClick={() => handleCancelSlot(slot.id)}
+                        className="px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded-full hover:bg-red-200 transition-all"
+                      >
+                        キャンセル
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

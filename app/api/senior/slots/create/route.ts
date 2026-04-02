@@ -91,6 +91,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate that start time is in the future (using JST)
+    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    if (startDateTime <= nowJST) {
+      return NextResponse.json(
+        { error: "Start time must be in the future" },
+        { status: 400 }
+      );
+    }
+
     // Check for duplicate: same senior + same start time
     const existingSlot = await prisma.slot.findFirst({
       where: {

@@ -99,16 +99,6 @@ export default function CreateSchedulePage() {
       }
 
       setSuccess("予定を登録しました！");
-
-      // Reset form
-      setSelectedDate("");
-      setStartTime("11:00");
-      setEndTime("16:00");
-
-      // Redirect to dashboard after 1.5 seconds
-      setTimeout(() => {
-        router.push("/senior/dashboard");
-      }, 1500);
     } catch (err) {
       console.error("予定登録エラー:", err);
       setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -151,9 +141,36 @@ export default function CreateSchedulePage() {
 
       {/* メインコンテンツ */}
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 日付選択 */}
-          <div>
+        {success ? (
+          <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-8 text-center">
+            <div className="text-6xl mb-4">✓</div>
+            <h2 className="text-2xl font-bold text-green-700 mb-2">予定を登録しました！</h2>
+            <p className="text-green-600 mb-6">学習者が予約できるようになりました</p>
+            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setSuccess("");
+                  setSelectedDate("");
+                  setStartTime("11:00");
+                  setEndTime("16:00");
+                }}
+                className="flex-1 bg-sky-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-sky-600 transition-all text-lg"
+              >
+                📅 続けて登録する
+              </button>
+              <Link
+                href="/senior/dashboard"
+                className="flex-1 bg-white text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-50 transition-all border-2 border-gray-200 text-lg text-center"
+              >
+                ← ダッシュボードに戻る
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 日付選択 */}
+            <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
               日付を選択 <span className="text-red-500">*</span>
             </label>
@@ -220,38 +237,35 @@ export default function CreateSchedulePage() {
             </div>
           </div>
 
-          {/* エラー・成功メッセージ */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">
-              {error}
-            </div>
-          )}
+            {/* エラーメッセージ */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">
+                {error}
+              </div>
+            )}
 
-          {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">
-              {success}
-            </div>
-          )}
-
-          {/* 送信ボタン */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "登録中..." : "予定を登録する"}
-          </button>
-        </form>
+            {/* 送信ボタン */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "登録中..." : "予定を登録する"}
+            </button>
+          </form>
+        )}
 
         {/* 注意事項 */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">ご注意</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
-            <li>・ 登録した予定は、学習者が予約できるようになります</li>
-            <li>・ 予約が入っていない予定はキャンセルできます</li>
-            <li>・ 予約が入った予定はキャンセルできません</li>
-          </ul>
-        </div>
+        {!success && (
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-900 mb-2">ご注意</h3>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>・ 登録した予定は、学習者が予約できるようになります</li>
+              <li>・ 予約が入っていない予定はキャンセルできます</li>
+              <li>・ 予約が入った予定はキャンセルできません</li>
+            </ul>
+          </div>
+        )}
       </main>
     </div>
   );

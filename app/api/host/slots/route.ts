@@ -29,11 +29,11 @@ export async function GET(req: NextRequest) {
 
     // If showAll is true, return all future slots without date filter
     if (showAll) {
-      // Show all future slots (from today onwards)
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
+      // Show all future slots (from today onwards) using JST
+      const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+      nowJST.setHours(0, 0, 0, 0);
       where.startTime = {
-        gte: now,
+        gte: nowJST,
       };
     } else if (date) {
       // Filter by date using JST (UTC+9) since hosts are in Japan

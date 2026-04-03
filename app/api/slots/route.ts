@@ -15,7 +15,9 @@ export async function GET(req: NextRequest) {
     const sessionType = searchParams.get("type"); // "business" | "casual" | "both"
     const date = searchParams.get("date"); // YYYY-MM-DD
 
+    // Get current time in JST to properly filter future slots
     const now = new Date();
+    const nowJST = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
 
     // Build where clause
     const where: Record<string, unknown> = {
@@ -39,10 +41,10 @@ export async function GET(req: NextRequest) {
       const startOfDayJST = new Date(Date.UTC(year, month - 1, day, -9, 0, 0, 0));
       const endOfDayJST = new Date(Date.UTC(year, month - 1, day, 14, 59, 59, 999)); // 23:59:59.999 JST = 14:59:59 UTC
 
-      // If date includes today's range and now is within it, use current time as minimum
-      if (startOfDayJST <= now && now <= endOfDayJST) {
+      // If date includes today's range and now is within it, use current JST time as minimum
+      if (startOfDayJST <= nowJST && nowJST <= endOfDayJST) {
         where.startTime = {
-          gte: now,
+          gte: nowJST,
           lte: endOfDayJST,
         };
       } else {
@@ -52,9 +54,9 @@ export async function GET(req: NextRequest) {
         };
       }
     } else {
-      // Default: show all future slots
+      // Default: show all future slots (using JST for comparison)
       where.startTime = {
-        gte: now,
+        gte: nowJST,
       };
     }
 

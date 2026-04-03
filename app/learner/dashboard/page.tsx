@@ -403,6 +403,31 @@ export default function LearnerDashboard() {
           )}
         </div>
 
+        {/* Find Japanese Teachers - Main CTA */}
+        <div className="mb-8">
+          <Link
+            href="/learner/browse"
+            className="block bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 text-white shadow-lg hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold mb-2">
+                  📅 Find Japanese Teachers
+                </h3>
+                <p className="text-white/90 text-sm mb-4">
+                  Browse available time slots and book your next conversation session
+                </p>
+                <div className="inline-flex items-center px-8 py-3 bg-white text-green-600 rounded-lg font-semibold hover:bg-gray-50 transition-all">
+                  Browse Available Slots →
+                </div>
+              </div>
+              <div className="hidden sm:block text-6xl">
+                🗣️
+              </div>
+            </div>
+          </Link>
+        </div>
+
         {/* Gamification Progress */}
         <div className="mb-8">
           <GamificationProgress />
@@ -419,41 +444,24 @@ export default function LearnerDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Casual Conversation */}
-          <Link
-            href="/learner/browse"
-            className="group bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg p-8 text-white hover:shadow-xl transition-all transform hover:scale-[1.02] block"
-          >
-            <div className="text-5xl mb-4">🎓</div>
-            <h2 className="text-2xl font-bold mb-2">Casual Conversation</h2>
-            <p className="opacity-90 mb-4">
-              Practice natural Japanese conversation with friendly native speakers
-            </p>
-            <span className="inline-flex items-center px-4 py-2 bg-white/20 rounded-lg text-sm font-medium group-hover:bg-white/30 transition-colors">
-              Find Available Slots
-              <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </span>
-          </Link>
-
+        <div className="mb-8 grid grid-cols-1 gap-4">
           {/* Edit Profile Card */}
           <Link
             href="/learner/profile"
-            className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl shadow-lg p-8 text-white hover:shadow-xl transition-all transform hover:scale-[1.02] block"
+            className="group bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white hover:shadow-xl transition-all block"
           >
-            <div className="text-5xl mb-4">👤</div>
-            <h2 className="text-2xl font-bold mb-2">Edit Profile</h2>
-            <p className="opacity-90 mb-4">
-              Update your profile, add your hometown food, and share about yourself
-            </p>
-            <span className="inline-flex items-center px-4 py-2 bg-white/20 rounded-lg text-sm font-medium group-hover:bg-white/30 transition-colors">
-              Edit My Profile
-              <svg className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">👤</div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-1">Edit Profile</h2>
+                <p className="opacity-90 text-sm">
+                  Update your profile, add your hometown food, and share about yourself
+                </p>
+              </div>
+              <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </span>
+            </div>
           </Link>
         </div>
 

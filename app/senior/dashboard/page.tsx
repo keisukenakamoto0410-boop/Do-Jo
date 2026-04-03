@@ -9,12 +9,19 @@ interface Slot {
   id: string;
   startTime: string;
   endTime: string;
-  isBooked: boolean;
+  status: string;
   reservation?: {
+    id: string;
     learner: {
+      id: string;
       name: string;
-      image?: string;
+      avatar?: string;
+      country?: string;
+      nativeLanguage?: string;
+      jlptLevel?: string;
     };
+    selectedTopic?: string;
+    targetWords?: string[];
   };
 }
 
@@ -111,8 +118,8 @@ export default function SeniorDashboard() {
     })
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-  const bookedSlots = upcomingSlots.filter(slot => slot.isBooked);
-  const availableSlots = upcomingSlots.filter(slot => !slot.isBooked);
+  const bookedSlots = upcomingSlots.filter(slot => slot.reservation);
+  const availableSlots = upcomingSlots.filter(slot => !slot.reservation);
 
   if (status === "loading" || loading) {
     return (
@@ -210,9 +217,9 @@ export default function SeniorDashboard() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      {slot.reservation?.learner.image ? (
+                      {slot.reservation?.learner.avatar ? (
                         <img
-                          src={slot.reservation.learner.image}
+                          src={slot.reservation.learner.avatar}
                           alt={slot.reservation.learner.name}
                           className="w-12 h-12 rounded-full object-cover"
                         />

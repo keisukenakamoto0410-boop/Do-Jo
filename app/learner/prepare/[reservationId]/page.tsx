@@ -93,13 +93,13 @@ export default function PreparationPage() {
           const reservationData = await reservationRes.json();
 
           // 予約時に入力した情報を初期値として設定
-          if (reservationData.selectedTopic) {
+          if (reservationData?.selectedTopic) {
             setSelectedTopic(reservationData.selectedTopic);
           }
-          if (reservationData.slideTopic) {
+          if (reservationData?.slideTopic) {
             setSlideTopic(reservationData.slideTopic);
           }
-          if (reservationData.targetWords && reservationData.targetWords.length > 0) {
+          if (reservationData?.targetWords && reservationData.targetWords.length > 0) {
             const words = [...reservationData.targetWords];
             // 5つの枠に収まるように調整
             while (words.length < 5) {
@@ -107,10 +107,10 @@ export default function PreparationPage() {
             }
             setTargetWords(words.slice(0, 5));
           }
-          if (reservationData.conversationGoal) {
+          if (reservationData?.conversationGoal) {
             setConversationGoal(reservationData.conversationGoal);
           }
-          if (reservationData.additionalNotes) {
+          if (reservationData?.additionalNotes) {
             setAdditionalNotes(reservationData.additionalNotes);
           }
         }
@@ -119,9 +119,9 @@ export default function PreparationPage() {
         const previousRes = await fetch(`/api/learner/previous-session`);
         if (previousRes.ok) {
           const previousData = await previousRes.json();
-          if (previousData.previousSession) {
+          if (previousData?.previousSession) {
             setIsFirstSession(false);
-            setPreviousTopic(previousData.previousSession.topic);
+            setPreviousTopic(previousData.previousSession?.topic);
           }
         }
       } catch (err) {

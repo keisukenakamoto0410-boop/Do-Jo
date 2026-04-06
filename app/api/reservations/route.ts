@@ -272,23 +272,25 @@ export async function POST(req: NextRequest) {
 
     if (hostLineId) {
       console.log("[Reservation] Host has LINE connected, sending notification to:", hostLineId);
-      sendLineBookingNotification({
-        lineUserId: hostLineId,
-        hostName: reservation.host.name,
-        learnerName: reservation.learner.name,
-        sessionDate: reservation.slot.startTime,
-        sessionUrl: hostSessionUrl,
-        topic: reservation.selectedTopic || undefined,
-        words: reservation.targetWords || [],
-      }).then((result) => {
-        if (result.success) {
-          console.log("[Reservation] LINE notification sent successfully");
+      try {
+        const lineResult = await sendLineBookingNotification({
+          lineUserId: hostLineId,
+          hostName: reservation.host.name,
+          learnerName: reservation.learner.name,
+          sessionDate: reservation.slot.startTime,
+          sessionUrl: hostSessionUrl,
+          topic: reservation.selectedTopic || undefined,
+          words: reservation.targetWords || [],
+        });
+
+        if (lineResult.success) {
+          console.log("[Reservation] ✅ LINE notification sent successfully");
         } else {
-          console.error("[Reservation] LINE notification failed:", result.error);
+          console.error("[Reservation] ❌ LINE notification failed:", lineResult.error);
         }
-      }).catch((err) => {
-        console.error("[Reservation] Failed to send LINE notification:", err);
-      });
+      } catch (err) {
+        console.error("[Reservation] ❌ Exception sending LINE notification:", err);
+      }
     } else {
       console.log("[Reservation] Host does not have LINE connected (lineId is null/undefined), skipping LINE notification");
       // Also check if the host has lineId in DB but it wasn't included in the query

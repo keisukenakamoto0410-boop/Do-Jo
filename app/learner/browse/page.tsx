@@ -169,7 +169,7 @@ function BrowseContent() {
       });
 
       if (res.ok) {
-        router.push("/learner/reservations");
+        router.push("/learner/dashboard");
       } else {
         const data = await res.json();
         alert(data.error || "Failed to book slot");

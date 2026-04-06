@@ -56,8 +56,8 @@ export default function SchedulePage() {
   };
 
   const handleSelectSlot = (start: Date, end: Date) => {
-    setSelectedSlot({ start, end });
-    setShowAddModal(true);
+    // カレンダーからの直接追加を無効化し、作成ページへ誘導
+    router.push("/senior/schedule/create");
   };
 
   const handleSelectEvent = (event: any) => {
@@ -140,15 +140,26 @@ export default function SchedulePage() {
             </button>
             <h1 className="text-2xl font-bold text-gray-900">スケジュール管理</h1>
           </div>
+          <button
+            onClick={() => router.push("/senior/schedule/create")}
+            className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-md"
+          >
+            <span className="text-xl">+</span>
+            <span>スロットを追加</span>
+          </button>
         </div>
       </div>
 
       {/* Calendar */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800">
-            💡 カレンダーをクリックして新しいスロットを追加できます。既存のスロットをクリックすると詳細が表示されます。
+          <p className="text-blue-800 font-medium mb-2">
+            💡 スロットの追加方法
           </p>
+          <ul className="text-blue-800 text-sm space-y-1">
+            <li>• 右上の「<strong>+ スロットを追加</strong>」ボタンから、日付と時間範囲（例: 11:00-16:00）を選択して追加できます</li>
+            <li>• カレンダー上の既存のスロットをクリックすると詳細が表示されます</li>
+          </ul>
         </div>
 
         <SlotCalendar

@@ -30,10 +30,10 @@ export default function CreateSchedulePage() {
     return dates;
   };
 
-  // Generate time options (30-minute intervals from 07:00 to 22:00)
+  // Generate time options (30-minute intervals from 09:00 to 21:00)
   const generateTimeOptions = () => {
     const times = [];
-    for (let hour = 7; hour <= 22; hour++) {
+    for (let hour = 9; hour <= 21; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeString = `${hour.toString().padStart(2, "0")}:${minute
           .toString()

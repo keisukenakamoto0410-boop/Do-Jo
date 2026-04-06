@@ -44,6 +44,28 @@ export async function POST(req: NextRequest) {
       where: { lineId: lineUserId },
     });
 
+    // LINE IDで見つからない場合は、メールアドレスでも検索
+    if (!user) {
+      const email = `${lineUserId}@line.local`;
+      user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (user) {
+        // メールアドレスで見つかった場合は、LINE IDを更新
+        console.log("[LIFF-LOGIN] Found user by email, updating LINE ID:", user.id);
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lineId: lineUserId,
+            name: displayName,
+            avatar: pictureUrl,
+            lastLoginAt: new Date(),
+          },
+        });
+      }
+    }
+
     if (!user) {
       // 新規ユーザーを作成
       console.log("[LIFF-LOGIN] Creating new user for LINE ID:", lineUserId);

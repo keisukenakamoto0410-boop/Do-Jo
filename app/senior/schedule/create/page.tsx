@@ -67,6 +67,13 @@ export default function CreateSchedulePage() {
     setError("");
     setSuccess("");
 
+    // セッションチェック
+    if (!session || !session.user) {
+      setError("ログインしてください");
+      router.push("/login");
+      return;
+    }
+
     if (!selectedDate) {
       setError("日付を選択してください");
       return;
@@ -80,6 +87,8 @@ export default function CreateSchedulePage() {
     setLoading(true);
 
     try {
+      console.log("Submitting slot creation:", { date: selectedDate, startTime, endTime });
+
       const response = await fetch("/api/senior/slots/create", {
         method: "POST",
         headers: {
@@ -93,16 +102,22 @@ export default function CreateSchedulePage() {
       });
 
       const data = await response.json();
+      console.log("API Response:", { status: response.status, data });
 
       if (!response.ok) {
-        throw new Error(data.error || "予定の登録に失敗しました");
+        const errorMsg = data.details || data.error || "予定の登録に失敗しました";
+        throw new Error(errorMsg);
       }
 
       const slotsCreated = data.slots?.length || 1;
       setSuccess(`${slotsCreated}個の予定を登録しました！（30分刻み）`);
     } catch (err) {
       console.error("予定登録エラー:", err);
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
+      const errorMessage = err instanceof Error ? err.message : "エラーが発生しました";
+      setError(errorMessage);
+
+      // エラーの詳細をアラートでも表示
+      alert(`エラー: ${errorMessage}\n\nブラウザのコンソール(F12)を開いて詳細を確認してください。`);
     } finally {
       setLoading(false);
     }

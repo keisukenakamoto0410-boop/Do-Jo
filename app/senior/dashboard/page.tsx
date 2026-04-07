@@ -189,10 +189,10 @@ export default function SeniorDashboard() {
                   あなたの空いている時間を教えてください
                 </p>
                 <Link
-                  href="/senior/schedule"
+                  href="/senior/schedule/create"
                   className="inline-block bg-white text-sky-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-all"
                 >
-                  予定を管理する →
+                  予定を登録する →
                 </Link>
               </div>
               <div className="hidden sm:block text-6xl">
@@ -311,18 +311,18 @@ export default function SeniorDashboard() {
         {/* クイックリンク */}
         <div className="mt-12 grid grid-cols-3 gap-4">
           <Link
-            href="/senior/schedule"
+            href="/senior/schedule/create"
             className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all text-center"
           >
             <div className="text-3xl mb-2">📅</div>
-            <p className="font-semibold text-gray-900">スケジュール</p>
+            <p className="font-semibold text-gray-900">予定を登録</p>
           </Link>
           <Link
-            href="/senior/reservations"
+            href="/senior/schedule"
             className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all text-center"
           >
             <div className="text-3xl mb-2">📋</div>
-            <p className="font-semibold text-gray-900">予約管理</p>
+            <p className="font-semibold text-gray-900">予定一覧</p>
           </Link>
           <Link
             href="/senior/profile"

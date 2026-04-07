@@ -193,6 +193,16 @@ export async function POST(req: NextRequest) {
           { status: 409 }
         );
       }
+
+      if (prismaError.code === "P2003") {
+        return NextResponse.json(
+          {
+            error: "指定されたユーザーが見つかりません。ユーザーを選択し直してください。",
+            details: "Foreign key constraint violation - user may not exist"
+          },
+          { status: 400 }
+        );
+      }
     }
 
     return NextResponse.json(

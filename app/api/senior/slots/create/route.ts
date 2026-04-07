@@ -181,6 +181,16 @@ export async function POST(req: NextRequest) {
           { status: 409 }
         );
       }
+
+      if (prismaError.code === "P2003") {
+        return NextResponse.json(
+          {
+            error: "セッションが無効です。LINEアプリを再起動してログインし直してください。",
+            details: "Foreign key constraint violation - user session may be invalid"
+          },
+          { status: 400 }
+        );
+      }
     }
 
     return NextResponse.json(

@@ -28,9 +28,9 @@ export default function NotFound() {
               ホームに戻る
             </Button>
           </Link>
-          <Link href="/candidate/dashboard">
-            <Button variant="outline" size="lg" leftIcon={<span>📊</span>}>
-              ダッシュボード
+          <Link href="/login">
+            <Button variant="outline" size="lg" leftIcon={<span>🔑</span>}>
+              ログイン
             </Button>
           </Link>
         </div>
@@ -40,31 +40,24 @@ export default function NotFound() {
           <p className="text-sm text-gray-500 mb-4">よくアクセスされるページ:</p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/candidate/book"
+              href="/learner/dashboard"
               className="text-sm text-blue-600 hover:underline"
             >
-              面接予約
+              学習者ダッシュボード
             </Link>
             <span className="text-gray-300">•</span>
             <Link
-              href="/candidate/resume"
+              href="/senior/dashboard"
               className="text-sm text-blue-600 hover:underline"
             >
-              レジュメ
+              シニアダッシュボード
             </Link>
             <span className="text-gray-300">•</span>
             <Link
-              href="/support"
+              href="/admin/dashboard"
               className="text-sm text-blue-600 hover:underline"
             >
-              サポート
-            </Link>
-            <span className="text-gray-300">•</span>
-            <Link
-              href="/contact"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              お問い合わせ
+              管理者ダッシュボード
             </Link>
           </div>
         </div>

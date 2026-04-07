@@ -1,129 +1,254 @@
-export default function TermsOfService() {
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export default function TermsPage() {
+  const router = useRouter();
+  const [agreed, setAgreed] = useState(false);
+
+  const handleAgree = () => {
+    // Store agreement in localStorage
+    localStorage.setItem("termsAgreed", "true");
+    // Redirect to login or home
+    router.push("/login");
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFB] py-12 px-4">
-      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
-        <div className="mb-8">
-          <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary-dark rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <span className="text-white font-bold text-xl">道</span>
-          </div>
-          <h1 className="text-3xl font-bold text-[#1A2332] mb-2">
-            Terms of Service
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+          <Link href="/" className="text-gray-600 hover:text-gray-900">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+            Do Jo（道場）
           </h1>
-          <p className="text-[#566573]">
-            Last updated: December 18, 2025
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+        {/* Title Section */}
+        <div className="text-center mb-12">
+          <div className="text-6xl mb-4">🤝</div>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Do Jo（道場）<br />利用のルール
+          </h2>
+          <p className="text-lg sm:text-xl text-gray-600 leading-relaxed">
+            楽しく、安全に使っていただくための<br className="sm:hidden" />
+            大切なお約束です
           </p>
         </div>
 
-        <div className="prose prose-lg max-w-none text-[#1A2332]">
+        {/* Rules Sections */}
+        <div className="space-y-6">
+          {/* Section 1 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">🎯</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  1. 目的（何をする場所か）
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  シニアと外国人が楽しく話し、助け合うための場所です。<br />
+                  <strong className="text-orange-600">お互いをリスペクト（尊敬）しましょう。</strong>
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            1. Service Overview
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            Do Jo (&quot;the Service&quot;) is a platform that connects Japanese language learners
-            with native Japanese speakers (seniors and university students) for 1-on-1
-            video conversation practice sessions.
-          </p>
+          {/* Section 2 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">⚠️</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  2. 自己責任（自分の責任で会う）
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  メンバー同士で直接会う場合は、<strong className="text-blue-600">自分の責任</strong>でお願いします。<br />
+                  会った後に起きたトラブルについて、Do Jo（運営者）は責任を取れません。
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            2. User Eligibility
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            You must be at least 18 years old to use this Service. By registering,
-            you confirm that all information provided is accurate and complete.
-          </p>
+          {/* Section 3 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-red-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">🚫</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  3. やってはいけないこと（禁止事項）
+                </h3>
+                <ul className="space-y-3 text-base sm:text-lg text-gray-700">
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-500 font-bold flex-shrink-0">✗</span>
+                    <span><strong>お金や物の貸し借り</strong>はしないでください。</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-500 font-bold flex-shrink-0">✗</span>
+                    <span><strong>宗教、政治、怪しいビジネスの勧誘</strong>は禁止です。</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-500 font-bold flex-shrink-0">✗</span>
+                    <span>相手が嫌がる言葉（<strong>差別や悪口</strong>）を使わないでください。</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-500 font-bold flex-shrink-0">✗</span>
+                    <span><strong>許可なく他人の写真や連絡先</strong>を外部に教えないでください。</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
 
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            3. User Conduct
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            Users agree to:
-          </p>
-          <ul className="list-disc pl-6 text-[#566573] space-y-2 mb-4">
-            <li>Treat all participants with respect and professionalism</li>
-            <li>Use the platform only for its intended educational purposes</li>
-            <li>Not record, screenshot, or share session content without consent</li>
-            <li>Not engage in harassment, discrimination, or inappropriate behavior</li>
-          </ul>
+          {/* Section 4 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">📸</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  4. 写真について
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  活動中の写真は、<strong className="text-purple-600">Do Joの活動を広めるため</strong>に使わせてもらうことがあります。
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            4. Session Policies
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            <strong>For Learners:</strong>
-          </p>
-          <ul className="list-disc pl-6 text-[#566573] space-y-2 mb-4">
-            <li>Sessions are 25 minutes long</li>
-            <li>Cost: ¥800 per session</li>
-            <li>Cancellations must be made 24 hours in advance for refund</li>
-            <li>Minimum 7 study log posts required before booking first session</li>
-          </ul>
+          {/* Section 5 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">🏪</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  5. クーポンやお店について（免責事項）
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  Do Joで紹介するお店のクーポンや情報は、お店の都合で<strong className="text-green-600">急に使えなくなることがあります</strong>。<br />
+                  その場合、Do Joは責任を負えません。お店に行く前に、自分で確認をお願いします。
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <p className="text-[#566573] leading-relaxed mb-4">
-            <strong>For Hosts (Seniors &amp; Students):</strong>
-          </p>
-          <ul className="list-disc pl-6 text-[#566573] space-y-2 mb-4">
-            <li>You will receive ¥560 per completed 25-minute session (70%)</li>
-            <li>Payment processed monthly via bank transfer</li>
-            <li>Must complete sessions professionally and on time</li>
-          </ul>
+          {/* Section 6 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-cyan-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">💬</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  6. メッセージや感想の利用（口コミの活用）
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  皆さんがDo Joに書いてくれた「お店の感想」や「お礼のメッセージ」は、<br />
+                  <strong className="text-cyan-600">Do Joの活動を他の人に紹介するため</strong>（ホームページや資料など）に使わせてもらうことがあります。
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            5. Payment &amp; Refunds
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            Platform fee: 30% of session cost. Refunds available for cancellations
-            made 24+ hours before session or technical issues preventing session completion.
-          </p>
+          {/* Section 7 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-yellow-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">🔄</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  7. ルールの変更とサービスの終了
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  Do Joは現在「<strong className="text-yellow-600">テスト中（実験中）</strong>」です。<br />
+                  そのため、ルールが急に変わったり、サービスを一時的にお休み（または終了）したりすることがあります。<br />
+                  あらかじめご了承ください。
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            6. Privacy &amp; Data
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            We collect and process personal data as described in our Privacy Policy.
-            Study logs and session data may be used to improve the Service.
-          </p>
-
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            7. Intellectual Property
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            You retain rights to your study logs and content. By posting, you grant
-            Do Jo a license to display and use your content within the Service.
-          </p>
-
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            8. Termination
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            We reserve the right to suspend or terminate accounts for violation of
-            these terms or inappropriate behavior.
-          </p>
-
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            9. Liability Limitation
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            Do Jo is provided &quot;as is&quot; without warranties. We are not liable for
-            session quality, content accuracy, or indirect damages.
-          </p>
-
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            10. Changes to Terms
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            We may update these terms. Continued use after changes constitutes acceptance.
-          </p>
-
-          <h2 className="text-2xl font-bold text-[#00A8CC] mt-8 mb-4">
-            11. Contact
-          </h2>
-          <p className="text-[#566573] leading-relaxed mb-4">
-            For questions, contact us at: <a href="mailto:keisuke.mjugaad91@gmail.com" className="text-[#00A8CC] hover:underline">keisuke.mjugaad91@gmail.com</a>
-          </p>
-
+          {/* Section 8 */}
+          <section className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border-l-4 border-pink-500 hover:shadow-lg transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="text-4xl flex-shrink-0">🛑</div>
+              <div className="flex-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  8. ルールを守れない場合
+                </h3>
+                <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                  <strong className="text-pink-600">ルールを守れない人は、すぐにグループから抜けてもらいます。</strong>
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
+
+        {/* Agreement Checkbox */}
+        <div className="mt-12 bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+          <label className="flex items-start gap-4 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-1 w-6 h-6 rounded border-gray-300 text-green-600 focus:ring-green-500 focus:ring-offset-2 cursor-pointer"
+            />
+            <span className="text-base sm:text-lg text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors">
+              上記のルールを読んで、内容を理解しました。<br />
+              <strong>ルールを守って、楽しく安全に使います。</strong>
+            </span>
+          </label>
+        </div>
+
+        {/* Action Button */}
+        <div className="mt-8 text-center">
+          <button
+            onClick={handleAgree}
+            disabled={!agreed}
+            className={`
+              w-full sm:w-auto
+              px-12 py-5
+              text-xl sm:text-2xl font-bold
+              rounded-2xl
+              shadow-xl
+              transition-all duration-300
+              transform
+              ${
+                agreed
+                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-2xl hover:scale-105 cursor-pointer"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }
+            `}
+          >
+            {agreed ? (
+              <>
+                <span className="inline-block mr-3">✓</span>
+                ルールに同意してはじめる
+              </>
+            ) : (
+              <>
+                <span className="inline-block mr-3">□</span>
+                まずチェックボックスにチェックを入れてください
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Footer Note */}
+        <div className="mt-12 text-center">
+          <p className="text-sm sm:text-base text-gray-500">
+            質問がある場合は、運営チームにお問い合わせください。<br />
+            <a href="mailto:keisuke.nakamoto0410@gmail.com" className="text-orange-600 hover:underline font-medium">
+              keisuke.nakamoto0410@gmail.com
+            </a>
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

@@ -94,6 +94,12 @@ export async function sendBookingConfirmationEmail({
   words,
 }: BookingEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip email if using LINE-only account (@line.local)
+    if (hostEmail.endsWith('@line.local')) {
+      console.log('[Email] Skipping email for LINE-only account:', hostEmail);
+      return { success: true }; // Return success since LINE notification will handle this
+    }
+
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
 
     // トピックと単語のHTMLを生成
@@ -168,6 +174,12 @@ export async function sendLearnerBookingConfirmationEmail({
   prepareUrl,
 }: LearnerBookingEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip email if using LINE-only account (@line.local)
+    if (learnerEmail.endsWith('@line.local')) {
+      console.log('[Email] Skipping email for LINE-only account:', learnerEmail);
+      return { success: true };
+    }
+
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
     await transporter.sendMail({
       from: `Do Jo <${FROM_EMAIL}>`,
@@ -228,6 +240,12 @@ export async function sendReminderEmail({
   isHost,
 }: ReminderEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip email if using LINE-only account (@line.local)
+    if (email.endsWith('@line.local')) {
+      console.log('[Email] Skipping email for LINE-only account:', email);
+      return { success: true };
+    }
+
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
     // Japanese email for hosts (seniors)
     if (isHost) {
@@ -318,6 +336,12 @@ export async function sendFeedbackNotificationEmail({
   summaryUrl,
 }: FeedbackNotificationEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip email if using LINE-only account (@line.local)
+    if (learnerEmail.endsWith('@line.local')) {
+      console.log('[Email] Skipping email for LINE-only account:', learnerEmail);
+      return { success: true };
+    }
+
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
     await transporter.sendMail({
       from: `Do Jo <${FROM_EMAIL}>`,
@@ -387,6 +411,12 @@ export async function sendPasswordResetEmail({
   resetUrl,
 }: PasswordResetEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip email if using LINE-only account (@line.local)
+    if (email.endsWith('@line.local')) {
+      console.log('[Email] Skipping email for LINE-only account:', email);
+      return { success: true };
+    }
+
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
     await transporter.sendMail({
       from: `Do Jo <${FROM_EMAIL}>`,
@@ -459,6 +489,12 @@ export async function sendCancellationEmail({
   reason,
 }: CancellationEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip email if using LINE-only account (@line.local)
+    if (recipientEmail.endsWith('@line.local')) {
+      console.log('[Email] Skipping email for LINE-only account:', recipientEmail);
+      return { success: true };
+    }
+
     const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
     const isHost = cancelledBy === "host";
 

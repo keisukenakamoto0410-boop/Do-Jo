@@ -309,27 +309,22 @@ export default function SeniorDashboard() {
         )}
 
         {/* クイックリンク */}
-        <div className="mt-12 grid grid-cols-3 gap-4">
+        <div className="mt-12 grid grid-cols-2 gap-6">
           <Link
             href="/senior/schedule/create"
-            className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all text-center"
+            className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-8 hover:shadow-lg transition-all text-center text-white"
           >
-            <div className="text-3xl mb-2">📅</div>
-            <p className="font-semibold text-gray-900">予定を登録</p>
-          </Link>
-          <Link
-            href="/senior/schedule"
-            className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all text-center"
-          >
-            <div className="text-3xl mb-2">📋</div>
-            <p className="font-semibold text-gray-900">予定一覧</p>
+            <div className="text-5xl mb-3">📅</div>
+            <p className="text-xl font-bold mb-1">予約枠を作成</p>
+            <p className="text-sm text-white/80">空いている時間を登録</p>
           </Link>
           <Link
             href="/senior/profile"
-            className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all text-center"
+            className="bg-white rounded-xl p-8 border border-gray-200 hover:shadow-lg transition-all text-center"
           >
-            <div className="text-3xl mb-2">⚙️</div>
-            <p className="font-semibold text-gray-900">設定</p>
+            <div className="text-5xl mb-3">⚙️</div>
+            <p className="text-xl font-bold text-gray-900 mb-1">設定</p>
+            <p className="text-sm text-gray-600">プロフィール編集</p>
           </Link>
         </div>
       </main>

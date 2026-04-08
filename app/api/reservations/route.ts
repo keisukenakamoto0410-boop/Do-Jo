@@ -272,13 +272,23 @@ export async function POST(req: NextRequest) {
 
     if (hostLineId) {
       console.log("[Reservation] Host has LINE connected, sending notification to:", hostLineId);
+
+      // Build Agora session URL based on host role
+      const hostRole = reservation.host.role;
+      const sessionPath = (hostRole === "senior" || hostRole === "admin")
+        ? "senior"
+        : "host";
+      const agoraSessionUrl = `${BASE_URL}/${sessionPath}/session/${reservation.id}`;
+
+      console.log("[Reservation] Agora session URL:", agoraSessionUrl);
+
       try {
         const lineResult = await sendLineBookingNotification({
           lineUserId: hostLineId,
           hostName: reservation.host.name,
           learnerName: reservation.learner.name,
           sessionDate: reservation.slot.startTime,
-          sessionUrl: hostSessionUrl,
+          sessionUrl: agoraSessionUrl,
           topic: reservation.selectedTopic || undefined,
           words: reservation.targetWords || [],
         });

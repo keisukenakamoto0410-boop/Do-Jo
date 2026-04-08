@@ -5,8 +5,6 @@ import { replyMessage, getProfile } from "./messaging";
 import { prisma } from "@/lib/prisma";
 import {
   buildWelcomeMessage,
-  buildEmailInputMessage,
-  buildEmailErrorMessage,
   buildGenderSelectMessage,
   buildAgeSelectMessage,
   buildInterestsSelectMessage,
@@ -93,41 +91,12 @@ export async function handleMessage(event: {
 
   switch (user.registrationStep) {
     case "AWAITING_NAME":
-      // Save name and proceed to email input
+      // Save name and proceed directly to gender selection (email is auto-generated)
       await prisma.user.update({
         where: { lineId },
-        data: { name: text, registrationStep: "AWAITING_EMAIL" },
+        data: { name: text, registrationStep: "AWAITING_GENDER" },
       });
-      await replyMessage(event.replyToken, buildEmailInputMessage(text));
-      break;
-
-    case "AWAITING_EMAIL":
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(text)) {
-        await replyMessage(event.replyToken, buildEmailErrorMessage(text));
-        break;
-      }
-      // Check if email is already in use by another user
-      const existingUserWithEmail = await prisma.user.findFirst({
-        where: {
-          email: text.toLowerCase(),
-          NOT: { id: user.id },
-        },
-      });
-      if (existingUserWithEmail) {
-        await replyMessage(event.replyToken, {
-          type: "text",
-          text: `このメールアドレスは既に登録されています。\n\n別のメールアドレスを入力してください。`,
-        });
-        break;
-      }
-      // Save email and proceed to gender selection
-      await prisma.user.update({
-        where: { lineId },
-        data: { email: text.toLowerCase(), registrationStep: "AWAITING_GENDER" },
-      });
-      await replyMessage(event.replyToken, buildGenderSelectMessage(user.name));
+      await replyMessage(event.replyToken, buildGenderSelectMessage(text));
       break;
 
     case "AWAITING_BIO":
@@ -335,11 +304,11 @@ async function handleConfirmName(
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { name: decodedName, registrationStep: "AWAITING_EMAIL" },
+    data: { name: decodedName, registrationStep: "AWAITING_GENDER" },
   });
 
   try {
-    await replyMessage(event.replyToken, buildEmailInputMessage(decodedName));
+    await replyMessage(event.replyToken, buildGenderSelectMessage(decodedName));
   } catch (error) {
     console.error("[LINE] Failed to reply in handleConfirmName:", error);
   }
@@ -692,7 +661,7 @@ async function handleSelectTime(
 // New flow: Start time selection
 async function handleSelectStartTime(
   event: { replyToken: string },
-  user: { id: string; lineId: string | null },
+  _user: { id: string; lineId: string | null },
   data: URLSearchParams
 ) {
   const time = data.get("time");

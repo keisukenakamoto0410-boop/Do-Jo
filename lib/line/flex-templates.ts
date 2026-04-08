@@ -657,6 +657,8 @@ export function buildRegistrationCompleteMessage(
     });
   }
 
+  const BASE_URL = process.env.NEXTAUTH_URL || "https://do-jo.vercel.app";
+
   return {
     type: "flex",
     altText: "登録完了！",
@@ -685,14 +687,24 @@ export function buildRegistrationCompleteMessage(
       footer: {
         type: "box",
         layout: "vertical",
+        spacing: "sm",
         contents: [
           {
             type: "button",
             style: "primary",
             color: COLORS.primary,
             action: {
+              type: "uri",
+              label: "🌐 Webサイトで予約を管理",
+              uri: BASE_URL,
+            },
+          },
+          {
+            type: "button",
+            style: "secondary",
+            action: {
               type: "postback",
-              label: "📅 スケジュールを登録する",
+              label: "📅 LINEでスケジュール登録",
               data: "action=start_schedule",
             },
           },

@@ -16,6 +16,7 @@ declare module "next-auth" {
       email: string;
       name: string;
       role: UserRole;
+      lineId?: string | null;
     };
   }
 
@@ -24,6 +25,7 @@ declare module "next-auth" {
     email: string;
     name: string;
     role: UserRole;
+    lineId?: string | null;
   }
 }
 
@@ -31,6 +33,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: UserRole;
+    lineId?: string | null;
   }
 }
 
@@ -101,6 +104,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             role: user.role as UserRole,
+            lineId: user.lineId,
           };
         } catch (error) {
           console.error("[AUTH] Error in authorize:", error);
@@ -149,6 +153,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             role: user.role as UserRole,
+            lineId: user.lineId,
           };
         } catch (error) {
           console.error("[AUTH] Error in LINE authorize:", error);
@@ -255,6 +260,7 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;
+          token.lineId = dbUser.lineId;
         }
       }
 
@@ -274,6 +280,7 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;
+          token.lineId = dbUser.lineId;
         }
       }
 
@@ -283,11 +290,13 @@ export const authOptions: NextAuthOptions = {
         console.log("[AUTH JWT] Credentials login, setting token from user:", { id: user.id, role: user.role });
         token.id = user.id;
         token.role = user.role;
+        token.lineId = user.lineId;
       } else if (user && user.role && !token.role) {
         // OAuthでもroleがない場合は設定
         console.log("[AUTH JWT] OAuth login without role, setting from user:", { id: user.id, role: user.role });
         token.id = user.id;
         token.role = user.role;
+        token.lineId = user.lineId;
       }
 
       // トークンにIDがない場合（既存セッション）、DBから取得
@@ -298,6 +307,7 @@ export const authOptions: NextAuthOptions = {
         if (dbUser) {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;
+          token.lineId = dbUser.lineId;
         }
       }
 
@@ -312,17 +322,20 @@ export const authOptions: NextAuthOptions = {
       console.log("[AUTH SESSION] Creating session from token:", {
         tokenId: token.id,
         tokenRole: token.role,
-        tokenEmail: token.email
+        tokenEmail: token.email,
+        tokenLineId: token.lineId
       });
 
       if (session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.email = token.email as string;
+        session.user.lineId = token.lineId;
 
         console.log("[AUTH SESSION] Session created:", {
           userId: session.user.id,
-          userRole: session.user.role
+          userRole: session.user.role,
+          userLineId: session.user.lineId
         });
       }
       return session;

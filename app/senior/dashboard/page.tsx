@@ -177,6 +177,33 @@ export default function SeniorDashboard() {
           </p>
         </div>
 
+        {/* LINE bot未追加の場合のバナー */}
+        {!session?.user?.lineId && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-md">
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">💬</div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold mb-2" style={{ fontFamily: "'Noto Sans JP', sans-serif" }}>
+                    LINE通知を受け取りましょう！
+                  </h3>
+                  <p className="text-white/90 text-sm mb-4">
+                    予約が入ったらLINEでお知らせします。Do Jo公式アカウントを友だち追加してください。
+                  </p>
+                  <a
+                    href={`https://line.me/R/ti/p/@${process.env.NEXT_PUBLIC_LINE_BOT_ID || 'dojo'}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-white text-green-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-50 transition-all text-sm"
+                  >
+                    友だち追加する →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 予定登録ボタン（大きく目立つ） */}
         <div className="mb-8">
           <div className="bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl p-8 text-white shadow-lg hover:shadow-xl transition-all">

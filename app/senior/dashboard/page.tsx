@@ -191,7 +191,7 @@ export default function SeniorDashboard() {
                     予約が入ったらLINEでお知らせします。Do Jo公式アカウントを友だち追加してください。
                   </p>
                   <a
-                    href={`https://line.me/R/ti/p/@${process.env.NEXT_PUBLIC_LINE_BOT_ID || 'dojo'}`}
+                    href="https://lin.ee/QitILwY"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-block bg-white text-green-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-50 transition-all text-sm"

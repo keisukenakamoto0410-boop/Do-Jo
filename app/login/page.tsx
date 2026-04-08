@@ -141,12 +141,11 @@ export default function LoginPage() {
 
           if (role === "learner") {
             targetUrl = "/learner/dashboard";
-          } else if (role === "senior") {
+          } else if (role === "senior" || role === "admin") {
+            // senior and admin both use senior dashboard (Japanese speakers)
             targetUrl = "/senior/dashboard";
           } else if (role === "student") {
             targetUrl = "/host/dashboard";
-          } else if (role === "admin") {
-            targetUrl = "/admin/dashboard";
           }
 
           // 完全なページリロードでセッションを確実に反映

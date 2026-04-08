@@ -4,12 +4,6 @@
 import { replyMessage, getProfile } from "./messaging";
 import { prisma } from "@/lib/prisma";
 import {
-  buildWelcomeMessage,
-  buildGenderSelectMessage,
-  buildAgeSelectMessage,
-  buildInterestsSelectMessage,
-  buildBioPromptMessage,
-  buildRegistrationCompleteMessage,
   buildDaySelectMessage,
   buildTimeSelectMessage,
   buildStartTimeSelectMessage,
@@ -18,12 +12,11 @@ import {
   buildMainMenuMessage,
   buildScheduleStatusMessage,
   buildUsageGuideMessage,
-  buildProfileMessage,
   buildProfileIncompleteMessage,
 } from "./flex-templates";
 
 // ==============================
-// follow: Friend added -> Start registration
+// follow: Friend added -> Auto-register with LINE profile
 // ==============================
 export async function handleFollow(event: {
   source: { userId: string };
@@ -38,32 +31,40 @@ export async function handleFollow(event: {
 
   if (existingUser) {
     // Returning user
-    await replyMessage(event.replyToken, {
-      type: "text",
-      text: `おかえりなさい、${existingUser.name}さん！\n下のメニューから操作できます。`,
-    });
+    await replyMessage(event.replyToken, buildMainMenuMessage(existingUser.name));
     return;
   }
 
-  // Fetch LINE profile to get display name
+  // Fetch LINE profile to get display name and picture
   const profile = await getProfile(lineId);
-  const displayName = profile?.displayName || null;
+  const displayName = profile?.displayName || "Do Joユーザー";
+  const pictureUrl = profile?.pictureUrl || null;
 
-  // Create new user for LINE registration flow
+  // Create new user with LINE profile data - skip manual registration
   // Generate a unique placeholder email since email is required and unique
-  const placeholderEmail = `line_${lineId}_${Date.now()}@line.local`;
+  const placeholderEmail = `${lineId}@line.local`;
+
+  // Generate default avatar path if no picture
+  const avatarPath = pictureUrl || "https://do-jo.vercel.app/avatars/n_60s.png";
 
   await prisma.user.create({
     data: {
       lineId,
       email: placeholderEmail,
-      name: displayName || "LINE登録中",
+      name: displayName,
+      avatar: avatarPath,
       role: "senior", // Japanese volunteer
-      registrationStep: "AWAITING_NAME",
+      registrationStep: "COMPLETED", // Auto-complete registration
+      prefecture: "豊橋市", // Default
+      lastLoginAt: new Date(),
     },
   });
 
-  await replyMessage(event.replyToken, buildWelcomeMessage(displayName || undefined));
+  // Send welcome message with main menu
+  await replyMessage(event.replyToken, {
+    type: "text",
+    text: `${displayName}さん、Do Joへようこそ！\n\n日本語を学ぶ外国人の方と会話するボランティアプラットフォームです。\n\n下のメニューから「スケジュール」を選んで、対応可能な時間帯を登録してください。`,
+  });
 }
 
 // ==============================
@@ -89,45 +90,8 @@ export async function handleMessage(event: {
     return;
   }
 
-  switch (user.registrationStep) {
-    case "AWAITING_NAME":
-      // Save name and proceed directly to gender selection (email is auto-generated)
-      await prisma.user.update({
-        where: { lineId },
-        data: { name: text, registrationStep: "AWAITING_GENDER" },
-      });
-      await replyMessage(event.replyToken, buildGenderSelectMessage(text));
-      break;
-
-    case "AWAITING_BIO":
-      // Save bio and complete registration
-      const avatarPath = generateAvatarPath(user.gender, user.ageRange);
-      await prisma.user.update({
-        where: { lineId },
-        data: {
-          bio: text,
-          avatar: avatarPath,
-          registrationStep: "COMPLETED",
-        },
-      });
-      await replyMessage(
-        event.replyToken,
-        buildRegistrationCompleteMessage(user.name, avatarPath)
-      );
-      break;
-
-    case "COMPLETED":
-    case null:
-      // Registered user sending text -> handle rich menu actions
-      await handleRichMenuText(event.replyToken, user.id, user.name, text);
-      break;
-
-    default:
-      await replyMessage(event.replyToken, {
-        type: "text",
-        text: "登録を続けるには、ボタンをタップしてください。",
-      });
-  }
+  // All users are auto-registered, so handle all text messages as rich menu actions
+  await handleRichMenuText(event.replyToken, user.id, user.name, text);
 }
 
 // ==============================
@@ -139,13 +103,6 @@ const LOCKABLE_ACTIONS = [
   "confirm_days",
   "select_time",
   "start_schedule",
-  "confirm_name",
-  "select_gender",
-  "select_age",
-  "toggle_interest",
-  "confirm_interests",
-  "skip_bio",
-  "edit_profile",
 ];
 
 export async function handlePostback(event: {
@@ -195,31 +152,6 @@ export async function handlePostback(event: {
 
   try {
     switch (action) {
-      // --- Registration Flow ---
-      case "confirm_name":
-        await handleConfirmName(event, user, data);
-        break;
-
-      case "select_gender":
-        await handleSelectGender(event, user, data);
-        break;
-
-      case "select_age":
-        await handleSelectAge(event, user, data);
-        break;
-
-      case "toggle_interest":
-        await handleToggleInterest(event, user, data);
-        break;
-
-      case "confirm_interests":
-        await handleConfirmInterests(event, user);
-        break;
-
-      case "skip_bio":
-        await handleSkipBio(event, user);
-        break;
-
       // --- Schedule Registration: Day Selection ---
       case "toggle_day":
         await handleToggleDay(event, user, data);
@@ -251,11 +183,6 @@ export async function handlePostback(event: {
         await handleViewReservations(event, user);
         break;
 
-      // --- Profile Edit ---
-      case "edit_profile":
-        await handleEditProfile(event, user);
-        break;
-
       default:
         await replyMessage(event.replyToken, {
           type: "text",
@@ -274,201 +201,6 @@ export async function handlePostback(event: {
 }
 
 // --- Handler Functions ---
-
-/**
- * Generate avatar path based on gender and age
- */
-function generateAvatarPath(
-  gender: string | null,
-  ageRange: string | null
-): string {
-  // Default avatar
-  const baseUrl = "https://do-jo.vercel.app/avatars";
-
-  // Map gender and age to avatar filename
-  const genderKey = gender === "male" ? "m" : gender === "female" ? "f" : "n";
-  const ageKey = ageRange || "50s";
-
-  return `${baseUrl}/${genderKey}_${ageKey}.png`;
-}
-
-async function handleConfirmName(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const name = data.get("name");
-  if (!name) return;
-
-  const decodedName = decodeURIComponent(name);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { name: decodedName, registrationStep: "AWAITING_GENDER" },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildGenderSelectMessage(decodedName));
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleConfirmName:", error);
-  }
-}
-
-async function handleSelectGender(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const gender = data.get("gender");
-  if (!gender) return;
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { gender, registrationStep: "AWAITING_AGE" },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildAgeSelectMessage());
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleSelectGender:", error);
-  }
-}
-
-async function handleSelectAge(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const age = data.get("age");
-  if (!age) return;
-
-  // Set age and default prefecture to 豊橋市, then proceed to interests
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      ageRange: age,
-      prefecture: "豊橋市",
-      registrationStep: "AWAITING_INTERESTS",
-    },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildInterestsSelectMessage());
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleSelectAge:", error);
-  }
-}
-
-async function handleToggleInterest(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const interest = data.get("interest");
-  if (!interest) return;
-
-  const decodedInterest = decodeURIComponent(interest);
-
-  // Use transaction to prevent race condition
-  const updatedUser = await prisma.$transaction(async (tx) => {
-    const latestUser = await tx.user.findUnique({
-      where: { id: user.id },
-      select: { interests: true },
-    });
-
-    const currentInterests = latestUser?.interests || [];
-
-    // Toggle the interest
-    const updatedInterests = currentInterests.includes(decodedInterest)
-      ? currentInterests.filter((i) => i !== decodedInterest)
-      : [...currentInterests, decodedInterest];
-
-    return tx.user.update({
-      where: { id: user.id },
-      data: { interests: updatedInterests },
-      select: { interests: true },
-    });
-  });
-
-  try {
-    await replyMessage(
-      event.replyToken,
-      buildInterestsSelectMessage(updatedUser.interests)
-    );
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleToggleInterest:", error);
-  }
-}
-
-async function handleConfirmInterests(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null }
-) {
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { registrationStep: "AWAITING_BIO" },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildBioPromptMessage());
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleConfirmInterests:", error);
-  }
-}
-
-async function handleSkipBio(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null }
-) {
-  // Fetch user data for avatar generation
-  const userData = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { name: true, gender: true, ageRange: true },
-  });
-
-  const avatarPath = generateAvatarPath(
-    userData?.gender || null,
-    userData?.ageRange || null
-  );
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      avatar: avatarPath,
-      registrationStep: "COMPLETED",
-    },
-  });
-
-  try {
-    await replyMessage(
-      event.replyToken,
-      buildRegistrationCompleteMessage(userData?.name || "", avatarPath)
-    );
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleSkipBio:", error);
-  }
-}
-
-async function handleEditProfile(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null }
-) {
-  // Fetch LINE profile for display name
-  const profile = user.lineId ? await getProfile(user.lineId) : null;
-  const displayName = profile?.displayName || undefined;
-
-  // Reset registration step to restart flow
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { registrationStep: "AWAITING_NAME" },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildWelcomeMessage(displayName));
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleEditProfile:", error);
-  }
-}
 
 async function handleStartSchedule(
   event: { replyToken: string },
@@ -971,32 +703,10 @@ async function handleRichMenuText(
       }
 
       case "プロフィール": {
-        // Fetch user profile data
-        const profileUser = await prisma.user.findUnique({
-          where: { id: userId },
-          select: {
-            name: true,
-            gender: true,
-            ageRange: true,
-            prefecture: true,
-            interests: true,
-            bio: true,
-          },
+        await replyMessage(replyToken, {
+          type: "text",
+          text: "プロフィールはLINEアカウント情報から自動で設定されています。\n\n詳細な情報を変更したい場合は、Webアプリからログインしてください。",
         });
-
-        if (profileUser) {
-          await replyMessage(
-            replyToken,
-            buildProfileMessage({
-              name: profileUser.name,
-              gender: profileUser.gender,
-              ageRange: profileUser.ageRange,
-              prefecture: profileUser.prefecture,
-              interests: profileUser.interests,
-              bio: profileUser.bio,
-            })
-          );
-        }
         break;
       }
 

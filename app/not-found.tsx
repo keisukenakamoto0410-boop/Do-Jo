@@ -54,10 +54,10 @@ export default function NotFound() {
             </Link>
             <span className="text-gray-300">•</span>
             <Link
-              href="/admin/dashboard"
+              href="/host/dashboard"
               className="text-sm text-blue-600 hover:underline"
             >
-              管理者ダッシュボード
+              ホストダッシュボード
             </Link>
           </div>
         </div>

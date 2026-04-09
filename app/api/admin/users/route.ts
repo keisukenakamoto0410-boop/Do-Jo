@@ -41,7 +41,6 @@ export async function GET(request: NextRequest) {
         country: true,
         prefecture: true,
         ageRange: true,
-        university: true,
         totalTalkTime: true,
         averageRating: true,
         totalSessions: true,

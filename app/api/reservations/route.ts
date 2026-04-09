@@ -60,8 +60,6 @@ export async function GET(req: NextRequest) {
             averageRating: true,
             careerHistory: true,
             expertise: true,
-            university: true,
-            major: true,
           },
         },
         detailedFeedback: true,

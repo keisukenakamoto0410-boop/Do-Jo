@@ -215,8 +215,6 @@ export async function GET(
             averageRating: true,
             careerHistory: true,
             expertise: true,
-            university: true,
-            major: true,
           },
         },
         detailedFeedback: true,

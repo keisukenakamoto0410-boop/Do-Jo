@@ -79,9 +79,6 @@ export async function GET(req: NextRequest) {
             // Senior specific
             careerHistory: true,
             expertise: true,
-            // Student specific
-            university: true,
-            major: true,
           },
         },
       },

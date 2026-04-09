@@ -53,11 +53,9 @@ function SessionJoinContent() {
       sessionStorage.setItem("sessionUserId", data.userId);
       sessionStorage.setItem("sessionReservationId", data.reservationId);
 
-      // Redirect to host session page (seniors use /senior/session or /host/session)
+      // Redirect to session page based on role
       if (data.userRole === "senior") {
         router.replace(`/senior/session/${data.reservationId}?token=${token}`);
-      } else if (data.userRole === "student") {
-        router.replace(`/host/session/${data.reservationId}?token=${token}`);
       } else {
         router.replace(`/learner/session/${data.reservationId}?token=${token}`);
       }

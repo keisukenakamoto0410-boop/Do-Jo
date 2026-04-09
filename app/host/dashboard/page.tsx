@@ -85,7 +85,6 @@ export default function HostDashboard() {
 
   const user = session.user;
   const isSenior = user.role === "senior";
-  const isStudent = user.role === "student";
 
   // Check if session is joinable (15 minutes before to 30 minutes after start)
   const isJoinable = (startTime: string) => {
@@ -178,7 +177,7 @@ export default function HostDashboard() {
               >
                 予約一覧
               </Link>
-              {isStudent && (
+              {isSenior && (
                 <Link
                   href="/host/earnings"
                   className="text-gray-600 hover:text-gray-900"
@@ -363,8 +362,8 @@ export default function HostDashboard() {
           )}
         </div>
 
-        {/* Student Earnings Card */}
-        {isStudent && (
+        {/* Senior Earnings Card */}
+        {isSenior && (
           <div className="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-xl p-8 text-white">
             <div className="flex items-center justify-between">
               <div>

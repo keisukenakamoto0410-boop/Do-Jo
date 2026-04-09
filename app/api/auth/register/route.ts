@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       email,
       password,
       name,
-      role, // "learner" | "senior" | "student"
+      role, // "learner" | "senior"
       agreedToTerms,
       // 共通
       bio,
@@ -25,10 +25,6 @@ export async function POST(request: Request) {
       careerHistory,
       expertise,
       ageRange,
-      // 大学生用
-      university,
-      major,
-      graduationYear,
     } = body;
 
     // Validate required fields
@@ -40,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     // Validate role
-    if (!["learner", "senior", "student"].includes(role)) {
+    if (!["learner", "senior"].includes(role)) {
       return NextResponse.json(
         { error: "無効なユーザータイプです" },
         { status: 400 }
@@ -93,10 +89,6 @@ export async function POST(request: Request) {
         careerHistory: role === "senior" ? careerHistory : null,
         expertise: role === "senior" ? (expertise || []) : [],
         ageRange: role === "senior" ? ageRange : null,
-        // 大学生用
-        university: role === "student" ? university : null,
-        major: role === "student" ? major : null,
-        graduationYear: role === "student" ? graduationYear : null,
       },
     });
 

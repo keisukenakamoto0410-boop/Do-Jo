@@ -147,8 +147,6 @@ export default function LoginPage() {
           } else if (role === "senior") {
             // senior (Japanese speakers) use senior dashboard
             targetUrl = "/senior/dashboard";
-          } else if (role === "student") {
-            targetUrl = "/host/dashboard";
           }
 
           // 完全なページリロードでセッションを確実に反映

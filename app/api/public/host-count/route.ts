@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 // This is a public API endpoint - no authentication required
 export async function GET() {
   try {
-    // Count all hosts (seniors and students)
+    // Count all hosts (seniors)
     const hostCount = await prisma.user.count({
       where: {
-        role: { in: ["senior", "student"] },
+        role: "senior",
       },
     });
 

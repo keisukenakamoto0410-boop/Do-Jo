@@ -49,27 +49,6 @@ async function main() {
   });
   console.log("✅ Created senior host:", senior1.email);
 
-  // Create Student Host User
-  const studentPassword = await bcrypt.hash("student123", 10);
-  const student1 = await prisma.user.upsert({
-    where: { email: "student@dojo.com" },
-    update: {},
-    create: {
-      email: "student@dojo.com",
-      password: studentPassword,
-      name: "佐藤 花子",
-      role: "student",
-      bio: "東京大学で経済学を学んでいます。国際交流に興味があります。",
-      university: "東京大学",
-      major: "経済学部",
-      graduationYear: 2026,
-      interests: ["アニメ", "旅行", "音楽", "ファッション"],
-      termsAccepted: true,
-      termsAcceptedAt: new Date(),
-    },
-  });
-  console.log("✅ Created student host:", student1.email);
-
   // ==================== トピックマスター ====================
   const topics = [
     { name: "Daily Conversation", nameJa: "日常会話", category: "basic", level: "N5", keywords: ["挨拶", "自己紹介", "天気", "時間"] },

@@ -23,8 +23,6 @@ export default function SeniorLayout({
       // Redirect to appropriate dashboard
       if (session?.user?.role === "learner") {
         router.push("/learner/dashboard");
-      } else if (session?.user?.role === "student") {
-        router.push("/host/dashboard");
       }
     }
   }, [status, session, router]);

@@ -68,8 +68,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ホスト（シニア/学生）のみ作成可能
-    if (session.user.role !== "senior" && session.user.role !== "student") {
+    // ホスト（シニア）のみ作成可能
+    if (session.user.role !== "senior") {
       return NextResponse.json(
         { error: "Only hosts can submit detailed feedback" },
         { status: 403 }

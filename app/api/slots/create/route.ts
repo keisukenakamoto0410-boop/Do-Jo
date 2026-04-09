@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     const teacher = await prisma.user.findFirst({
       where: {
         name: teacherName,
-        role: { in: ["senior", "student"] }
+        role: "senior"
       },
       select: { id: true, role: true, name: true },
     });

@@ -1,4 +1,4 @@
-export type UserRole = "learner" | "senior" | "student" | "admin";
+export type UserRole = "learner" | "senior" | "admin";
 export type JLPTLevel = "N1" | "N2" | "N3" | "N4" | "N5" | "beginner";
 export type LearningGoal = "business" | "casual" | "both";
 

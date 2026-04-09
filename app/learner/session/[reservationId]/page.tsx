@@ -365,12 +365,12 @@ export default function SessionPage() {
       console.error("Failed to complete session:", err);
     }
 
-    router.push(`/learner/feedback/${reservationId}`);
+    router.push(`/learner/session/${reservationId}/thank-you`);
   };
 
   const handleMedalModalClose = () => {
     setShowMedalModal(false);
-    router.push(`/learner/feedback/${reservationId}`);
+    router.push(`/learner/session/${reservationId}/thank-you`);
   };
 
   const formatTime = (seconds: number) => {

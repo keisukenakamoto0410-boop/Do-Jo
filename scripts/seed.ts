@@ -41,26 +41,6 @@ async function main() {
   });
   console.log("Created senior user:", senior.email);
 
-  // Create sample student user
-  const studentPassword = await bcrypt.hash("student123", 10);
-  const student = await prisma.user.upsert({
-    where: { email: "yamada@example.com" },
-    update: {},
-    create: {
-      email: "yamada@example.com",
-      password: studentPassword,
-      name: "山田 花子",
-      role: "student",
-      bio: "東京大学の3年生です。アニメや日本の若者文化について話すのが好きです！外国の方と楽しくおしゃべりしたいです♪",
-      languages: ["日本語", "English"],
-      university: "東京大学",
-      major: "文学部",
-      graduationYear: 2026,
-      interests: ["アニメ", "旅行", "音楽", "ファッション"],
-    },
-  });
-  console.log("Created student user:", student.email);
-
   // Create sample learner user
   const learnerPassword = await bcrypt.hash("learner123", 10);
   const learner = await prisma.user.upsert({

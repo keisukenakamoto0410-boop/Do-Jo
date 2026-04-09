@@ -4,15 +4,7 @@
 import { replyMessage, getProfile } from "./messaging";
 import { prisma } from "@/lib/prisma";
 import {
-  buildDaySelectMessage,
-  buildTimeSelectMessage,
-  buildStartTimeSelectMessage,
-  buildEndTimeSelectMessage,
-  buildScheduleConfirmMessage,
-  buildMainMenuMessage,
   buildScheduleStatusMessage,
-  buildUsageGuideMessage,
-  buildProfileIncompleteMessage,
 } from "./flex-templates";
 
 // ==============================
@@ -31,7 +23,10 @@ export async function handleFollow(event: {
 
   if (existingUser) {
     // Returning user
-    await replyMessage(event.replyToken, buildMainMenuMessage(existingUser.name));
+    await replyMessage(event.replyToken, {
+      type: "text",
+      text: `${existingUser.name}さん、おかえりなさい！\n\nスケジュールの確認はメニューの「スケジュール」から、登録はWebアプリから行えます。\n\nhttps://do-jo.vercel.app`,
+    });
     return;
   }
 
@@ -40,31 +35,62 @@ export async function handleFollow(event: {
   const displayName = profile?.displayName || "Do Joユーザー";
   const pictureUrl = profile?.pictureUrl || null;
 
-  // Create new user with LINE profile data - skip manual registration
-  // Generate a unique placeholder email since email is required and unique
-  const placeholderEmail = `${lineId}@line.local`;
-
-  // Generate default avatar path if no picture
-  const avatarPath = pictureUrl || "https://do-jo.vercel.app/avatars/n_60s.png";
-
-  await prisma.user.create({
-    data: {
-      lineId,
-      email: placeholderEmail,
+  // Check if there's an existing user with the same name (potential duplicate)
+  const existingUserByName = await prisma.user.findFirst({
+    where: {
       name: displayName,
-      avatar: avatarPath,
-      role: "senior", // Japanese volunteer
-      registrationStep: "COMPLETED", // Auto-complete registration
-      prefecture: "豊橋市", // Default
-      lastLoginAt: new Date(),
+      lineId: null, // Only check users without LINE ID (Web registered users)
     },
   });
 
-  // Send welcome message with main menu
-  await replyMessage(event.replyToken, {
-    type: "text",
-    text: `${displayName}さん、Do Joへようこそ！\n\n日本語を学ぶ外国人の方と会話するボランティアプラットフォームです。\n\n下のメニューから「スケジュール」を選んで、対応可能な時間帯を登録してください。`,
-  });
+  if (existingUserByName) {
+    // Found a potential duplicate - ask for confirmation
+    // Create a temporary user with pending merge status
+    const placeholderEmail = `${lineId}@line.local`;
+    const avatarPath = pictureUrl || "https://do-jo.vercel.app/avatars/n_60s.png";
+
+    await prisma.user.create({
+      data: {
+        lineId,
+        email: placeholderEmail,
+        name: displayName,
+        avatar: avatarPath,
+        role: "senior",
+        registrationStep: "AWAITING_MERGE_CONFIRMATION",
+        prefecture: "豊橋市",
+        lastLoginAt: new Date(),
+      },
+    });
+
+    // Send confirmation message
+    await replyMessage(event.replyToken, {
+      type: "text",
+      text: `${displayName}さん、Do Joへようこそ！\n\n「${displayName}」という既存アカウントが見つかりました。\n\nこのアカウントとLINEを統合しますか？\n\n1️⃣ はい、統合する\n2️⃣ いいえ、新しいアカウントを作成\n\n番号を送信してください。`,
+    });
+  } else {
+    // No duplicate found - create new user directly
+    const placeholderEmail = `${lineId}@line.local`;
+    const avatarPath = pictureUrl || "https://do-jo.vercel.app/avatars/n_60s.png";
+
+    await prisma.user.create({
+      data: {
+        lineId,
+        email: placeholderEmail,
+        name: displayName,
+        avatar: avatarPath,
+        role: "senior",
+        registrationStep: "COMPLETED",
+        prefecture: "豊橋市",
+        lastLoginAt: new Date(),
+      },
+    });
+
+    // Send welcome message
+    await replyMessage(event.replyToken, {
+      type: "text",
+      text: `${displayName}さん、Do Joへようこそ！\n\n日本語を学ぶ外国人の方と会話するボランティアプラットフォームです。\n\nまずはWebアプリでスケジュールを登録しましょう：\nhttps://do-jo.vercel.app/senior/schedule/create`,
+    });
+  }
 }
 
 // ==============================
@@ -90,6 +116,73 @@ export async function handleMessage(event: {
     return;
   }
 
+  // Handle account merge confirmation
+  if (user.registrationStep === "AWAITING_MERGE_CONFIRMATION") {
+    if (text === "1" || text === "１") {
+      // User wants to merge accounts
+      // Find the existing account with the same name
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          name: user.name,
+          lineId: null,
+          id: { not: user.id }, // Exclude current LINE user
+        },
+      });
+
+      if (existingUser) {
+        // Merge: Update existing account with LINE ID
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            lineId: user.lineId,
+            avatar: user.avatar || existingUser.avatar,
+            lastLoginAt: new Date(),
+            registrationStep: "COMPLETED",
+          },
+        });
+
+        // Delete the temporary LINE user
+        await prisma.user.delete({
+          where: { id: user.id },
+        });
+
+        await replyMessage(event.replyToken, {
+          type: "text",
+          text: `✅ アカウントを統合しました！\n\n既存のアカウントにLINEが紐付けられました。\n\nWebアプリはこちら：\nhttps://do-jo.vercel.app/senior/dashboard`,
+        });
+      } else {
+        // Existing user not found anymore, just complete registration
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { registrationStep: "COMPLETED" },
+        });
+
+        await replyMessage(event.replyToken, {
+          type: "text",
+          text: `✅ 登録完了！\n\nWebアプリでスケジュールを登録しましょう：\nhttps://do-jo.vercel.app/senior/schedule/create`,
+        });
+      }
+    } else if (text === "2" || text === "２") {
+      // User wants a new account
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { registrationStep: "COMPLETED" },
+      });
+
+      await replyMessage(event.replyToken, {
+        type: "text",
+        text: `✅ 新しいアカウントを作成しました！\n\nWebアプリでスケジュールを登録しましょう：\nhttps://do-jo.vercel.app/senior/schedule/create`,
+      });
+    } else {
+      // Invalid input
+      await replyMessage(event.replyToken, {
+        type: "text",
+        text: `既存アカウントとLINEを統合しますか？\n\n1️⃣ はい、統合する\n2️⃣ いいえ、新しいアカウントを作成\n\n「1」または「2」を送信してください。`,
+      });
+    }
+    return;
+  }
+
   // All users are auto-registered, so handle all text messages as rich menu actions
   await handleRichMenuText(event.replyToken, user.id, user.name, text);
 }
@@ -97,14 +190,6 @@ export async function handleMessage(event: {
 // ==============================
 // postback: Button tap -> Route to handler
 // ==============================
-// Actions that require processing lock (to prevent button spam)
-const LOCKABLE_ACTIONS = [
-  "toggle_day",
-  "confirm_days",
-  "select_time",
-  "start_schedule",
-];
-
 export async function handlePostback(event: {
   source: { userId: string };
   replyToken: string;
@@ -126,371 +211,21 @@ export async function handlePostback(event: {
     return;
   }
 
-  // Check if this action requires locking
-  const requiresLock = action && LOCKABLE_ACTIONS.includes(action);
+  switch (action) {
+    // --- View Reservations ---
+    case "view_reservations":
+      await handleViewReservations(event, user);
+      break;
 
-  if (requiresLock) {
-    // Check if already processing
-    if (user.isProcessing) {
-      try {
-        await replyMessage(event.replyToken, {
-          type: "text",
-          text: "処理中です、少々お待ちください。",
-        });
-      } catch (error) {
-        console.error("[LINE] Failed to send processing message:", error);
-      }
-      return;
-    }
-
-    // Set processing flag
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { isProcessing: true },
-    });
-  }
-
-  try {
-    switch (action) {
-      // --- Schedule Registration: Day Selection ---
-      case "toggle_day":
-        await handleToggleDay(event, user, data);
-        break;
-
-      case "confirm_days":
-        await handleConfirmDays(event, user);
-        break;
-
-      case "start_schedule":
-        await handleStartSchedule(event, user);
-        break;
-
-      // --- Schedule Registration: Time Selection ---
-      case "select_time":
-        await handleSelectTime(event, user, data);
-        break;
-
-      case "select_start_time":
-        await handleSelectStartTime(event, user, data);
-        break;
-
-      case "select_end_time":
-        await handleSelectEndTime(event, user, data);
-        break;
-
-      // --- View Reservations ---
-      case "view_reservations":
-        await handleViewReservations(event, user);
-        break;
-
-      default:
-        await replyMessage(event.replyToken, {
-          type: "text",
-          text: "不明な操作です。メニューからお選びください。",
-        });
-    }
-  } finally {
-    // Always release the lock
-    if (requiresLock) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { isProcessing: false },
+    default:
+      await replyMessage(event.replyToken, {
+        type: "text",
+        text: "Webアプリをご利用ください：\nhttps://do-jo.vercel.app",
       });
-    }
   }
 }
 
 // --- Handler Functions ---
-
-async function handleStartSchedule(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null }
-) {
-  // Check if profile is complete
-  const userData = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { registrationStep: true },
-  });
-
-  if (userData?.registrationStep !== "COMPLETED") {
-    try {
-      await replyMessage(event.replyToken, buildProfileIncompleteMessage());
-    } catch (error) {
-      console.error("[LINE] Failed to reply profile incomplete:", error);
-    }
-    return;
-  }
-
-  // Clear any previous selection state
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { selectedDays: null, scheduleStep: null },
-  });
-
-  try {
-    await replyMessage(event.replyToken, buildDaySelectMessage());
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleStartSchedule:", error);
-  }
-}
-
-async function handleToggleDay(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const day = data.get("day");
-  if (!day) return;
-
-  // Use transaction to prevent race condition from button spam
-  const updatedUser = await prisma.$transaction(async (tx) => {
-    // Re-fetch latest data from DB
-    const latestUser = await tx.user.findUnique({
-      where: { id: user.id },
-      select: { selectedDays: true },
-    });
-
-    const currentDays: string[] = latestUser?.selectedDays
-      ? JSON.parse(latestUser.selectedDays)
-      : [];
-
-    // Toggle the day
-    const updatedDays = currentDays.includes(day)
-      ? currentDays.filter((d) => d !== day)
-      : [...currentDays, day];
-
-    // Save updated selection
-    return tx.user.update({
-      where: { id: user.id },
-      data: { selectedDays: JSON.stringify(updatedDays) },
-      select: { selectedDays: true },
-    });
-  });
-
-  const updatedDays: string[] = updatedUser.selectedDays
-    ? JSON.parse(updatedUser.selectedDays)
-    : [];
-
-  // Show updated day selection message
-  try {
-    await replyMessage(event.replyToken, buildDaySelectMessage(updatedDays));
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleToggleDay:", error);
-  }
-}
-
-async function handleConfirmDays(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null }
-) {
-  // Re-fetch latest data from DB to prevent race condition
-  const latestUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { selectedDays: true },
-  });
-
-  const days: string[] = latestUser?.selectedDays
-    ? JSON.parse(latestUser.selectedDays)
-    : [];
-
-  if (days.length === 0) {
-    try {
-      await replyMessage(event.replyToken, {
-        type: "text",
-        text: "曜日を1つ以上選んでください！",
-      });
-    } catch (error) {
-      console.error("[LINE] Failed to reply in handleConfirmDays:", error);
-    }
-    return;
-  }
-
-  // Sort days by weekday order
-  const dayOrder = ["月", "火", "水", "木", "金", "土", "日"];
-  days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
-
-  // Initialize schedule step
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      scheduleStep: JSON.stringify({
-        days,
-        currentIndex: 0,
-        selectedTimes: {},
-      }),
-    },
-  });
-
-  // Show start time selection for first day (new flow)
-  try {
-    await replyMessage(event.replyToken, buildStartTimeSelectMessage(days[0]));
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleConfirmDays:", error);
-  }
-}
-
-async function handleSelectTime(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const time = data.get("time");
-  const day = data.get("day");
-  if (!time || !day) return;
-
-  // Re-fetch latest data from DB to prevent race condition
-  const latestUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { scheduleStep: true },
-  });
-
-  const stepData = latestUser?.scheduleStep
-    ? JSON.parse(latestUser.scheduleStep)
-    : { days: [], currentIndex: 0, selectedTimes: {} };
-
-  // Create the slot for this day/time
-  await createSlot(user.id, day, time);
-
-  // Move to next day
-  const nextIndex = stepData.currentIndex + 1;
-
-  if (nextIndex < stepData.days.length) {
-    // More days to process
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        scheduleStep: JSON.stringify({
-          ...stepData,
-          currentIndex: nextIndex,
-        }),
-      },
-    });
-    try {
-      await replyMessage(
-        event.replyToken,
-        buildTimeSelectMessage(stepData.days[nextIndex])
-      );
-    } catch (error) {
-      console.error("[LINE] Failed to reply in handleSelectTime:", error);
-    }
-  } else {
-    // All days completed
-    const slots = await getUserUpcomingSlots(user.id);
-    try {
-      await replyMessage(event.replyToken, buildScheduleConfirmMessage(slots));
-    } catch (error) {
-      console.error("[LINE] Failed to reply in handleSelectTime:", error);
-    }
-
-    // Clear temporary data
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { selectedDays: null, scheduleStep: null },
-    });
-  }
-}
-
-// New flow: Start time selection
-async function handleSelectStartTime(
-  event: { replyToken: string },
-  _user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const time = data.get("time");
-  const day = data.get("day");
-  if (!time || !day) return;
-
-  // Show end time selection
-  try {
-    await replyMessage(event.replyToken, buildEndTimeSelectMessage(day, time));
-  } catch (error) {
-    console.error("[LINE] Failed to reply in handleSelectStartTime:", error);
-  }
-}
-
-// New flow: End time selection and slot creation
-async function handleSelectEndTime(
-  event: { replyToken: string },
-  user: { id: string; lineId: string | null },
-  data: URLSearchParams
-) {
-  const day = data.get("day");
-  const startTime = data.get("startTime");
-  const endTime = data.get("endTime");
-  if (!day || !startTime || !endTime) return;
-
-  // Validate that end time is after start time
-  const [startHour, startMin] = startTime.split(":").map(Number);
-  const [endHour, endMin] = endTime.split(":").map(Number);
-  const startMinutes = startHour * 60 + startMin;
-  const endMinutes = endHour * 60 + endMin;
-
-  if (endMinutes <= startMinutes) {
-    await replyMessage(event.replyToken, {
-      type: "text",
-      text: "終了時刻は開始時刻より後にしてください。もう一度やり直してください。",
-    });
-    return;
-  }
-
-  // Create slots for the range
-  let currentMinutes = startMinutes;
-  while (currentMinutes < endMinutes) {
-    const hour = Math.floor(currentMinutes / 60);
-    const minute = currentMinutes % 60;
-    const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-    await createSlot(user.id, day, timeStr);
-    currentMinutes += 30;
-  }
-
-  // Re-fetch latest data from DB
-  const latestUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { scheduleStep: true },
-  });
-
-  const stepData = latestUser?.scheduleStep
-    ? JSON.parse(latestUser.scheduleStep)
-    : { days: [], currentIndex: 0, selectedTimes: {} };
-
-  // Move to next day
-  const nextIndex = stepData.currentIndex + 1;
-
-  if (nextIndex < stepData.days.length) {
-    // More days to process
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        scheduleStep: JSON.stringify({
-          ...stepData,
-          currentIndex: nextIndex,
-        }),
-      },
-    });
-    try {
-      await replyMessage(
-        event.replyToken,
-        buildStartTimeSelectMessage(stepData.days[nextIndex])
-      );
-    } catch (error) {
-      console.error("[LINE] Failed to reply in handleSelectEndTime:", error);
-    }
-  } else {
-    // All days completed
-    const slots = await getUserUpcomingSlots(user.id);
-    try {
-      await replyMessage(event.replyToken, buildScheduleConfirmMessage(slots));
-    } catch (error) {
-      console.error("[LINE] Failed to reply in handleSelectEndTime:", error);
-    }
-
-    // Clear temporary data
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { selectedDays: null, scheduleStep: null },
-    });
-  }
-}
 
 async function handleViewReservations(
   event: { replyToken: string },
@@ -516,7 +251,7 @@ async function handleViewReservations(
     try {
       await replyMessage(event.replyToken, {
         type: "text",
-        text: "現在、予約はありません。\nスケジュールを登録して学習者からの予約を待ちましょう！",
+        text: "現在、予約はありません。\n\nWebアプリでスケジュールを登録しましょう：\nhttps://do-jo.vercel.app/senior/schedule/create",
       });
     } catch (error) {
       console.error("[LINE] Failed to reply in handleViewReservations:", error);
@@ -544,100 +279,6 @@ async function handleViewReservations(
   }
 }
 
-// --- Helper Functions ---
-
-/**
- * Get the Monday of next week
- */
-function getNextMonday(): Date {
-  const now = new Date();
-  const current = now.getDay(); // 0=Sun, 1=Mon, ...
-
-  // Days until next Monday
-  let daysUntilMonday = 1 - current; // Monday = 1
-  if (daysUntilMonday <= 0) {
-    daysUntilMonday += 7; // Move to next week
-  }
-  daysUntilMonday += 7; // Always push to the week after next
-
-  const result = new Date(now);
-  result.setDate(result.getDate() + daysUntilMonday);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-/**
- * Get the date for a specific weekday based on next Monday
- */
-function getDateForDay(dayName: string): Date {
-  const dayOffsets: Record<string, number> = {
-    月: 0,
-    火: 1,
-    水: 2,
-    木: 3,
-    金: 4,
-    土: 5,
-    日: 6,
-  };
-
-  const nextMonday = getNextMonday();
-  const result = new Date(nextMonday);
-  result.setDate(nextMonday.getDate() + dayOffsets[dayName]);
-  return result;
-}
-
-/**
- * Create a slot for the given day and time (next week)
- * Skips if a slot with the same hostId and startTime already exists
- */
-async function createSlot(userId: string, dayName: string, time: string) {
-  const nextDate = getDateForDay(dayName);
-  const [hours, minutes] = time.split(":").map(Number);
-
-  const startTime = new Date(nextDate);
-  startTime.setHours(hours, minutes, 0, 0);
-
-  // Check if slot already exists
-  const existingSlot = await prisma.slot.findFirst({
-    where: {
-      hostId: userId,
-      startTime,
-    },
-  });
-
-  if (existingSlot) {
-    console.log(`[LINE] Slot already exists for ${userId} at ${startTime}, skipping`);
-    return;
-  }
-
-  const endTime = new Date(startTime.getTime() + 25 * 60 * 1000); // 25 min session
-
-  await prisma.slot.create({
-    data: {
-      hostId: userId,
-      startTime,
-      endTime,
-      status: "available",
-      sessionType: "both", // Default to both business and casual
-    },
-  });
-}
-
-/**
- * Get user's upcoming available slots
- */
-async function getUserUpcomingSlots(userId: string) {
-  return prisma.slot.findMany({
-    where: {
-      hostId: userId,
-      startTime: { gte: new Date() },
-      status: "available",
-    },
-    orderBy: { startTime: "asc" },
-    take: 20,
-  });
-}
-
 /**
  * Handle rich menu text messages
  */
@@ -650,17 +291,6 @@ async function handleRichMenuText(
   try {
     switch (text) {
       case "スケジュール": {
-        // Check if profile is complete
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { registrationStep: true },
-        });
-
-        if (user?.registrationStep !== "COMPLETED") {
-          await replyMessage(replyToken, buildProfileIncompleteMessage());
-          return;
-        }
-
         // Fetch available slots
         const availableSlots = await prisma.slot.findMany({
           where: {
@@ -695,9 +325,14 @@ async function handleRichMenuText(
           topic: r.selectedTopic,
         }));
 
+        // Show current schedule and guide to web app for creating new slots
         await replyMessage(
           replyToken,
-          buildScheduleStatusMessage({ availableSlots, bookedSlots })
+          buildScheduleStatusMessage({
+            availableSlots,
+            bookedSlots,
+            showWebAppLink: true
+          })
         );
         break;
       }
@@ -705,25 +340,31 @@ async function handleRichMenuText(
       case "プロフィール": {
         await replyMessage(replyToken, {
           type: "text",
-          text: "プロフィールはLINEアカウント情報から自動で設定されています。\n\n詳細な情報を変更したい場合は、Webアプリからログインしてください。",
+          text: "プロフィールの確認・編集はWebアプリから行えます。\nhttps://do-jo.vercel.app/senior/dashboard",
         });
         break;
       }
 
       case "使い方":
-        await replyMessage(replyToken, buildUsageGuideMessage());
+        await replyMessage(replyToken, {
+          type: "text",
+          text: "【Do Joの使い方】\n\n1. 「スケジュール」から空き時間を確認\n2. Webアプリでスケジュールを登録\n3. 学習者からの予約を待つ\n4. 予約が入ったらLINEでお知らせ\n\n詳しくはWebアプリをご確認ください。\nhttps://do-jo.vercel.app",
+        });
         break;
 
       case "メニュー":
       case "menu":
-        await replyMessage(replyToken, buildMainMenuMessage(userName));
+        await replyMessage(replyToken, {
+          type: "text",
+          text: `${userName}さん、こんにちは！\n\nメニューから「スケジュール」を選んで現在の予定を確認できます。\n\n新しいスケジュールの登録はWebアプリから：\nhttps://do-jo.vercel.app/senior/schedule/create`,
+        });
         break;
 
       default:
         // Any other text is treated as inquiry/feedback
         await replyMessage(replyToken, {
           type: "text",
-          text: "メッセージを受け付けました。担当者が確認してお返事します。\n\n下のメニューから「スケジュール」「プロフィール」「使い方」を選ぶこともできます。",
+          text: "メッセージを受け付けました。\n\nスケジュールの確認・登録はWebアプリから：\nhttps://do-jo.vercel.app",
         });
     }
   } catch (error) {

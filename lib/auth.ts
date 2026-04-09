@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 
 // User role type
-type UserRole = "learner" | "senior" | "student" | "admin";
+type UserRole = "learner" | "senior" | "admin";
 
 // Extend NextAuth types
 declare module "next-auth" {

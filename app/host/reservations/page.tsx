@@ -78,7 +78,6 @@ export default function HostReservationsPage() {
   const [loadingLogs, setLoadingLogs] = useState<string | null>(null);
 
   const isSenior = session?.user?.role === "senior";
-  const isStudent = session?.user?.role === "student";
 
   useEffect(() => {
     if (status === "unauthenticated") {

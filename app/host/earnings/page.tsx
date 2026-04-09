@@ -47,7 +47,7 @@ export default function HostEarningsPage() {
   }, [status, session, router]);
 
   useEffect(() => {
-    if (session?.user && session.user.role === "student") {
+    if (session?.user && session.user.role === "senior") {
       fetchEarnings();
     }
   }, [session]);
@@ -133,7 +133,7 @@ export default function HostEarningsPage() {
     }
   };
 
-  if (status === "loading" || (session?.user?.role !== "student" && status !== "unauthenticated")) {
+  if (status === "loading" || (session?.user?.role !== "senior" && status !== "unauthenticated")) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -141,7 +141,7 @@ export default function HostEarningsPage() {
     );
   }
 
-  if (!session?.user || session.user.role !== "student") return null;
+  if (!session?.user || session.user.role !== "senior") return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">

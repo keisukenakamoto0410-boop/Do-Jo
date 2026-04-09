@@ -1785,8 +1785,9 @@ export function buildScheduleStatusMessage(params: {
     learnerName: string;
     topic?: string | null;
   }>;
+  showWebAppLink?: boolean;
 }): LineMessage {
-  const { availableSlots, bookedSlots } = params;
+  const { availableSlots, bookedSlots, showWebAppLink = false } = params;
 
   const formatDate = (date: Date) => {
     const d = new Date(date);
@@ -1907,7 +1908,30 @@ export function buildScheduleStatusMessage(params: {
         layout: "vertical",
         contents: bodyContents,
       },
-      footer: {
+      footer: showWebAppLink ? {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: COLORS.primary,
+            action: {
+              type: "uri",
+              label: "📅 Webアプリでスケジュールを登録",
+              uri: "https://do-jo.vercel.app/senior/schedule/create",
+            },
+          },
+          {
+            type: "text",
+            text: "スケジュールの登録・編集はWebアプリから行えます",
+            size: "xs",
+            color: "#888888",
+            margin: "md",
+            wrap: true,
+          },
+        ],
+      } : {
         type: "box",
         layout: "vertical",
         contents: [
@@ -2527,12 +2551,12 @@ export function buildProfileIncompleteMessage(): LineMessage {
 }
 
 /**
- * Weekly reminder message sent every Sunday to prompt schedule registration
+ * Weekly reminder message sent every Wednesday to prompt schedule registration
  */
 export function buildWeeklyReminderMessage(): LineMessage {
   return {
     type: "flex",
-    altText: "今週のスケジュール登録",
+    altText: "来週のスケジュール設定しませんか？",
     contents: {
       type: "bubble",
       header: {
@@ -2541,7 +2565,7 @@ export function buildWeeklyReminderMessage(): LineMessage {
         contents: [
           {
             type: "text",
-            text: "📅 今週のスケジュール登録",
+            text: "📅 来週のスケジュール設定",
             weight: "bold",
             size: "lg",
             color: "#FFFFFF",
@@ -2556,14 +2580,14 @@ export function buildWeeklyReminderMessage(): LineMessage {
         contents: [
           {
             type: "text",
-            text: "来週の空き時間を登録しませんか？",
+            text: "来週の空き時間を設定しませんか？",
             weight: "bold",
             size: "md",
             wrap: true,
           },
           {
             type: "text",
-            text: "ボタン1つで簡単に登録できます！",
+            text: "Do Joのアプリから簡単に登録できます！",
             size: "sm",
             color: "#666666",
             margin: "md",
@@ -2580,9 +2604,9 @@ export function buildWeeklyReminderMessage(): LineMessage {
             style: "primary",
             color: COLORS.primary,
             action: {
-              type: "postback",
+              type: "uri",
               label: "スケジュールを登録する",
-              data: "action=start_schedule",
+              uri: "https://do-jo.vercel.app/senior/schedule/create",
             },
           },
         ],

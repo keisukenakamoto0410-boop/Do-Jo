@@ -123,7 +123,6 @@ export default function AdminDashboard() {
     admin: users.filter(u => u.role === "admin").length,
     senior: users.filter(u => u.role === "senior").length,
     learner: users.filter(u => u.role === "learner").length,
-    student: users.filter(u => u.role === "student").length,
   };
 
   const reservationStats = {

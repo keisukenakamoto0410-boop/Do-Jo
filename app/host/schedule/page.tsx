@@ -12,7 +12,6 @@ export default function HostSchedulePage() {
   const router = useRouter();
 
   const isSenior = session?.user?.role === "senior";
-  const isStudent = session?.user?.role === "student";
 
   useEffect(() => {
     if (status === "unauthenticated") {

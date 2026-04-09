@@ -18,7 +18,7 @@ model User {
   email           String    @unique
   password        String?
   name            String
-  role            String    @default("learner") // "learner" | "senior" | "student" | "admin"
+  role            String    @default("learner") // "learner" | "senior" | "admin"
 
   // OAuth Provider IDs
   lineId          String?   @unique  // LINE user ID for LINE notifications
@@ -60,11 +60,6 @@ model User {
   hobbies         String[]  // 趣味
   expertiseTopics String[]  // 得意な話題
   speakingStyle   String?   // 話し方の特徴
-
-  // 日本人大学生用フィールド
-  university      String?   // 大学名
-  major           String?   // 専攻
-  graduationYear  Int?      // 卒業予定年
 
   // 統計
   totalTalkTime   Int       @default(0) // 総会話時間（分）
@@ -330,7 +325,7 @@ model AdminMessage {
   title       String
   content     String    @db.Text
   messageType String    // "info" | "warning" | "success" | "announcement"
-  targetRole  String?   // "all" | "learner" | "senior" | "student" | null(=all)
+  targetRole  String?   // "all" | "learner" | "senior" | null(=all)
   isActive    Boolean   @default(true)
   startsAt    DateTime  @default(now())
   expiresAt   DateTime?

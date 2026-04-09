@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 全シニア・大学生のセッション数を取得
+    // 全シニアのセッション数を取得
     const allHosts = await prisma.user.findMany({
       where: {
-        role: { in: ["senior", "student"] },
+        role: "senior",
       },
       select: {
         id: true,

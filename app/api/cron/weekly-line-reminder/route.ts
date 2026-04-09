@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * GET /api/cron/weekly-line-reminder
  *
  * Security: Protected by CRON_SECRET
- * Schedule: Every Sunday 10:00 JST (1:00 UTC)
+ * Schedule: Every Wednesday 10:00 JST (1:00 UTC)
  */
 export async function GET(request: Request) {
   // Verify cron secret for security (Vercel Cron sets this header)

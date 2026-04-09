@@ -215,12 +215,6 @@ export default function AdminUsersPage() {
                 {stats.byRole.senior || 0}
               </p>
             </div>
-            <div className="bg-green-50 rounded-xl shadow p-4">
-              <p className="text-sm text-green-600">大学生</p>
-              <p className="text-2xl font-bold text-green-900">
-                {stats.byRole.student || 0}
-              </p>
-            </div>
             <div className="bg-red-50 rounded-xl shadow p-4">
               <p className="text-sm text-red-600">管理者</p>
               <p className="text-2xl font-bold text-red-900">
@@ -350,9 +344,6 @@ export default function AdminUsersPage() {
                                 </span>
                               )}
                             </>
-                          )}
-                          {user.role === "student" && user.university && (
-                            <span>{user.university}</span>
                           )}
                         </div>
                       </td>

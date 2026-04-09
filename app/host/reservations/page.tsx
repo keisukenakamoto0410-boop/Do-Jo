@@ -340,14 +340,6 @@ export default function HostReservationsPage() {
               >
                 予約一覧
               </Link>
-              {isStudent && (
-                <Link
-                  href="/host/earnings"
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  収益管理
-                </Link>
-              )}
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{isSenior ? "🏯" : "🎓"}</span>
                 <span className="font-medium">{session.user.name}</span>

@@ -32,8 +32,11 @@ export default function HomePage() {
       const role = session.user.role;
       if (role === "learner") {
         router.push("/learner/dashboard");
-      } else if (role === "senior" || role === "admin") {
-        // senior and admin both use senior dashboard (Japanese speakers)
+      } else if (role === "admin") {
+        // admin uses dedicated admin dashboard
+        router.push("/admin/dashboard");
+      } else if (role === "senior") {
+        // senior (Japanese speakers) use senior dashboard
         router.push("/senior/dashboard");
       } else {
         router.push("/host/dashboard");

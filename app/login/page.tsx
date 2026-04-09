@@ -141,8 +141,11 @@ export default function LoginPage() {
 
           if (role === "learner") {
             targetUrl = "/learner/dashboard";
-          } else if (role === "senior" || role === "admin") {
-            // senior and admin both use senior dashboard (Japanese speakers)
+          } else if (role === "admin") {
+            // admin uses dedicated admin dashboard
+            targetUrl = "/admin/dashboard";
+          } else if (role === "senior") {
+            // senior (Japanese speakers) use senior dashboard
             targetUrl = "/senior/dashboard";
           } else if (role === "student") {
             targetUrl = "/host/dashboard";

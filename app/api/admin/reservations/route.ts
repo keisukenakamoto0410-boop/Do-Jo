@@ -3,21 +3,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Admin emails that can access this endpoint
-const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
-
 // GET: Get all reservations for admin
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
-    if (!ADMIN_EMAILS.includes(session.user.email)) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    // Check if user has admin role
+    if (session.user.role !== "admin") {
+      return NextResponse.json({ error: "Access denied - Admin only" }, { status: 403 });
     }
 
     // Get all confirmed reservations with future start times

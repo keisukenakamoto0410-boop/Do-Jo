@@ -12,9 +12,6 @@ async function checkStudentUsers() {
       name: true,
       email: true,
       lineId: true,
-      university: true,
-      major: true,
-      graduationYear: true,
       createdAt: true,
     },
   });

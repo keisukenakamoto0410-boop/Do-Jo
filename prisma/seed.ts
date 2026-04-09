@@ -105,30 +105,10 @@ async function main() {
   }
   console.log("✅ Created 4 slots for senior host");
 
-  // Create slots for student host
-  for (let i = 0; i < 4; i++) {
-    const startTime = new Date(tomorrow);
-    startTime.setHours(14 + i, 0, 0, 0);
-    const endTime = new Date(startTime);
-    endTime.setMinutes(startTime.getMinutes() + 25);
-
-    await prisma.slot.create({
-      data: {
-        hostId: student1.id,
-        sessionType: "casual",
-        startTime,
-        endTime,
-        status: "available",
-      },
-    });
-  }
-  console.log("✅ Created 4 slots for student host");
-
   console.log("\n🎉 Seeding completed successfully!");
   console.log("\n📝 Login credentials:");
   console.log("Learner:  learner@dojo.com / learner123");
   console.log("Senior:   senior@dojo.com / senior123");
-  console.log("Student:  student@dojo.com / student123");
 }
 
 main()

@@ -35,8 +35,14 @@ export default function SeniorDashboard() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
+    } else if (status === "authenticated" && session?.user) {
+      // Check if user has accepted terms
+      const userTermsAccepted = (session.user as any).termsAccepted;
+      if (userTermsAccepted === false || userTermsAccepted === undefined) {
+        router.push("/terms");
+      }
     }
-  }, [status, router]);
+  }, [status, session, router]);
 
   useEffect(() => {
     fetchSlots();
@@ -347,7 +353,7 @@ export default function SeniorDashboard() {
         )}
 
         {/* クイックリンク */}
-        <div className="mt-12 grid grid-cols-2 gap-6">
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link
             href="/senior/schedule/create"
             className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-8 hover:shadow-lg transition-all text-center text-white"
@@ -363,6 +369,14 @@ export default function SeniorDashboard() {
             <div className="text-5xl mb-3">⚙️</div>
             <p className="text-xl font-bold text-gray-900 mb-1">設定</p>
             <p className="text-sm text-gray-600">プロフィール編集</p>
+          </Link>
+          <Link
+            href="/terms"
+            className="bg-white rounded-xl p-8 border border-gray-200 hover:shadow-lg transition-all text-center"
+          >
+            <div className="text-5xl mb-3">📜</div>
+            <p className="text-xl font-bold text-gray-900 mb-1">利用規約</p>
+            <p className="text-sm text-gray-600">ルールを確認</p>
           </Link>
         </div>
       </main>

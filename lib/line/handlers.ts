@@ -58,6 +58,7 @@ export async function handleFollow(event: {
         role: "senior",
         registrationStep: "AWAITING_MERGE_CONFIRMATION",
         prefecture: "豊橋市",
+        termsAccepted: false,
         lastLoginAt: new Date(),
       },
     });
@@ -81,6 +82,7 @@ export async function handleFollow(event: {
         role: "senior",
         registrationStep: "COMPLETED",
         prefecture: "豊橋市",
+        termsAccepted: false,
         lastLoginAt: new Date(),
       },
     });

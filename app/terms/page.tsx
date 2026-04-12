@@ -1,18 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function TermsPage() {
   const router = useRouter();
+  const { data: session, status, update } = useSession();
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [needsAcceptance, setNeedsAcceptance] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
 
-  const handleAgree = () => {
-    // Store agreement in localStorage
-    localStorage.setItem("termsAgreed", "true");
-    // Redirect to login or home
-    router.push("/login");
+  useEffect(() => {
+    // Check if user needs to accept terms (termsAccepted: false)
+    if (session?.user) {
+      const userTermsAccepted = (session.user as any).termsAccepted;
+      if (userTermsAccepted === false || userTermsAccepted === undefined) {
+        setNeedsAcceptance(true);
+      } else {
+        // User has already accepted, this is view-only mode
+        setIsViewOnly(true);
+      }
+    } else if (status === "unauthenticated") {
+      // Not logged in, this is view-only mode
+      setIsViewOnly(true);
+    }
+  }, [session, status]);
+
+  const handleAgree = async () => {
+    if (!agreed) return;
+
+    if (needsAcceptance && session?.user) {
+      // User needs to accept terms in DB
+      setLoading(true);
+      try {
+        const response = await fetch("/api/auth/accept-terms", {
+          method: "POST",
+        });
+
+        if (response.ok) {
+          // Update session
+          await update();
+
+          // Redirect to appropriate dashboard based on role
+          const userRole = (session.user as any).role;
+          if (userRole === "senior" || userRole === "admin") {
+            router.push("/senior/dashboard");
+          } else {
+            router.push("/learner/dashboard");
+          }
+        } else {
+          alert("利用規約の同意処理に失敗しました。もう一度お試しください。");
+        }
+      } catch (error) {
+        console.error("Error accepting terms:", error);
+        alert("エラーが発生しました。もう一度お試しください。");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Store agreement in localStorage for non-logged-in users
+      localStorage.setItem("termsAgreed", "true");
+      // Redirect to login or home
+      router.push("/login");
+    }
   };
 
   return (
@@ -190,53 +243,70 @@ export default function TermsPage() {
         </div>
 
         {/* Agreement Checkbox */}
-        <div className="mt-12 bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-          <label className="flex items-start gap-4 cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-1 w-6 h-6 rounded border-gray-300 text-green-600 focus:ring-green-500 focus:ring-offset-2 cursor-pointer"
-            />
-            <span className="text-base sm:text-lg text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors">
-              上記のルールを読んで、内容を理解しました。<br />
-              <strong>ルールを守って、楽しく安全に使います。</strong>
-            </span>
-          </label>
-        </div>
+        {!isViewOnly && (
+          <div className="mt-12 bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+            <label className="flex items-start gap-4 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-1 w-6 h-6 rounded border-gray-300 text-green-600 focus:ring-green-500 focus:ring-offset-2 cursor-pointer"
+              />
+              <span className="text-base sm:text-lg text-gray-700 leading-relaxed group-hover:text-gray-900 transition-colors">
+                上記のルールを読んで、内容を理解しました。<br />
+                <strong>ルールを守って、楽しく安全に使います。</strong>
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Action Button */}
         <div className="mt-8 text-center">
-          <button
-            onClick={handleAgree}
-            disabled={!agreed}
-            className={`
-              w-full sm:w-auto
-              px-12 py-5
-              text-xl sm:text-2xl font-bold
-              rounded-2xl
-              shadow-xl
-              transition-all duration-300
-              transform
-              ${
-                agreed
-                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-2xl hover:scale-105 cursor-pointer"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }
-            `}
-          >
-            {agreed ? (
-              <>
-                <span className="inline-block mr-3">✓</span>
-                ルールに同意してはじめる
-              </>
-            ) : (
-              <>
-                <span className="inline-block mr-3">□</span>
-                まずチェックボックスにチェックを入れてください
-              </>
-            )}
-          </button>
+          {isViewOnly ? (
+            <button
+              onClick={() => router.back()}
+              className="w-full sm:w-auto px-12 py-5 text-xl sm:text-2xl font-bold rounded-2xl shadow-xl bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700 hover:shadow-2xl transition-all duration-300"
+            >
+              <span className="inline-block mr-3">←</span>
+              戻る
+            </button>
+          ) : (
+            <button
+              onClick={handleAgree}
+              disabled={!agreed || loading}
+              className={`
+                w-full sm:w-auto
+                px-12 py-5
+                text-xl sm:text-2xl font-bold
+                rounded-2xl
+                shadow-xl
+                transition-all duration-300
+                transform
+                ${
+                  agreed && !loading
+                    ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 hover:shadow-2xl hover:scale-105 cursor-pointer"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }
+              `}
+            >
+              {loading ? (
+                <>
+                  <span className="inline-block mr-3">⏳</span>
+                  処理中...
+                </>
+              ) : agreed ? (
+                <>
+                  <span className="inline-block mr-3">✓</span>
+                  ルールに同意してはじめる
+                </>
+              ) : (
+                <>
+                  <span className="inline-block mr-3">□</span>
+                  まずチェックボックスにチェックを入れてください
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Footer Note */}

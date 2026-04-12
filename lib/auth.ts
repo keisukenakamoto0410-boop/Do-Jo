@@ -17,6 +17,7 @@ declare module "next-auth" {
       name: string;
       role: UserRole;
       lineId?: string | null;
+      termsAccepted?: boolean;
     };
   }
 
@@ -26,6 +27,7 @@ declare module "next-auth" {
     name: string;
     role: UserRole;
     lineId?: string | null;
+    termsAccepted?: boolean;
   }
 }
 
@@ -34,6 +36,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: UserRole;
     lineId?: string | null;
+    termsAccepted?: boolean;
   }
 }
 
@@ -105,6 +108,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role as UserRole,
             lineId: user.lineId,
+            termsAccepted: user.termsAccepted,
           };
         } catch (error) {
           console.error("[AUTH] Error in authorize:", error);
@@ -154,6 +158,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role as UserRole,
             lineId: user.lineId,
+            termsAccepted: user.termsAccepted,
           };
         } catch (error) {
           console.error("[AUTH] Error in LINE authorize:", error);
@@ -229,6 +234,7 @@ export const authOptions: NextAuthOptions = {
                 name: user.name || "User",
                 role: "senior",
                 lineId: lineUserId,
+                termsAccepted: false,
                 lastLoginAt: new Date(),
               },
             });
@@ -261,6 +267,7 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;
           token.lineId = dbUser.lineId;
+          token.termsAccepted = dbUser.termsAccepted;
         }
       }
 
@@ -281,6 +288,7 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;
           token.lineId = dbUser.lineId;
+          token.termsAccepted = dbUser.termsAccepted;
         }
       }
 
@@ -291,12 +299,14 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.lineId = user.lineId;
+        token.termsAccepted = user.termsAccepted;
       } else if (user && user.role && !token.role) {
         // OAuthでもroleがない場合は設定
         console.log("[AUTH JWT] OAuth login without role, setting from user:", { id: user.id, role: user.role });
         token.id = user.id;
         token.role = user.role;
         token.lineId = user.lineId;
+        token.termsAccepted = user.termsAccepted;
       }
 
       // トークンにIDがない場合（既存セッション）、DBから取得
@@ -308,6 +318,17 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id;
           token.role = dbUser.role as UserRole;
           token.lineId = dbUser.lineId;
+          token.termsAccepted = dbUser.termsAccepted;
+        }
+      }
+
+      // セッション更新時（accept-termsなど）、DBから最新のtermsAcceptedを取得
+      if (trigger === "update" && token.id) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id },
+        });
+        if (dbUser) {
+          token.termsAccepted = dbUser.termsAccepted;
         }
       }
 
@@ -331,11 +352,13 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.email = token.email as string;
         session.user.lineId = token.lineId;
+        session.user.termsAccepted = token.termsAccepted;
 
         console.log("[AUTH SESSION] Session created:", {
           userId: session.user.id,
           userRole: session.user.role,
-          userLineId: session.user.lineId
+          userLineId: session.user.lineId,
+          termsAccepted: session.user.termsAccepted
         });
       }
       return session;

@@ -20,9 +20,9 @@ import { signIn } from "next-auth/react";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { lineUserId, displayName, pictureUrl } = body;
+    const { lineUserId, displayName, pictureUrl, preferredRole } = body;
 
-    console.log("[LIFF-LOGIN] Request:", { lineUserId, displayName, pictureUrl });
+    console.log("[LIFF-LOGIN] Request:", { lineUserId, displayName, pictureUrl, preferredRole });
 
     // バリデーション
     if (!lineUserId) {
@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
     if (!displayName) {
       return NextResponse.json(
         { error: "displayName is required" },
+        { status: 400 }
+      );
+    }
+
+    // preferredRole のバリデーション（オプショナル）
+    if (preferredRole && !["learner", "senior"].includes(preferredRole)) {
+      return NextResponse.json(
+        { error: "Invalid preferredRole. Must be 'learner' or 'senior'" },
         { status: 400 }
       );
     }
@@ -70,22 +78,32 @@ export async function POST(req: NextRequest) {
       // 新規ユーザーを作成
       console.log("[LIFF-LOGIN] Creating new user for LINE ID:", lineUserId);
 
+      // preferredRole が指定されている場合はそのロールを使用、なければ "unset"
+      const userRole = preferredRole || "unset";
+      console.log("[LIFF-LOGIN] Setting role to:", userRole);
+
       user = await prisma.user.create({
         data: {
           // LINEログインの場合はemailがないため、一時的にlineUserIdをemailに設定
           email: `${lineUserId}@line.local`,
           name: displayName,
-          role: "senior", // デフォルトはsenior（必要に応じて変更可能）
+          role: userRole,
           lineId: lineUserId,
           avatar: pictureUrl,
           lastLoginAt: new Date(),
         },
       });
 
-      console.log("[LIFF-LOGIN] User created:", user.id);
+      console.log("[LIFF-LOGIN] User created:", user.id, "with role:", user.role);
     } else {
       // 既存ユーザーの情報を更新
       console.log("[LIFF-LOGIN] Updating existing user:", user.id);
+
+      // ロールが "unset" で preferredRole が指定されている場合、ロールを更新
+      const shouldUpdateRole = user.role === "unset" && preferredRole;
+      if (shouldUpdateRole) {
+        console.log("[LIFF-LOGIN] Updating role from 'unset' to:", preferredRole);
+      }
 
       user = await prisma.user.update({
         where: { id: user.id },
@@ -93,8 +111,11 @@ export async function POST(req: NextRequest) {
           name: displayName,
           avatar: pictureUrl,
           lastLoginAt: new Date(),
+          ...(shouldUpdateRole && { role: preferredRole }),
         },
       });
+
+      console.log("[LIFF-LOGIN] User updated:", user.id, "role:", user.role);
     }
 
     // セッション情報を返す

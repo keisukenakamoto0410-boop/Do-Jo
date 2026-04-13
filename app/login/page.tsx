@@ -139,7 +139,10 @@ export default function LoginPage() {
           const role = data.user.role;
           let targetUrl = "/";
 
-          if (role === "learner") {
+          if (role === "unset") {
+            // ロール未設定の場合はロール選択ページへ
+            targetUrl = "/select-role";
+          } else if (role === "learner") {
             targetUrl = "/learner/dashboard";
           } else if (role === "admin") {
             // admin uses dedicated admin dashboard

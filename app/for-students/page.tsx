@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLiff } from "@/hooks/useLiff";
 
 export default function ForStudentsPage() {
   const { data: session, status } = useSession();
@@ -11,9 +12,10 @@ export default function ForStudentsPage() {
   const [hostCount, setHostCount] = useState<number | null>(null);
   const [seniorCount, setSeniorCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  // LIFFフックを使用
+  const { isReady, isLoggedIn, profile, error: liffError, login } = useLiff();
 
   // Redirect if already logged in as learner
   useEffect(() => {
@@ -43,31 +45,86 @@ export default function ForStudentsPage() {
     fetchCounts();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  // LIFFログイン後の処理
+  useEffect(() => {
+    if (isLoggedIn && profile) {
+      handleLiffLogin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, profile]);
+
+  // LIFFエラーの処理
+  useEffect(() => {
+    if (liffError) {
+      setError(liffError);
+    }
+  }, [liffError]);
+
+  const handleLiffLogin = async () => {
+    if (!profile) return;
+
     setIsLoading(true);
+    setError("");
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      console.log("[FOR-STUDENTS] Starting LIFF login as learner:", profile);
+
+      // バックエンドにLIFFプロフィール情報を送信（learner希望を明示）
+      const response = await fetch("/api/auth/liff-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          lineUserId: profile.userId,
+          displayName: profile.displayName,
+          pictureUrl: profile.pictureUrl,
+          preferredRole: "learner", // learner として登録
+        }),
       });
 
-      if (result?.error) {
-        setError("Invalid email or password");
-        setIsLoading(false);
-        return;
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Login failed");
       }
 
-      router.push("/learner/dashboard");
-      router.refresh();
+      const data = await response.json();
+      console.log("[FOR-STUDENTS] User created/updated:", data);
+
+      if (data.success) {
+        // NextAuthでセッションを作成
+        console.log("[FOR-STUDENTS] Creating NextAuth session...");
+        const result = await signIn("line-credentials", {
+          lineUserId: profile.userId,
+          redirect: false,
+        });
+
+        console.log("[FOR-STUDENTS] NextAuth signIn result:", result);
+
+        if (result?.error) {
+          throw new Error(result.error);
+        }
+
+        if (result?.ok) {
+          // learner dashboardへリダイレクト
+          console.log("[FOR-STUDENTS] Redirecting to learner dashboard");
+          window.location.href = "/learner/dashboard";
+        }
+      }
     } catch (err) {
-      console.error("Login error:", err);
-      setError("Failed to sign in");
+      console.error("[FOR-STUDENTS] LIFF login error:", err);
+      setError(err instanceof Error ? err.message : "Failed to sign in with LINE");
+    } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLineLogin = () => {
+    if (!isReady) {
+      setError("LINE login is not ready yet. Please wait.");
+      return;
+    }
+    login();
   };
 
   // Show loading while checking session
@@ -206,8 +263,19 @@ export default function ForStudentsPage() {
             </div>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* LINE Login Section */}
+          <div className="space-y-4">
+            {/* デバッグ情報 (開発中のみ表示) */}
+            {process.env.NODE_ENV !== 'production' && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs">
+                <div className="font-bold mb-1">Debug Info:</div>
+                <div>LIFF Ready: {isReady ? "✓" : "✗"}</div>
+                <div>LIFF Logged In: {isLoggedIn ? "✓" : "✗"}</div>
+                <div>Profile: {profile ? "✓" : "✗"}</div>
+              </div>
+            )}
+
+            {/* エラーメッセージ */}
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,54 +285,36 @@ export default function ForStudentsPage() {
               </div>
             )}
 
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A8CC] focus:border-transparent transition-all text-sm"
-              placeholder="Email address"
-              style={{ fontFamily: "'Outfit', sans-serif" }}
-            />
-
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A8CC] focus:border-transparent transition-all text-sm"
-              placeholder="Password"
-              style={{ fontFamily: "'Outfit', sans-serif" }}
-            />
-
+            {/* LINEログインボタン */}
             <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-4 px-6 bg-gradient-to-r from-[#00A8CC] to-[#006B7D] text-white font-bold text-lg rounded-xl hover:shadow-lg hover:shadow-cyan-500/30 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
-              style={{ fontFamily: "'Outfit', sans-serif" }}
+              type="button"
+              onClick={handleLineLogin}
+              disabled={isLoading || !isReady}
+              className="w-full py-4 px-6 bg-[#06C755] text-white font-bold text-lg rounded-xl hover:opacity-90 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+              style={{ fontFamily: "'Noto Sans JP', sans-serif" }}
             >
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Signing in...</span>
+                  <span>ログイン中...</span>
                 </>
               ) : (
-                <span>Sign In</span>
+                <>
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
+                  </svg>
+                  LINEでログイン・始める
+                </>
               )}
             </button>
-          </form>
 
-          <p
-            className="text-center text-gray-500 text-sm mt-3"
-            style={{ fontFamily: "'Outfit', sans-serif" }}
-          >
-            Ready to start?{" "}
-            <Link href="/login" className="text-[#00A8CC] hover:underline font-medium">
-              Sign in with LINE
-            </Link>
-          </p>
+            <p
+              className="text-center text-gray-500 text-sm mt-3"
+              style={{ fontFamily: "'Outfit', sans-serif" }}
+            >
+              LINEアカウントで簡単にログインできます
+            </p>
+          </div>
         </div>
 
         {/* Footer Note */}

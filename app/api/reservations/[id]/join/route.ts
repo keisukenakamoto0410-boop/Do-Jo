@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { validateSessionToken, getClientIp } from "@/lib/session-token";
 
 // POST - ユーザーがセッションに入室
 export async function POST(
@@ -9,13 +10,31 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
+
+    // Try token-based authentication first (for LINE users)
+    const authHeader = req.headers.get("Authorization");
+    const sessionToken = authHeader?.replace("Bearer ", "");
+
+    let userId: string | null = null;
+
+    if (sessionToken) {
+      // Validate session token with IP address verification
+      const clientIp = getClientIp(req);
+      const tokenData = await validateSessionToken(sessionToken, clientIp);
+      if (tokenData && tokenData.reservationId === id) {
+        userId = tokenData.userId;
+      }
     }
 
-    const { id } = await params;
-    const userId = session.user.id;
+    // Fall back to NextAuth session if no token
+    if (!userId) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.user.id;
+    }
 
     // 予約を取得
     const reservation = await prisma.reservation.findUnique({
@@ -117,12 +136,31 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id } = await params;
+
+    // Try token-based authentication first (for LINE users)
+    const authHeader = req.headers.get("Authorization");
+    const sessionToken = authHeader?.replace("Bearer ", "");
+
+    let userId: string | null = null;
+
+    if (sessionToken) {
+      // Validate session token with IP address verification
+      const clientIp = getClientIp(req);
+      const tokenData = await validateSessionToken(sessionToken, clientIp);
+      if (tokenData && tokenData.reservationId === id) {
+        userId = tokenData.userId;
+      }
     }
 
-    const { id } = await params;
+    // Fall back to NextAuth session if no token
+    if (!userId) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.user.id;
+    }
 
     const reservation = await prisma.reservation.findUnique({
       where: { id },
@@ -141,8 +179,8 @@ export async function GET(
     }
 
     // ユーザーがこの予約に参加しているか確認
-    const isLearner = reservation.learnerId === session.user.id;
-    const isHost = reservation.hostId === session.user.id;
+    const isLearner = reservation.learnerId === userId;
+    const isHost = reservation.hostId === userId;
 
     if (!isLearner && !isHost) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });

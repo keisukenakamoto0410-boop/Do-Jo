@@ -29,6 +29,18 @@ export default function SeniorSessionPage() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const token = searchParams?.get('token');
 
+  // Ensure token from URL is saved to sessionStorage (fallback for redirect issues)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && token) {
+      const existingToken = sessionStorage.getItem('sessionToken');
+      if (!existingToken) {
+        // If sessionStorage was cleared but URL has token, restore it
+        sessionStorage.setItem('sessionToken', token);
+        console.log('[Session] Restored token from URL to sessionStorage');
+      }
+    }
+  }, [token]);
+
   // Video refs
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLDivElement>(null);
@@ -90,7 +102,8 @@ export default function SeniorSessionPage() {
 
   useEffect(() => {
     fetchReservation();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationId]);
 
   useEffect(() => {
     if (reservation && !agoraInitialized && !error) {
@@ -127,10 +140,10 @@ export default function SeniorSessionPage() {
 
         if (remaining <= 0) {
           clearInterval(interval);
-          handleSessionEnd();
+          handleSessionEnd(true); // 強制終了（確認なし）
         }
 
-        if (remaining === 5 * 60) {
+        if (remaining <= 5 * 60 && remaining > 5 * 60 - 2) {
           alert("あと5分です！");
         }
       }
@@ -157,11 +170,11 @@ export default function SeniorSessionPage() {
 
       const sessionStart = new Date(data.slot.startTime);
       const now = new Date();
-      const fiveMinutesBefore = new Date(sessionStart.getTime() - 5 * 60 * 1000);
+      const thirtyMinutesBefore = new Date(sessionStart.getTime() - 30 * 60 * 1000);
       const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000);
 
-      if (now < fiveMinutesBefore) {
-        const waitMinutes = Math.ceil((fiveMinutesBefore.getTime() - now.getTime()) / 60000);
+      if (now < thirtyMinutesBefore) {
+        const waitMinutes = Math.ceil((thirtyMinutesBefore.getTime() - now.getTime()) / 60000);
         const startTimeStr = sessionStart.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
         setError(`セッションはまだ始まっていません。あと${waitMinutes}分後にお越しください。開始時刻: ${startTimeStr}`);
         setLoading(false);
@@ -232,9 +245,6 @@ export default function SeniorSessionPage() {
               }
               return [...prev, user];
             });
-
-            // 相手が入室したらタイマー開始
-            setTimerStarted(true);
 
             // Play video using ref
             setTimeout(() => {
@@ -330,18 +340,29 @@ export default function SeniorSessionPage() {
     }
   };
 
-  const handleSessionEnd = async () => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      "通話を終了してもよろしいですか？\n\nAre you sure you want to end this session?"
-    );
-    if (!confirmed) return;
+  const handleSessionEnd = async (forceEnd: boolean = false) => {
+    // Show confirmation dialog only if manually ended (not when timer expires)
+    if (!forceEnd) {
+      const confirmed = window.confirm(
+        "通話を終了してもよろしいですか？\n\nAre you sure you want to end this session?"
+      );
+      if (!confirmed) return;
+    }
 
     await leaveChannel();
 
     try {
+      // Get token from sessionStorage if available (for LINE users)
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('sessionToken') : null;
+
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
       await fetch(`/api/reservations/${reservationId}/complete`, {
         method: "POST",
+        headers,
       });
     } catch (err) {
       console.error("Failed to complete session:", err);
@@ -458,7 +479,7 @@ export default function SeniorSessionPage() {
 
           {/* End Session Button */}
           <button
-            onClick={handleSessionEnd}
+            onClick={() => handleSessionEnd(false)}
             className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors"
           >
             通話を終了

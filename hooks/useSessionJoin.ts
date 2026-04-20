@@ -41,9 +41,17 @@ export function useSessionJoin({
 
     const joinAndCheck = async () => {
       try {
+        // Get session token from sessionStorage if available (for LINE users)
+        const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('sessionToken') : null;
+
+        const headers: HeadersInit = { "Content-Type": "application/json" };
+        if (sessionToken) {
+          headers['Authorization'] = `Bearer ${sessionToken}`;
+        }
+
         const res = await fetch(`/api/reservations/${reservationId}/join`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ isHost }),
         });
 

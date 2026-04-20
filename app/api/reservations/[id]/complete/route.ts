@@ -2,18 +2,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { validateSessionToken, getClientIp } from "@/lib/session-token";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { id: reservationId } = await params;
+
+    // Try token-based authentication first (for LINE users)
+    const authHeader = request.headers.get("Authorization");
+    const sessionToken = authHeader?.replace("Bearer ", "");
+
+    let userId: string | null = null;
+
+    if (sessionToken) {
+      // Validate session token with IP address verification
+      const clientIp = getClientIp(request);
+      const tokenData = await validateSessionToken(sessionToken, clientIp);
+      if (tokenData && tokenData.reservationId === reservationId) {
+        userId = tokenData.userId;
+      }
     }
 
-    const { id: reservationId } = await params;
+    // Fall back to NextAuth session if no token
+    if (!userId) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = session.user.id;
+    }
 
     // 予約を取得
     const reservation = await prisma.reservation.findUnique({
@@ -35,10 +55,27 @@ export async function POST(
 
     // ユーザーが参加者か確認
     if (
-      reservation.learnerId !== session.user.id &&
-      reservation.hostId !== session.user.id
+      reservation.learnerId !== userId &&
+      reservation.hostId !== userId
     ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 重複実行チェック：既に完了している場合は既存のメダルを返す
+    if (reservation.status === "completed") {
+      console.log("[Complete] Session already completed, returning existing medals");
+      const existingMedals = await prisma.userMedal.findMany({
+        where: {
+          userId: reservation.learnerId,
+          reservationId,
+        },
+      });
+      return NextResponse.json({
+        success: true,
+        alreadyCompleted: true,
+        completedAt: reservation.completedAt,
+        earnedMedals: existingMedals.map((m) => m.medalType),
+      });
     }
 
     // セッション完了処理

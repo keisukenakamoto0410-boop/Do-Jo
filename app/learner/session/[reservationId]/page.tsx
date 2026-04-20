@@ -30,6 +30,18 @@ export default function SessionPage() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const token = searchParams?.get('token');
 
+  // Ensure token from URL is saved to sessionStorage (fallback for redirect issues)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && token) {
+      const existingToken = sessionStorage.getItem('sessionToken');
+      if (!existingToken) {
+        // If sessionStorage was cleared but URL has token, restore it
+        sessionStorage.setItem('sessionToken', token);
+        console.log('[Session] Restored token from URL to sessionStorage');
+      }
+    }
+  }, [token]);
+
   // Video refs
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLDivElement>(null);
@@ -95,7 +107,8 @@ export default function SessionPage() {
 
   useEffect(() => {
     fetchReservation();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationId]);
 
   useEffect(() => {
     if (reservation && !agoraInitialized && !error) {
@@ -132,10 +145,10 @@ export default function SessionPage() {
 
         if (remaining <= 0) {
           clearInterval(interval);
-          handleSessionEnd();
+          handleSessionEnd(true); // 強制終了（確認なし）
         }
 
-        if (remaining === 5 * 60) {
+        if (remaining <= 5 * 60 && remaining > 5 * 60 - 2) {
           alert("5 minutes remaining!");
         }
       }
@@ -167,11 +180,11 @@ export default function SessionPage() {
 
       const sessionStart = new Date(data.slot.startTime);
       const now = new Date();
-      const fiveMinutesBefore = new Date(sessionStart.getTime() - 5 * 60 * 1000);
+      const thirtyMinutesBefore = new Date(sessionStart.getTime() - 30 * 60 * 1000);
       const sessionEnd = new Date(sessionStart.getTime() + 30 * 60 * 1000);
 
-      if (now < fiveMinutesBefore) {
-        const waitMinutes = Math.ceil((fiveMinutesBefore.getTime() - now.getTime()) / 60000);
+      if (now < thirtyMinutesBefore) {
+        const waitMinutes = Math.ceil((thirtyMinutesBefore.getTime() - now.getTime()) / 60000);
         setError(`Session has not started yet. Please come back in ${waitMinutes} minutes.`);
         setLoading(false);
         return;
@@ -241,9 +254,6 @@ export default function SessionPage() {
               }
               return [...prev, user];
             });
-
-            // 相手が入室したらタイマー開始
-            setTimerStarted(true);
 
             // Play video using ref
             setTimeout(() => {
@@ -339,18 +349,29 @@ export default function SessionPage() {
     }
   };
 
-  const handleSessionEnd = async () => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      "Are you sure you want to end this session?\n\nセッションを終了してもよろしいですか？"
-    );
-    if (!confirmed) return;
+  const handleSessionEnd = async (forceEnd: boolean = false) => {
+    // Show confirmation dialog only if manually ended (not when timer expires)
+    if (!forceEnd) {
+      const confirmed = window.confirm(
+        "Are you sure you want to end this session?\n\nセッションを終了してもよろしいですか？"
+      );
+      if (!confirmed) return;
+    }
 
     await leaveChannel();
 
     try {
+      // Get token from sessionStorage if available (for LINE users)
+      const sessionToken = typeof window !== 'undefined' ? sessionStorage.getItem('sessionToken') : null;
+
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+
       const res = await fetch(`/api/reservations/${reservationId}/complete`, {
         method: "POST",
+        headers,
       });
 
       if (res.ok) {
@@ -478,7 +499,7 @@ export default function SessionPage() {
           )}
 
           <button
-            onClick={handleSessionEnd}
+            onClick={() => handleSessionEnd(false)}
             className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
           >
             End Session

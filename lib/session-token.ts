@@ -75,11 +75,11 @@ export async function createSessionToken(
 
 /**
  * Validate and consume a session token with enhanced security
- * Returns user and reservation info if valid, null if invalid
+ * Returns user and reservation info if valid, error details if invalid
  *
  * Security features:
- * - Time-based access: 5 minutes before to 5 minutes after session start
- * - IP address tracking: First access IP is recorded and verified
+ * - Time-based access: 30 minutes before session start (when reminder is sent) to 30 minutes after
+ * - IP address tracking: First access IP is recorded and verified (allows same /24 subnet)
  * - Access count limit: Maximum 20 accesses per token
  */
 export async function validateSessionToken(
@@ -107,17 +107,16 @@ export async function validateSessionToken(
     return null;
   }
 
-  // Time-based restriction: 5 minutes before to 5 minutes after session start
-  const fiveMinutesBefore = new Date(sessionToken.sessionStartTime.getTime() - 5 * 60 * 1000);
-  const fiveMinutesAfter = new Date(sessionToken.sessionStartTime.getTime() + 5 * 60 * 1000);
+  // Time-based restriction: Allow access from reminder time (30 min before) to session end
+  // Since reminders are sent 30 minutes before, allow access from that point
+  const thirtyMinutesBefore = new Date(sessionToken.sessionStartTime.getTime() - 30 * 60 * 1000);
 
-  if (now < fiveMinutesBefore) {
+  if (now < thirtyMinutesBefore) {
     console.log("[Token Validation] Too early - session not started yet");
     return null;
   }
 
-  // Allow access up to 5 minutes late (for latecomers)
-  // But session ends 30 minutes after start, so token becomes invalid after that
+  // Allow access until session end (sessions are 25 minutes, allow 5 min buffer)
   const sessionEndTime = new Date(sessionToken.sessionStartTime.getTime() + 30 * 60 * 1000);
   if (now > sessionEndTime) {
     console.log("[Token Validation] Session ended");
@@ -212,9 +211,13 @@ function isSimilarIp(ip1: string, ip2: string): boolean {
  */
 export function getBaseUrl(): string {
   const rawUrl = process.env.NEXTAUTH_URL;
-  const baseUrl = rawUrl || "https://do-jo.vercel.app";
+  if (!rawUrl) {
+    throw new Error(
+      "NEXTAUTH_URL environment variable is not set. Please configure it in your environment."
+    );
+  }
   // Remove trailing slashes to prevent double slashes in URLs
-  return baseUrl.replace(/\/+$/, "");
+  return rawUrl.replace(/\/+$/, "");
 }
 
 /**

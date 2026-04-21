@@ -92,8 +92,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate that start time is in the future (using JST)
-    const nowJST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-    if (startDateTime <= nowJST) {
+    // Get current UTC time and add 9 hours for JST, then subtract 5 minutes grace period
+    const now = new Date();
+    const nowJST = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC to JST
+    const graceMinutes = 5; // Allow 5 minute grace period
+    const minimumStartTime = new Date(nowJST.getTime() - (graceMinutes * 60 * 1000));
+
+    if (startDateTime < minimumStartTime) {
       return NextResponse.json(
         { error: "Start time must be in the future" },
         { status: 400 }

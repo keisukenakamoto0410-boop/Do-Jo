@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is senior
-    if (session.user.role !== "senior") {
+    // Check if user can create slots (senior or admin)
+    if (session.user.role === "learner") {
       return NextResponse.json(
-        { error: "Only seniors can create slots" },
+        { error: "Learners cannot create slots" },
         { status: 403 }
       );
     }

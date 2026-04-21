@@ -24,10 +24,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is senior
-    if (session.user.role !== "senior") {
+    // Check if user can delete slots (senior or admin)
+    if (session.user.role === "learner") {
       return NextResponse.json(
-        { error: "Only seniors can delete slots" },
+        { error: "Learners cannot delete slots" },
         { status: 403 }
       );
     }
@@ -51,8 +51,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Slot not found" }, { status: 404 });
     }
 
-    // Check if slot belongs to the current user
-    if (slot.hostId !== session.user.id) {
+    // Check if slot belongs to the current user (admin can delete any slot)
+    if (slot.hostId !== session.user.id && session.user.role !== "admin") {
       return NextResponse.json(
         { error: "You can only delete your own slots" },
         { status: 403 }

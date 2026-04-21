@@ -19,8 +19,8 @@ export default function SeniorLayout({
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (session?.user?.role !== "senior") {
-      // Redirect to appropriate dashboard
+    } else if (session?.user?.role !== "senior" && session?.user?.role !== "admin") {
+      // Redirect to appropriate dashboard (admin can access senior pages)
       if (session?.user?.role === "learner") {
         router.push("/learner/dashboard");
       }

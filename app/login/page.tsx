@@ -57,6 +57,11 @@ export default function LoginPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [seniorCount, setSeniorCount] = useState<number | null>(null);
 
+  // Email/Password login state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+
   // LIFFフックを使用
   const { isReady, isLoggedIn, profile, error: liffError, login } = useLiff();
 
@@ -171,6 +176,34 @@ export default function LoginPage() {
       return;
     }
     login();
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setEmailLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("E-mail ou senha incorretos");
+        return;
+      }
+
+      if (result?.ok) {
+        // Redirecionar para o dashboard do learner
+        window.location.href = "/learner/dashboard";
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao fazer login");
+    } finally {
+      setEmailLoading(false);
+    }
   };
 
   // アイコンカラーのバリエーション
@@ -368,13 +401,13 @@ export default function LoginPage() {
                   className="text-sm text-[#566573] leading-relaxed"
                   style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 300 }}
                 >
-                  Connect with Japanese.<br />
-                  A community for real conversations.
+                  Conecte-se com japoneses.<br />
+                  Uma comunidade para conversas reais.
                 </p>
                 {seniorCount !== null && (
                   <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#00A8CC]/10 to-[#FF6B35]/10 border border-[#00A8CC]/20">
                     <span className="text-2xl font-bold text-[#00A8CC]">{seniorCount}</span>
-                    <span className="text-xs text-[#566573]">Japanese speakers ready to talk</span>
+                    <span className="text-xs text-[#566573]">Falantes de japonês prontos para conversar</span>
                   </div>
                 )}
               </div>
@@ -398,15 +431,85 @@ export default function LoginPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div className="flex-1">
-                      <div className="font-semibold mb-1">Error:</div>
+                      <div className="font-semibold mb-1">Erro:</div>
                       <div>{error}</div>
-                      <div className="mt-2 text-xs opacity-75">
-                        Please check browser console (F12) for more details
-                      </div>
                     </div>
                   </div>
                 </div>
               )}
+
+              {/* メール/パスワードログインフォーム */}
+              <form onSubmit={handleEmailLogin} className="space-y-4 mb-6">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    E-mail
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={emailLoading}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                    Senha
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={emailLoading}
+                    minLength={6}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-sky-600 hover:text-sky-700 font-semibold"
+                  >
+                    Esqueceu sua senha?
+                  </Link>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={emailLoading}
+                  className="w-full py-4 px-4 rounded-xl font-semibold transition-all duration-300 bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:shadow-lg hover:shadow-sky-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {emailLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Entrando...
+                    </span>
+                  ) : (
+                    "Entrar"
+                  )}
+                </button>
+              </form>
+
+              {/* 区切り線 */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">ou</span>
+                </div>
+              </div>
 
               {/* LINEログインボタン */}
               <div className="mb-6">
@@ -434,7 +537,7 @@ export default function LoginPage() {
                       <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.349 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
                       </svg>
-                      LINEでログイン
+                      Entrar com LINE
                     </>
                   )}
                 </button>
@@ -443,8 +546,17 @@ export default function LoginPage() {
               {/* 説明テキスト */}
               <div className="mt-6 text-center">
                 <p className="text-xs text-[#566573] leading-relaxed" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                  LINEアカウントで簡単にログインできます。<br />
-                  初めての方は自動的にアカウントが作成されます。
+                  Login com LINE é para falantes nativos de japonês.
+                </p>
+              </div>
+
+              {/* アカウント作成リンク */}
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Não tem uma conta?{" "}
+                  <Link href="/register" className="text-sky-600 hover:text-sky-700 font-semibold">
+                    Criar conta
+                  </Link>
                 </p>
               </div>
 
@@ -453,9 +565,9 @@ export default function LoginPage() {
                 className="mt-6 text-center text-[0.65rem] text-[#566573]"
                 style={{ fontFamily: "'Outfit', sans-serif" }}
               >
-                By continuing, you agree to our{" "}
+                Ao continuar, você concorda com nossos{" "}
                 <Link href="/terms" className="underline hover:text-[#00A8CC]">
-                  Terms of Service
+                  Termos de Serviço
                 </Link>
               </p>
             </div>

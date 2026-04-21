@@ -54,19 +54,19 @@ export default function ForgotPasswordPage() {
               </svg>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Check your email
+              Verifique seu e-mail
             </h3>
             <p className="text-gray-600 mb-6">
-              If an account exists for <strong>{email}</strong>, you will receive a password reset link.
+              Se existir uma conta para <strong>{email}</strong>, você receberá um link para redefinir sua senha.
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              The link will expire in 1 hour.
+              O link expirará em 1 hora.
             </p>
             <Link
               href="/login"
               className="inline-block px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-sky-500/30 transition-all"
             >
-              Back to Login
+              Voltar ao Login
             </Link>
           </div>
         </div>
@@ -84,15 +84,15 @@ export default function ForgotPasswordPage() {
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Do Jo</h2>
           </Link>
-          <p className="text-gray-500 mt-2">Password Recovery</p>
+          <p className="text-gray-500 mt-2">Recuperação de Senha</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-            Forgot Password?
+            Esqueceu a Senha?
           </h3>
           <p className="text-gray-500 text-center mb-6">
-            Enter your email and we&apos;ll send you a reset link.
+            Digite seu e-mail e enviaremos um link de redefinição.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Endereço de E-mail
               </label>
               <input
                 id="email"
@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
                 required
                 disabled={loading}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
-                placeholder="your@email.com"
+                placeholder="seu@email.com"
               />
             </div>
 
@@ -132,10 +132,10 @@ export default function ForgotPasswordPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Sending...
+                  Enviando...
                 </span>
               ) : (
-                "Send Reset Link"
+                "Enviar Link de Redefinição"
               )}
             </button>
           </form>
@@ -145,7 +145,7 @@ export default function ForgotPasswordPage() {
               href="/login"
               className="text-sky-600 hover:text-sky-700 font-semibold text-sm"
             >
-              ← Back to Login
+              ← Voltar ao Login
             </Link>
           </div>
         </div>

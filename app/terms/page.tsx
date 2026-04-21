@@ -41,18 +41,29 @@ export default function TermsPage() {
         });
 
         if (response.ok) {
-          // Update session
-          await update();
+          console.log("[Terms] Accept terms API succeeded");
+
+          // Update session and wait for it to complete
+          console.log("[Terms] Updating session...");
+          const updatedSession = await update();
+          console.log("[Terms] Session updated:", updatedSession);
+
+          // Small delay to ensure session is fully updated
+          await new Promise(resolve => setTimeout(resolve, 500));
 
           // Redirect to appropriate dashboard based on role
           const userRole = (session.user as any).role;
+          console.log("[Terms] Redirecting user with role:", userRole);
+
           if (userRole === "senior" || userRole === "admin") {
             router.push("/senior/dashboard");
           } else {
             router.push("/learner/dashboard");
           }
         } else {
-          alert("利用規約の同意処理に失敗しました。もう一度お試しください。");
+          const errorData = await response.json().catch(() => ({}));
+          console.error("[Terms] Accept terms API failed:", response.status, errorData);
+          alert(`利用規約の同意処理に失敗しました。もう一度お試しください。\nエラー: ${errorData.error || '不明なエラー'}`);
         }
       } catch (error) {
         console.error("Error accepting terms:", error);

@@ -15,19 +15,19 @@ export async function POST(request: Request) {
       userRole: session?.user?.role,
     });
 
-    if (!session || !session.user?.email) {
-      console.log("[Accept Terms API] Unauthorized - no session or email");
+    if (!session || !session.user?.id) {
+      console.log("[Accept Terms API] Unauthorized - no session or user ID");
       return NextResponse.json(
         { error: "Unauthorized - Please log in first" },
         { status: 401 }
       );
     }
 
-    console.log("[Accept Terms API] Updating user:", session.user.email);
+    console.log("[Accept Terms API] Updating user ID:", session.user.id);
 
-    // Update user's termsAccepted status
+    // Update user's termsAccepted status by ID (more reliable than email)
     const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
       data: {
         termsAccepted: true,
         termsAcceptedAt: new Date(),
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
 
     console.log("[Accept Terms API] User updated successfully:", {
       userId: updatedUser.id,
+      userEmail: updatedUser.email,
       termsAccepted: updatedUser.termsAccepted,
       termsAcceptedAt: updatedUser.termsAcceptedAt,
     });

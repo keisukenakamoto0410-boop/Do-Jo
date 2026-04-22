@@ -234,7 +234,8 @@ export const authOptions: NextAuthOptions = {
                 name: user.name || "User",
                 role: "senior",
                 lineId: lineUserId,
-                termsAccepted: false,
+                termsAccepted: true,
+                termsAcceptedAt: new Date(),
                 lastLoginAt: new Date(),
               },
             });

@@ -8,10 +8,7 @@ async function main() {
 
   const result = await prisma.user.updateMany({
     where: {
-      OR: [
-        { termsAccepted: false },
-        { termsAccepted: null },
-      ],
+      termsAccepted: false,
     },
     data: {
       termsAccepted: true,

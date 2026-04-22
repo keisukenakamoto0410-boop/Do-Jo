@@ -91,12 +91,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate that start time is in the future (using JST)
-    // Get current UTC time and add 9 hours for JST, then subtract 5 minutes grace period
+    // Validate that start time is in the future
+    // startDateTime is already correctly parsed with timezone info (+09:00)
+    // JavaScript Date objects handle timezone-aware strings correctly for comparison
+    // No manual timezone conversion needed - just compare directly
     const now = new Date();
-    const nowJST = new Date(now.getTime() + (9 * 60 * 60 * 1000)); // UTC to JST
-    const graceMinutes = 5; // Allow 5 minute grace period
-    const minimumStartTime = new Date(nowJST.getTime() - (graceMinutes * 60 * 1000));
+    const graceMinutes = 5; // 5-minute grace period for clock skew
+    const minimumStartTime = new Date(now.getTime() - (graceMinutes * 60 * 1000));
 
     if (startDateTime < minimumStartTime) {
       return NextResponse.json(

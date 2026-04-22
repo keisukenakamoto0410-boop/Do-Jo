@@ -65,13 +65,6 @@ export default function LearnerDashboard() {
     if (status === "unauthenticated") {
       router.push("/login");
     } else if (session?.user) {
-      // Check if user has accepted terms
-      const userTermsAccepted = (session.user as any).termsAccepted;
-      if (userTermsAccepted === false || userTermsAccepted === undefined) {
-        router.push("/terms");
-        return;
-      }
-
       // Check role
       if (session.user.role !== "learner") {
         router.push("/host/dashboard");

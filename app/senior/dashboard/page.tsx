@@ -35,14 +35,8 @@ export default function SeniorDashboard() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (status === "authenticated" && session?.user) {
-      // Check if user has accepted terms
-      const userTermsAccepted = (session.user as any).termsAccepted;
-      if (userTermsAccepted === false || userTermsAccepted === undefined) {
-        router.push("/terms");
-      }
     }
-  }, [status, session, router]);
+  }, [status, router]);
 
   useEffect(() => {
     fetchSlots();

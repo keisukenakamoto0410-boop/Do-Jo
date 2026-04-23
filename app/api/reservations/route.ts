@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendBookingConfirmationEmail, sendLearnerBookingConfirmationEmail } from "@/lib/email";
-import { sendLineBookingNotification } from "@/lib/line";
+import { sendBookingConfirmationEmail, sendLearnerBookingConfirmationEmail, sendAdminBookingNotification } from "@/lib/email";
 import { getBaseUrl, createSessionToken, buildSessionUrl } from "@/lib/session-token";
 
 // GET reservations for the current user
@@ -261,54 +260,32 @@ export async function POST(req: NextRequest) {
       console.error("[Reservation] Failed to send booking confirmation email to learner:", err);
     });
 
-    // LINE notification to host (if LINE connected)
-    console.log("[Reservation] Host object:", JSON.stringify(reservation.host, null, 2));
-    console.log("[Reservation] Host lineId from reservation:", reservation.host.lineId);
+    // Send admin notification for manual LINE forwarding
+    console.log("[Reservation] Sending admin notification email...");
 
-    const hostLineId = reservation.host.lineId;
-    console.log("[Reservation] hostLineId value:", hostLineId, "type:", typeof hostLineId);
+    // Build Agora session URL based on host role
+    const hostRole = reservation.host.role;
+    const sessionPath = (hostRole === "senior" || hostRole === "admin")
+      ? "senior"
+      : "host";
+    const agoraSessionUrl = `${BASE_URL}/${sessionPath}/session/${reservation.id}`;
 
-    if (hostLineId) {
-      console.log("[Reservation] Host has LINE connected, sending notification to:", hostLineId);
-
-      // Build Agora session URL based on host role
-      const hostRole = reservation.host.role;
-      const sessionPath = (hostRole === "senior" || hostRole === "admin")
-        ? "senior"
-        : "host";
-      const agoraSessionUrl = `${BASE_URL}/${sessionPath}/session/${reservation.id}`;
-
-      console.log("[Reservation] Agora session URL:", agoraSessionUrl);
-
-      try {
-        const lineResult = await sendLineBookingNotification({
-          lineUserId: hostLineId,
-          hostName: reservation.host.name,
-          learnerName: reservation.learner.name,
-          sessionDate: reservation.slot.startTime,
-          sessionUrl: agoraSessionUrl,
-          topic: reservation.selectedTopic || undefined,
-          words: reservation.targetWords || [],
-        });
-
-        if (lineResult.success) {
-          console.log("[Reservation] ✅ LINE notification sent successfully");
-        } else {
-          console.error("[Reservation] ❌ LINE notification failed:", lineResult.error);
-        }
-      } catch (err) {
-        console.error("[Reservation] ❌ Exception sending LINE notification:", err);
+    sendAdminBookingNotification({
+      hostName: reservation.host.name,
+      learnerName: reservation.learner.name,
+      sessionDate: reservation.slot.startTime,
+      sessionUrl: agoraSessionUrl,
+      topic: reservation.selectedTopic || undefined,
+      words: reservation.targetWords || [],
+    }).then((result) => {
+      if (result.success) {
+        console.log("[Reservation] ✅ Admin notification email sent successfully");
+      } else {
+        console.error("[Reservation] ❌ Admin notification email failed:", result.error);
       }
-    } else {
-      console.log("[Reservation] Host does not have LINE connected (lineId is null/undefined), skipping LINE notification");
-      // Also check if the host has lineId in DB but it wasn't included in the query
-      prisma.user.findUnique({
-        where: { id: reservation.host.id },
-        select: { lineId: true }
-      }).then(dbHost => {
-        console.log("[Reservation] Direct DB check - Host lineId:", dbHost?.lineId);
-      });
-    }
+    }).catch((err) => {
+      console.error("[Reservation] ❌ Exception sending admin notification email:", err);
+    });
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {

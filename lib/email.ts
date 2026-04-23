@@ -469,6 +469,16 @@ export async function sendPasswordResetEmail({
   }
 }
 
+// Admin notification email params
+interface AdminBookingNotificationParams {
+  hostName: string;
+  learnerName: string;
+  sessionDate: Date;
+  sessionUrl: string;
+  topic?: string;
+  words?: string[];
+}
+
 // Cancellation email params
 interface CancellationEmailParams {
   recipientEmail: string;
@@ -477,6 +487,90 @@ interface CancellationEmailParams {
   cancelledBy: "learner" | "host";
   sessionDate: Date;
   reason?: string;
+}
+
+// Send booking notification to admin for manual LINE forwarding
+export async function sendAdminBookingNotification({
+  hostName,
+  learnerName,
+  sessionDate,
+  sessionUrl,
+  topic,
+  words,
+}: AdminBookingNotificationParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const ADMIN_EMAIL = "keisuke.nakamoto0410@gmail.com";
+
+    // トピックと単語のテキストを生成
+    const topicText = topic ? `📝 トピック: ${topic}` : "📝 トピック: なし";
+    const wordsText =
+      words && words.length > 0
+        ? `💬 練習したい単語: ${words.join("、")}`
+        : "💬 練習したい単語: なし";
+
+    await transporter.sendMail({
+      from: `Do Jo <${FROM_EMAIL}>`,
+      to: ADMIN_EMAIL,
+      subject: `【Do Jo】新規予約 - ${hostName}さん宛`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1 style="color: #7c3aed; font-size: 24px; margin-bottom: 20px;">🎉 新しい予約が入りました</h1>
+
+          <p style="font-size: 16px; color: #333;">
+            以下の内容をLINEで<strong>${hostName}さん</strong>に転送してください：
+          </p>
+
+          <div style="background: #f3f4f6; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7c3aed;">
+            <p style="margin: 8px 0;"><strong>👤 ホスト:</strong> ${hostName}</p>
+            <p style="margin: 8px 0;"><strong>🌍 学習者（外国人）:</strong> ${learnerName}</p>
+            <p style="margin: 8px 0;"><strong>📅 日時:</strong> ${formatDateJa(sessionDate)}</p>
+            <p style="margin: 12px 0 4px 0;">${topicText}</p>
+            <p style="margin: 4px 0;">${wordsText}</p>
+          </div>
+
+          <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; font-weight: bold; color: #92400e;">📋 LINEで送るテキスト（コピペ用）:</p>
+            <div style="background: white; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 14px; white-space: pre-wrap; word-break: break-all;">
+${hostName}さん、こんにちは！
+
+新しい予約が入りました。
+
+👤 学習者: ${learnerName}さん
+📅 日時: ${formatDateJa(sessionDate)}
+${topicText}
+${wordsText}
+
+🔗 セッションURL:
+${sessionUrl}
+
+当日は開始5分前にログインしてお待ちください。
+            </div>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${sessionUrl}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+              セッションURLを確認 →
+            </a>
+          </div>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+          <p style="font-size: 12px; color: #999; text-align: center;">
+            Do Jo - 管理者通知
+          </p>
+        </div>
+      `,
+    });
+
+    console.log("[Email] Admin booking notification sent to:", ADMIN_EMAIL);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send admin booking notification:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
 // Send cancellation notification email

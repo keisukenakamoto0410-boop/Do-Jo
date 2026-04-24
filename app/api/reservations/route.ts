@@ -282,6 +282,7 @@ export async function POST(req: NextRequest) {
     console.log("[Reservation] Sending admin notification email...");
 
     // Build Agora session URL based on host role
+    const BASE_URL = getBaseUrl();
     const hostRole = reservation.host.role;
     const sessionPath = (hostRole === "senior" || hostRole === "admin")
       ? "senior"

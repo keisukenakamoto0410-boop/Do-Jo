@@ -29,7 +29,6 @@ interface LearnerBookingEmailParams {
   hostName: string;
   sessionDate: Date;
   sessionUrl: string;
-  prepareUrl: string;
 }
 
 interface PasswordResetEmailParams {
@@ -171,7 +170,6 @@ export async function sendLearnerBookingConfirmationEmail({
   hostName,
   sessionDate,
   sessionUrl,
-  prepareUrl,
 }: LearnerBookingEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
     // Skip email if using LINE-only account (@line.local)
@@ -199,15 +197,15 @@ export async function sendLearnerBookingConfirmationEmail({
           </div>
 
           <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
-            <strong>Next step:</strong> Prepare for your session by selecting a topic and setting your goals.
+            You can join the session 15 minutes before the start time.
           </p>
 
-          <a href="${prepareUrl}" style="display: inline-block; background: #0ea5e9; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
-            Prepare for Session →
+          <a href="${sessionUrl}" style="display: inline-block; background: #0ea5e9; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 10px 0;">
+            Join Session →
           </a>
 
           <p style="font-size: 14px; color: #666; margin-top: 20px;">
-            Session URL: <a href="${sessionUrl}" style="color: #0ea5e9;">${sessionUrl}</a>
+            See you at the session!
           </p>
 
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />

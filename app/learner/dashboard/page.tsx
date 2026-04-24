@@ -468,29 +468,48 @@ export default function LearnerDashboard() {
           </Link>
         </div>
 
-        {/* Super Prominent Join Button - Show when session is joinable */}
-        {futureReservations.some((r) => isJoinable(r.slot.startTime, r.slot.endTime)) && (
+        {/* Next Session - Always show upcoming session at the top */}
+        {futureReservations.length > 0 && (
           <div className="mb-8">
-            {futureReservations
-              .filter((r) => isJoinable(r.slot.startTime, r.slot.endTime))
-              .map((reservation) => (
-                <Link
+            {futureReservations.slice(0, 1).map((reservation) => {
+              const joinable = isJoinable(reservation.slot.startTime, reservation.slot.endTime);
+              return (
+                <div
                   key={reservation.id}
-                  href={`/learner/session/${reservation.id}`}
-                  className="block w-full py-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-2xl text-center transition-all shadow-2xl border-4 border-green-400 animate-pulse mb-4"
+                  className={`block w-full py-6 rounded-2xl text-center transition-all shadow-2xl mb-4 ${
+                    joinable
+                      ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border-4 border-green-400 animate-pulse"
+                      : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 border-4 border-blue-400"
+                  }`}
                 >
                   <div className="text-4xl mb-2">🎥</div>
-                  <div className="text-2xl font-bold mb-1">
-                    Join Session Now!
+                  <div className="text-white">
+                    <div className="text-2xl font-bold mb-1">
+                      {joinable ? "Join Session Now!" : "Next Session"}
+                    </div>
+                    <div className="text-lg opacity-90 mb-2">
+                      with {reservation.host.name}-san
+                    </div>
+                    <div className="text-base opacity-90 mb-4">
+                      {formatDate(reservation.slot.startTime)}{" "}
+                      {formatTime(reservation.slot.startTime)} ({getTimezoneAbbr()})
+                    </div>
+                    {joinable ? (
+                      <Link
+                        href={`/learner/session/${reservation.id}`}
+                        className="inline-block px-8 py-4 bg-white text-green-600 font-bold rounded-xl text-lg hover:bg-gray-100 transition-all"
+                      >
+                        ▶ Tap to Join
+                      </Link>
+                    ) : (
+                      <div className="text-base opacity-75">
+                        {getRelativeTime(reservation.slot.startTime)}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-lg opacity-90">
-                    with {reservation.host.name}-san
-                  </div>
-                  <div className="mt-2 text-base opacity-75">
-                    ▶ Tap to join
-                  </div>
-                </Link>
-              ))}
+                </div>
+              );
+            })}
           </div>
         )}
 

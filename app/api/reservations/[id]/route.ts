@@ -5,9 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { sendCancellationEmail } from "@/lib/email";
 import { validateSessionToken, getClientIp } from "@/lib/session-token";
 
-// Admin emails for access control
-const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
-
 // DELETE cancel a reservation (with optional reason)
 export async function DELETE(
   req: NextRequest,

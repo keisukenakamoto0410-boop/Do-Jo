@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, validatePassword } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -31,6 +31,15 @@ export async function POST(request: Request) {
     if (!email || !password || !name || !role) {
       return NextResponse.json(
         { error: "必須項目が入力されていません" },
+        { status: 400 }
+      );
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json(
+        { error: passwordValidation.error },
         { status: 400 }
       );
     }

@@ -365,9 +365,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // 開発環境で複数オリジン（localhost, IPアドレス）からアクセスを許可
-      const allowedHosts = ["localhost", "127.0.0.1", "192.168.0.10"];
-
       // 相対URLの場合
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
@@ -375,17 +372,21 @@ export const authOptions: NextAuthOptions = {
 
       try {
         const urlObj = new URL(url);
-        // 許可されたホストからのリクエストはそのまま通す
-        if (allowedHosts.includes(urlObj.hostname)) {
+
+        // 開発環境のみローカルホストを許可
+        if (process.env.NODE_ENV === "development") {
+          const allowedHosts = ["localhost", "127.0.0.1"];
+          if (allowedHosts.includes(urlObj.hostname)) {
+            return url;
+          }
+        }
+
+        // 同じオリジンの場合
+        if (urlObj.origin === baseUrl) {
           return url;
         }
       } catch {
         // URL解析エラーの場合はbaseUrlを使用
-      }
-
-      // 同じオリジンの場合
-      if (new URL(url).origin === baseUrl) {
-        return url;
       }
 
       // デフォルトはベースURL
@@ -395,6 +396,29 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === "development",
 };
+
+export function validatePassword(password: string): { valid: boolean; error?: string } {
+  if (!password || password.length < 8) {
+    return { valid: false, error: "Password must be at least 8 characters long" };
+  }
+
+  // Check for at least one uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one uppercase letter" };
+  }
+
+  // Check for at least one lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one lowercase letter" };
+  }
+
+  // Check for at least one number
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one number" };
+  }
+
+  return { valid: true };
+}
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);

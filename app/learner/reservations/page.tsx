@@ -329,60 +329,22 @@ export default function LearnerReservationsPage() {
                     {activeTab === "upcoming" &&
                       reservation.status === "confirmed" && (
                         <div className="flex gap-2">
-                          {reservation.hasAgenda ? (
-                            <>
-                              <Link
-                                href={`/learner/prepare/${reservation.id}/agenda`}
-                                className="px-4 py-2 rounded-lg font-medium text-neutral-700 border border-neutral-200 hover:bg-neutral-50 transition-colors"
-                              >
-                                View Agenda
-                              </Link>
-                              <Link
-                                href={`/learner/session/${reservation.id}`}
-                                className={`px-4 py-2 rounded-lg font-medium text-white ${
-                                  reservation.sessionType === "business"
-                                    ? "bg-accent hover:bg-accent-warm"
-                                    : "bg-purple-600 hover:bg-purple-700"
-                                } transition-colors`}
-                              >
-                                Join Session
-                              </Link>
-                            </>
-                          ) : (
-                            <Link
-                              href={`/learner/prepare/${reservation.id}`}
-                              className="px-4 py-2 rounded-lg font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors flex items-center gap-2"
-                            >
-                              <span>📝</span> Prepare for Session
-                            </Link>
-                          )}
+                          <Link
+                            href={`/learner/session/${reservation.id}`}
+                            className={`px-4 py-2 rounded-lg font-medium text-white ${
+                              reservation.sessionType === "business"
+                                ? "bg-accent hover:bg-accent-warm"
+                                : "bg-purple-600 hover:bg-purple-700"
+                            } transition-colors`}
+                          >
+                            Join Session
+                          </Link>
                           <button
                             onClick={() => cancelReservation(reservation.id)}
                             className="px-4 py-2 border border-neutral-200 rounded-lg text-neutral-700 hover:bg-neutral-50 transition-colors"
                           >
                             Cancel
                           </button>
-                        </div>
-                      )}
-                    {/* Preparation Status */}
-                    {activeTab === "upcoming" &&
-                      reservation.status === "confirmed" && (
-                        <div
-                          className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 ${
-                            reservation.hasAgenda
-                              ? "bg-gradient-to-r from-success to-success-light text-white"
-                              : "bg-warning/10 text-warning-dark"
-                          }`}
-                        >
-                          {reservation.hasAgenda ? (
-                            <>
-                              <span>✓</span> Ready to Talk!
-                            </>
-                          ) : (
-                            <>
-                              <span>⚠️</span> Preparation Required
-                            </>
-                          )}
                         </div>
                       )}
                     {activeTab === "past" &&

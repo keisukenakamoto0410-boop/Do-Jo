@@ -27,6 +27,12 @@ export async function POST(
 
     console.log("📷 Analyzing image...");
 
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY not configured");
+      throw new Error("AI service not configured");
+    }
+
     // OpenAIクライアントを関数内で初期化（ビルド時エラー回避）
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,

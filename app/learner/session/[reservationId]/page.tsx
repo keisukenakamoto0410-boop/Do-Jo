@@ -167,15 +167,29 @@ export default function SessionPage() {
         headers['Authorization'] = `Bearer ${sessionToken}`;
       }
 
-      const response = await fetch(`/api/reservations/${reservationId}`, { headers });
+      let response = await fetch(`/api/reservations/${reservationId}`, { headers });
       if (!response.ok) {
         throw new Error("Reservation not found");
       }
-      const data = await response.json();
+      let data = await response.json();
 
+      // If no agenda exists, generate one automatically
       if (!data.generatedAgenda) {
-        router.push(`/learner/prepare/${reservationId}`);
-        return;
+        console.log("No agenda found, generating automatically...");
+        const agendaResponse = await fetch(`/api/reservations/${reservationId}/generate-agenda`, {
+          method: "POST",
+          headers,
+        });
+        if (agendaResponse.ok) {
+          console.log("Agenda generated successfully, fetching updated reservation data...");
+          // Fetch updated reservation data after agenda generation
+          response = await fetch(`/api/reservations/${reservationId}`, { headers });
+          if (response.ok) {
+            data = await response.json();
+          }
+        } else {
+          console.error("Failed to generate agenda, continuing without it");
+        }
       }
 
       const sessionStart = new Date(data.slot.startTime);

@@ -10,24 +10,47 @@ import { prisma } from "@/lib/prisma";
  * Called by Google Apps Script when a senior submits a Google Form
  * Creates a slot in the Supabase database
  *
+ * Request headers:
+ * - x-api-key: API key for authentication
+ *
  * Request body:
  * {
- *   "teacherName": "山田太郎",  // Teacher's name (required)
+ *   "teacherEmail": "teacher@example.com",  // Teacher's email (required, unique)
  *   "scheduledAt": "2026-04-06T09:00:00+09:00",  // ISO 8601 datetime (required)
  *   "durationMinutes": 60      // Duration in minutes (required)
  * }
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { teacherName, scheduledAt, durationMinutes } = body;
+    // Validate API key
+    const apiKey = req.headers.get("x-api-key");
+    const validApiKey = process.env.SLOTS_API_KEY;
 
-    console.log("[/api/slots/create] Request:", { teacherName, scheduledAt, durationMinutes });
+    if (!validApiKey) {
+      console.error("[/api/slots/create] SLOTS_API_KEY not configured");
+      return NextResponse.json(
+        { error: "Service configuration error" },
+        { status: 500 }
+      );
+    }
+
+    if (!apiKey || apiKey !== validApiKey) {
+      console.error("[/api/slots/create] Invalid or missing API key");
+      return NextResponse.json(
+        { error: "Unauthorized - Invalid API key" },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { teacherEmail, scheduledAt, durationMinutes } = body;
+
+    console.log("[/api/slots/create] Request:", { teacherEmail, scheduledAt, durationMinutes });
 
     // Validate required fields
-    if (!teacherName) {
+    if (!teacherEmail) {
       return NextResponse.json(
-        { error: "Missing required field: teacherName" },
+        { error: "Missing required field: teacherEmail" },
         { status: 400 }
       );
     }
@@ -55,19 +78,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find teacher by name
-    const teacher = await prisma.user.findFirst({
-      where: {
-        name: teacherName,
-        role: "senior"
-      },
-      select: { id: true, role: true, name: true },
+    // Find teacher by email (unique identifier)
+    const teacher = await prisma.user.findUnique({
+      where: { email: teacherEmail },
+      select: { id: true, role: true, name: true, email: true },
     });
 
     if (!teacher) {
       return NextResponse.json(
-        { error: `Teacher not found with name: ${teacherName}` },
+        { error: `Teacher not found with email: ${teacherEmail}` },
         { status: 404 }
+      );
+    }
+
+    if (teacher.role !== "senior") {
+      return NextResponse.json(
+        { error: `User ${teacherEmail} is not a senior teacher` },
+        { status: 400 }
       );
     }
 
@@ -84,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     if (existingSlot) {
       console.log("[/api/slots/create] Duplicate slot detected, skipping:", {
-        teacherName,
+        teacherEmail,
         startTime,
       });
       return NextResponse.json(
@@ -155,10 +182,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // In production, don't expose internal error details
+    const isDevelopment = process.env.NODE_ENV === "development";
     return NextResponse.json(
       {
         error: "Failed to create slot",
-        details: error instanceof Error ? error.message : "Unknown error",
+        ...(isDevelopment && {
+          details: error instanceof Error ? error.message : "Unknown error",
+        }),
       },
       { status: 500 }
     );

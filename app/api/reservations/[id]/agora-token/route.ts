@@ -5,9 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { RtcTokenBuilder, RtcRole } from "agora-access-token";
 import { validateSessionToken, getClientIp } from "@/lib/session-token";
 
-// Admin emails for access control
-const ADMIN_EMAILS = ["keisuke.mjugaad91@gmail.com"];
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

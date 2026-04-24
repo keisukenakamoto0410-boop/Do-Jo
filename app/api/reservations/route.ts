@@ -108,7 +108,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { slotId, slideTopic, selectedTopic, targetWords } = body;
-    console.log("[Reservation] Request body:", { slotId, slideTopic, selectedTopic, targetWords });
 
     if (!slotId) {
       return NextResponse.json(
@@ -116,6 +115,20 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Validate and sanitize targetWords
+    const sanitizedTargetWords = Array.isArray(targetWords)
+      ? targetWords
+          .filter((w) => typeof w === "string" && w.trim() !== "")
+          .slice(0, 5) // Max 5 words
+      : [];
+
+    console.log("[Reservation] Sanitized data:", {
+      slotId,
+      slideTopic,
+      selectedTopic,
+      targetWords: sanitizedTargetWords
+    });
 
     // Find the slot
     const slot = await prisma.slot.findUnique({
@@ -136,29 +149,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if learner already has a reservation at this time
-    const existingReservation = await prisma.reservation.findFirst({
-      where: {
-        learnerId: session.user.id,
-        status: { in: ["pending", "confirmed"] },
-        slot: {
-          startTime: slot.startTime,
-        },
-      },
-    });
-
-    if (existingReservation) {
-      console.log("[Reservation] Rejected: Already has reservation at this time");
-      return NextResponse.json(
-        { error: "You already have a reservation at this time" },
-        { status: 409 }
-      );
-    }
-
     console.log("[Reservation] Creating reservation with learnerId:", session.user.id, "hostId:", slot.hostId);
 
     // Create reservation and update slot status in a transaction
+    // All checks are inside the transaction to prevent race conditions
     const reservation = await prisma.$transaction(async (tx) => {
+      // Re-check slot availability inside transaction
+      const currentSlot = await tx.slot.findUnique({
+        where: { id: slotId },
+        include: { reservation: true },
+      });
+
+      if (!currentSlot || currentSlot.status !== "available" || currentSlot.reservation) {
+        throw new Error("Slot is no longer available");
+      }
+
+      // Check if learner already has a reservation at this time inside transaction
+      const existingReservation = await tx.reservation.findFirst({
+        where: {
+          learnerId: session.user.id,
+          status: { in: ["pending", "confirmed"] },
+          slot: {
+            startTime: currentSlot.startTime,
+          },
+        },
+      });
+
+      if (existingReservation) {
+        throw new Error("You already have a reservation at this time");
+      }
+
       // Update slot status to "reserved" (matching schema comment)
       await tx.slot.update({
         where: { id: slotId },
@@ -175,7 +195,7 @@ export async function POST(req: NextRequest) {
           status: "confirmed",
           slideTopic: slideTopic || null,
           selectedTopic: selectedTopic || null,
-          targetWords: targetWords || [],
+          targetWords: sanitizedTargetWords,
         },
         include: {
           slot: true,
@@ -230,7 +250,7 @@ export async function POST(req: NextRequest) {
       sessionDate: reservation.slot.startTime,
       sessionUrl: hostSessionUrl,
       topic: reservation.selectedTopic || undefined,
-      words: reservation.targetWords || [],
+      words: sanitizedTargetWords,
     }).then((result) => {
       if (result.success) {
         console.log("[Reservation] Host email sent successfully");
@@ -242,14 +262,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Email to learner (English)
-    const BASE_URL = getBaseUrl();
     sendLearnerBookingConfirmationEmail({
       learnerEmail: reservation.learner.email!,
       learnerName: reservation.learner.name,
       hostName: reservation.host.name,
       sessionDate: reservation.slot.startTime,
       sessionUrl: learnerSessionUrl,
-      prepareUrl: `${BASE_URL}/learner/prepare/${reservation.id}`,
     }).then((result) => {
       if (result.success) {
         console.log("[Reservation] Learner email sent successfully");
@@ -276,7 +294,7 @@ export async function POST(req: NextRequest) {
       sessionDate: reservation.slot.startTime,
       sessionUrl: agoraSessionUrl,
       topic: reservation.selectedTopic || undefined,
-      words: reservation.targetWords || [],
+      words: sanitizedTargetWords,
     }).then((result) => {
       if (result.success) {
         console.log("[Reservation] ✅ Admin notification email sent successfully");
@@ -290,10 +308,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (error) {
     console.error("[Reservation] Error creating reservation:", error);
-    // Include more details in the error for debugging
+
+    // Handle specific error messages from transaction
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    if (errorMessage === "Slot is no longer available") {
+      return NextResponse.json(
+        { error: "This slot is no longer available" },
+        { status: 409 }
+      );
+    }
+
+    if (errorMessage === "You already have a reservation at this time") {
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 409 }
+      );
+    }
+
+    // In production, don't expose internal error details
+    const isDevelopment = process.env.NODE_ENV === "development";
     return NextResponse.json(
-      { error: "Failed to create reservation", details: errorMessage },
+      {
+        error: "Failed to create reservation",
+        ...(isDevelopment && { details: errorMessage }),
+      },
       { status: 500 }
     );
   }
